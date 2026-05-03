@@ -1,4 +1,4 @@
-; Disl stdlib collection: Deque<T>
+﻿; Disl stdlib collection: Deque<T>
 ;
 ; Dynamic array with a centered start index — front and back both grow without
 ; shifting. The allocator is stored in the struct.
@@ -8,6 +8,7 @@
 ; centered buffer.
 
 struct Deque<T>
+    require T: typename
     data: Ptr<T>
     start: I64
     length: I64
@@ -15,6 +16,7 @@ struct Deque<T>
     alloc: Ptr<Allocator>
 
 routine Deque<T>.new(#alloc: Ptr<Allocator>) -> Deque<T>
+    require T: typename
     block entry():
         %deque: Deque<T> = Deque<T> {
             data: null,
@@ -26,17 +28,20 @@ routine Deque<T>.new(#alloc: Ptr<Allocator>) -> Deque<T>
         return(%deque)
 
 routine Deque<T>.length(#self: Ptr<Deque<T>>) -> I64
+    require T: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
 routine Deque<T>.is_empty(#self: Ptr<Deque<T>>) -> Bool
+    require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
         return(%empty)
 
 routine Deque<T>.recenter(#self: Ptr<Deque<T>>, %new_capacity: I64) -> Void
+    require T: typename
     block entry():
         %length: I64 := #self.length
         %slack: I64 = %new_capacity - %length
@@ -66,6 +71,7 @@ routine Deque<T>.recenter(#self: Ptr<Deque<T>>, %new_capacity: I64) -> Void
         return()
 
 routine Deque<T>.ensure_front(#self: Ptr<Deque<T>>) -> Void
+    require T: typename
     block entry():
         %start: I64 := #self.start
         %has_front_space: Bool = sgt(%start, 0)
@@ -86,6 +92,7 @@ routine Deque<T>.ensure_front(#self: Ptr<Deque<T>>) -> Void
         return()
 
 routine Deque<T>.ensure_back(#self: Ptr<Deque<T>>) -> Void
+    require T: typename
     block entry():
         %start: I64 := #self.start
         %length: I64 := #self.length
@@ -108,6 +115,7 @@ routine Deque<T>.ensure_back(#self: Ptr<Deque<T>>) -> Void
         return()
 
 routine Deque<T>.push_back(#self: Ptr<Deque<T>>, %value: T) -> Void
+    require T: typename
     block entry():
         #self.ensure_back()
         #data: Ptr<T> := #self.data
@@ -119,11 +127,13 @@ routine Deque<T>.push_back(#self: Ptr<Deque<T>>, %value: T) -> Void
         return()
 
 routine Deque<T>.push(#self: Ptr<Deque<T>>, %value: T) -> Void
+    require T: typename
     block entry:
         #self.push_back(%value)
         return()
 
 routine Deque<T>.push_front(#self: Ptr<Deque<T>>, %value: T) -> Void
+    require T: typename
     block entry:
         #self.ensure_front()
         #data: Ptr<T> := #self.data
@@ -136,6 +146,7 @@ routine Deque<T>.push_front(#self: Ptr<Deque<T>>, %value: T) -> Void
         return()
 
 routine Deque<T>.pop_back(#self: Ptr<Deque<T>>) -> T
+    require T: typename
     block entry:
         %length: I64 := #self.length
         %empty: Bool = %length == 0
@@ -151,11 +162,13 @@ routine Deque<T>.pop_back(#self: Ptr<Deque<T>>) -> T
         return(%value)
 
 routine Deque<T>.pop(#self: Ptr<Deque<T>>) -> T
+    require T: typename
     block entry:
         %value: T = #self.pop_back()
         return(%value)
 
 routine Deque<T>.pop_front(#self: Ptr<Deque<T>>) -> T
+    require T: typename
     block entry:
         %length: I64 := #self.length
         %empty: Bool = %length == 0
@@ -170,6 +183,7 @@ routine Deque<T>.pop_front(#self: Ptr<Deque<T>>) -> T
         return(%value)
 
 routine Deque<T>.get(#self: Ptr<Deque<T>>, %index: I64) -> T
+    require T: typename
     block entry:
         %length: I64 := #self.length
         %not_negative: Bool = sge(%index, 0)
@@ -179,35 +193,38 @@ routine Deque<T>.get(#self: Ptr<Deque<T>>, %index: I64) -> T
 
     block load(%index: I64):
         #data: Ptr<T> := #self.data
-        %start: i64 := #self.start
-        %physical: i64 = %start + %index
+        %start: I64 := #self.start
+        %physical: I64 = %start + %index
         %value: T := #data[%physical]
         return(%value)
 
-routine Deque<T>.set(#self: Ptr<Deque<T>>, %index: i64, %value: T) -> Void
+routine Deque<T>.set(#self: Ptr<Deque<T>>, %index: I64, %value: T) -> Void
+    require T: typename
     block entry:
-        %length: i64 := #self.length
+        %length: I64 := #self.length
         %not_negative: Bool = sge(%index, 0)
         %before_end: Bool = slt(%index, %length)
         %in_bounds: Bool = %not_negative & %before_end
         branch %in_bounds ? store(%index, %value) : trap()
 
-    block store(%index: i64, %value: T):
+    block store(%index: I64, %value: T):
         #data: Ptr<T> := #self.data
-        %start: i64 := #self.start
-        %physical: i64 = %start + %index
+        %start: I64 := #self.start
+        %physical: I64 = %start + %index
         #data[%physical] = %value
         return()
 
 routine Deque<T>.clear(#self: Ptr<Deque<T>>) -> Void
+    require T: typename
     block entry:
-        %capacity: i64 := #self.capacity
-        %start: i64 = sdiv(%capacity, 2)
+        %capacity: I64 := #self.capacity
+        %start: I64 = sdiv(%capacity, 2)
         #self.start = %start
         #self.length = 0
         return()
 
 routine Deque<T>.free(#self: Ptr<Deque<T>>) -> Void
+    require T: typename
     block entry:
         #data: Ptr<T> := #self.data
         %empty: Bool = #data == null

@@ -1,4 +1,4 @@
-; Disl stdlib collection: Option<T> and KVPair<K, V>
+﻿; Disl stdlib collection: Option<T> and KVPair<K, V>
 ;
 ; Option<T> is a tagged union — the standard way to represent a value that may
 ; be absent.  It is the return type of every collection iterator's next().
@@ -19,11 +19,13 @@ enum OptionTag: I32
     Some = 1
 
 struct Option<T>
+    require T: typename
     tag: OptionTag
     @aligned(alignof<T>())
     payload: Array<I8, sizeof<T>()>
 
 routine Option<T>.none() -> Option<T>
+    require T: typename
     block entry():
         #buf: Ptr<Option<T>> = alloca<Option<T>>
         zero<Option<T>>(#buf, 1)
@@ -31,6 +33,7 @@ routine Option<T>.none() -> Option<T>
         return(%opt)
 
 routine Option<T>.some(%value: T) -> Option<T>
+    require T: typename
     block entry():
         #buf: Ptr<Option<T>> = alloca<Option<T>>
         #buf.tag = OptionTag.Some
@@ -43,12 +46,14 @@ routine Option<T>.some(%value: T) -> Option<T>
 ; Both predicates take the Option by value — only the tag field is read,
 ; so no pointer is needed and the caller avoids an alloca.
 routine Option<T>.is_some(%self: Option<T>) -> Bool
+    require T: typename
     block entry():
         %tag: OptionTag = %self.tag
         %result: Bool = %tag == OptionTag.Some
         return(%result)
 
 routine Option<T>.is_none(%self: Option<T>) -> Bool
+    require T: typename
     block entry():
         %tag: OptionTag = %self.tag
         %result: Bool = %tag == OptionTag.None
@@ -57,6 +62,7 @@ routine Option<T>.is_none(%self: Option<T>) -> Bool
 ; unwrap takes a pointer so the payload GEP is cheap — no struct copy needed.
 ; Traps if tag is None.
 routine Option<T>.unwrap(#self: Ptr<Option<T>>) -> T
+    require T: typename
     block entry():
         %tag: OptionTag := #self.tag
         %is_some: Bool = %tag == OptionTag.Some
@@ -72,5 +78,7 @@ routine Option<T>.unwrap(#self: Ptr<Option<T>>) -> T
 
 ; Yielded by HashMap and BTreeMap iterators.
 struct KVPair<K, V>
+    require K: typename
+    require V: typename
     key:   K
     value: V

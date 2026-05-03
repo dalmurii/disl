@@ -82,16 +82,16 @@ routine LazySegmentTree<T, L, Ops>::aligned_to_cover(#self: Ptr<LazySegmentTree<
     block entry():
         %mask: I64 = #self.cover_mask(%height)
         %low_bits: I64 = %node & %mask
-        %aligned: bool = %low_bits == 0
+        %aligned: Bool = %low_bits == 0
         return %aligned
 
 routine LazySegmentTree<T, L, Ops>::new(%length: I64, #alloc: Ptr<Allocator>) -> LazySegmentTree<T, L, Ops>
     block entry():
-        %invalid: bool = sle(%length, 0)
+        %invalid: Bool = sle(%length, 0)
         branch %invalid ? trap() : choose_size(1, 0)
 
     block choose_size(%size: I64, %height: I64):
-        %done: bool = sge(%size, %length)
+        %done: Bool = sge(%size, %length)
         branch %done ? allocate(%size, %height) : grow(%size, %height)
 
     block grow(%size: I64, %height: I64):
@@ -103,16 +103,16 @@ routine LazySegmentTree<T, L, Ops>::new(%length: I64, #alloc: Ptr<Allocator>) ->
         %data_count: I64 = shl(%size, 1)
         #data: Ptr<T> = alloc<T>(#alloc, %data_count)
         #lazy: Ptr<L> = alloc<L>(#alloc, %size)
-        %data_failed: bool = #data == null
-        %lazy_failed: bool = #lazy == null
-        %failed: bool = %data_failed | %lazy_failed
+        %data_failed: Bool = #data == null
+        %lazy_failed: Bool = #lazy == null
+        %failed: Bool = %data_failed | %lazy_failed
         branch %failed ? trap() : init_data(#data, #lazy, %length, %size, %height, %data_count)
 
     block init_data(#data: Ptr<T>, #lazy: Ptr<L>, %length: I64, %size: I64, %height: I64, %data_count: I64):
         jump data_loop(0, #data, #lazy, %length, %size, %height, %data_count)
 
     block data_loop(%i: I64, #data: Ptr<T>, #lazy: Ptr<L>, %length: I64, %size: I64, %height: I64, %data_count: I64):
-        %done: bool = sge(%i, %data_count)
+        %done: Bool = sge(%i, %data_count)
         branch %done ? init_lazy(0, #data, #lazy, %length, %size, %height) : data_one(%i, #data, #lazy, %length, %size, %height, %data_count)
 
     block data_one(%i: I64, #data: Ptr<T>, #lazy: Ptr<L>, %length: I64, %size: I64, %height: I64, %data_count: I64):
@@ -121,7 +121,7 @@ routine LazySegmentTree<T, L, Ops>::new(%length: I64, #alloc: Ptr<Allocator>) ->
         jump data_loop(%i + 1, #data, #lazy, %length, %size, %height, %data_count)
 
     block init_lazy(%i: I64, #data: Ptr<T>, #lazy: Ptr<L>, %length: I64, %size: I64, %height: I64):
-        %done: bool = sge(%i, %size)
+        %done: Bool = sge(%i, %size)
         branch %done ? finish(#data, #lazy, %length, %size, %height) : lazy_one(%i, #data, #lazy, %length, %size, %height)
 
     block lazy_one(%i: I64, #data: Ptr<T>, #lazy: Ptr<L>, %length: I64, %size: I64, %height: I64):
@@ -150,7 +150,7 @@ routine LazySegmentTree<T, L, Ops>::build_from(#self: Ptr<LazySegmentTree<T, L, 
 
     block copy_loop(%i: I64):
         %length: I64 := #self.length
-        %done: bool = sge(%i, %length)
+        %done: Bool = sge(%i, %length)
         branch %done ? reset_lazy(0) : copy_one(%i)
 
     block copy_one(%i: I64):
@@ -162,7 +162,7 @@ routine LazySegmentTree<T, L, Ops>::build_from(#self: Ptr<LazySegmentTree<T, L, 
 
     block reset_lazy(%i: I64):
         %size: I64 := #self.size
-        %done: bool = sge(%i, %size)
+        %done: Bool = sge(%i, %size)
         branch %done ? pull_all() : reset_one(%i)
 
     block reset_one(%i: I64):
@@ -176,7 +176,7 @@ routine LazySegmentTree<T, L, Ops>::build_from(#self: Ptr<LazySegmentTree<T, L, 
         jump pull_loop(%size - 1)
 
     block pull_loop(%node: I64):
-        %done: bool = sle(%node, 0)
+        %done: Bool = sle(%node, 0)
         branch %done ? return : pull_one(%node)
 
     block pull_one(%node: I64):
@@ -201,7 +201,7 @@ routine LazySegmentTree<T, L, Ops>::apply_node(#self: Ptr<LazySegmentTree<T, L, 
         %next_value: T = Ops::apply(%value, %tag, %width)
         #data[%node] = %next_value
         %size: I64 := #self.size
-        %internal: bool = slt(%node, %size)
+        %internal: Bool = slt(%node, %size)
         branch %internal ? store_lazy(%node, %tag, %width) : return
 
     block store_lazy(%node: I64, %tag: L, %width: I64):
@@ -215,7 +215,7 @@ routine LazySegmentTree<T, L, Ops>::push_node(#self: Ptr<LazySegmentTree<T, L, O
     block entry():
         #lazy: Ptr<L> := #self.lazy
         %tag: L := #lazy[%node]
-        %clean: bool = Ops::is_identity_lazy(%tag)
+        %clean: Bool = Ops::is_identity_lazy(%tag)
         branch %clean ? return : spread(%node, %tag, %width)
 
     block spread(%node: I64, %tag: L, %width: I64):
@@ -235,7 +235,7 @@ routine LazySegmentTree<T, L, Ops>::push_path(#self: Ptr<LazySegmentTree<T, L, O
         jump loop(%height)
 
     block loop(%level: I64):
-        %done: bool = sle(%level, 0)
+        %done: Bool = sle(%level, 0)
         branch %done ? return : push_one(%level)
 
     block push_one(%level: I64):
@@ -250,7 +250,7 @@ routine LazySegmentTree<T, L, Ops>::rebuild_path(#self: Ptr<LazySegmentTree<T, L
         jump loop(%parent)
 
     block loop(%node: I64):
-        %done: bool = sle(%node, 0)
+        %done: Bool = sle(%node, 0)
         branch %done ? return : pull(%node)
 
     block pull(%node: I64):
@@ -264,11 +264,11 @@ routine LazySegmentTree<T, L, Ops>::rebuild_left_boundary(#self: Ptr<LazySegment
 
     block loop(%level: I64):
         %height: I64 := #self.height
-        %done: bool = sgt(%level, %height)
+        %done: Bool = sgt(%level, %height)
         branch %done ? return : check(%level)
 
     block check(%level: I64):
-        %aligned: bool = #self.aligned_to_cover(%node, %level)
+        %aligned: Bool = #self.aligned_to_cover(%node, %level)
         branch %aligned ? next(%level) : pull(%level)
 
     block pull(%level: I64):
@@ -285,11 +285,11 @@ routine LazySegmentTree<T, L, Ops>::rebuild_right_boundary(#self: Ptr<LazySegmen
 
     block loop(%level: I64):
         %height: I64 := #self.height
-        %done: bool = sgt(%level, %height)
+        %done: Bool = sgt(%level, %height)
         branch %done ? return : check(%level)
 
     block check(%level: I64):
-        %aligned: bool = #self.aligned_to_cover(%exclusive, %level)
+        %aligned: Bool = #self.aligned_to_cover(%exclusive, %level)
         branch %aligned ? next(%level) : pull(%level)
 
     block pull(%level: I64):
@@ -304,9 +304,9 @@ routine LazySegmentTree<T, L, Ops>::rebuild_right_boundary(#self: Ptr<LazySegmen
 routine LazySegmentTree<T, L, Ops>::set(#self: Ptr<LazySegmentTree<T, L, Ops>>, %index: I64, %value: T) -> Void
     block entry():
         %length: I64 := #self.length
-        %not_negative: bool = sge(%index, 0)
-        %before_end: bool = slt(%index, %length)
-        %in_bounds: bool = %not_negative & %before_end
+        %not_negative: Bool = sge(%index, 0)
+        %before_end: Bool = slt(%index, %length)
+        %in_bounds: Bool = %not_negative & %before_end
         branch %in_bounds ? update(%index, %value) : trap()
 
     block update(%index: I64, %value: T):
@@ -320,9 +320,9 @@ routine LazySegmentTree<T, L, Ops>::set(#self: Ptr<LazySegmentTree<T, L, Ops>>, 
 routine LazySegmentTree<T, L, Ops>::get(#self: Ptr<LazySegmentTree<T, L, Ops>>, %index: I64) -> T
     block entry():
         %length: I64 := #self.length
-        %not_negative: bool = sge(%index, 0)
-        %before_end: bool = slt(%index, %length)
-        %in_bounds: bool = %not_negative & %before_end
+        %not_negative: Bool = sge(%index, 0)
+        %before_end: Bool = slt(%index, %length)
+        %in_bounds: Bool = %not_negative & %before_end
         branch %in_bounds ? load(%index) : trap()
 
     block load(%index: I64):
@@ -334,16 +334,16 @@ routine LazySegmentTree<T, L, Ops>::get(#self: Ptr<LazySegmentTree<T, L, Ops>>, 
 
 routine LazySegmentTree<T, L, Ops>::range_apply(#self: Ptr<LazySegmentTree<T, L, Ops>>, %left: I64, %right: I64, %tag: L) -> Void
     block entry():
-        %valid_left: bool = sge(%left, 0)
-        %valid_order: bool = sle(%left, %right)
+        %valid_left: Bool = sge(%left, 0)
+        %valid_order: Bool = sle(%left, %right)
         %length: I64 := #self.length
-        %valid_right: bool = sle(%right, %length)
-        %valid_a: bool = %valid_left & %valid_order
-        %valid: bool = %valid_a & %valid_right
+        %valid_right: Bool = sle(%right, %length)
+        %valid_a: Bool = %valid_left & %valid_order
+        %valid: Bool = %valid_a & %valid_right
         branch %valid ? maybe_empty(%left, %right, %tag) : trap()
 
     block maybe_empty(%left: I64, %right: I64, %tag: L):
-        %empty: bool = %left == %right
+        %empty: Bool = %left == %right
         branch %empty ? return : prepare(%left, %right, %tag)
 
     block prepare(%left: I64, %right: I64, %tag: L):
@@ -355,11 +355,11 @@ routine LazySegmentTree<T, L, Ops>::range_apply(#self: Ptr<LazySegmentTree<T, L,
         jump loop(%l0, %rex0, 1, %tag, %l0, %rex0)
 
     block loop(%l: I64, %r: I64, %width: I64, %tag: L, %l0: I64, %rex0: I64):
-        %done: bool = sge(%l, %r)
+        %done: Bool = sge(%l, %r)
         branch %done ? rebuild(%l0, %rex0) : apply_left(%l, %r, %width, %tag, %l0, %rex0)
 
     block apply_left(%l: I64, %r: I64, %width: I64, %tag: L, %l0: I64, %rex0: I64):
-        %take_left: bool = #self.is_right_child(%l)
+        %take_left: Bool = #self.is_right_child(%l)
         branch %take_left ? take_left(%l, %r, %width, %tag, %l0, %rex0) : apply_right(%l, %r, %width, %tag, %l0, %rex0)
 
     block take_left(%l: I64, %r: I64, %width: I64, %tag: L, %l0: I64, %rex0: I64):
@@ -367,7 +367,7 @@ routine LazySegmentTree<T, L, Ops>::range_apply(#self: Ptr<LazySegmentTree<T, L,
         jump apply_right(%l + 1, %r, %width, %tag, %l0, %rex0)
 
     block apply_right(%l: I64, %r: I64, %width: I64, %tag: L, %l0: I64, %rex0: I64):
-        %take_right: bool = #self.is_right_child(%r)
+        %take_right: Bool = #self.is_right_child(%r)
         branch %take_right ? take_right(%l, %r, %width, %tag, %l0, %rex0) : climb(%l, %r, %width, %tag, %l0, %rex0)
 
     block take_right(%l: I64, %r: I64, %width: I64, %tag: L, %l0: I64, %rex0: I64):
@@ -388,16 +388,16 @@ routine LazySegmentTree<T, L, Ops>::range_apply(#self: Ptr<LazySegmentTree<T, L,
 
 routine LazySegmentTree<T, L, Ops>::range_query(#self: Ptr<LazySegmentTree<T, L, Ops>>, %left: I64, %right: I64) -> T
     block entry():
-        %valid_left: bool = sge(%left, 0)
-        %valid_order: bool = sle(%left, %right)
+        %valid_left: Bool = sge(%left, 0)
+        %valid_order: Bool = sle(%left, %right)
         %length: I64 := #self.length
-        %valid_right: bool = sle(%right, %length)
-        %valid_a: bool = %valid_left & %valid_order
-        %valid: bool = %valid_a & %valid_right
+        %valid_right: Bool = sle(%right, %length)
+        %valid_a: Bool = %valid_left & %valid_order
+        %valid: Bool = %valid_a & %valid_right
         branch %valid ? maybe_empty(%left, %right) : trap()
 
     block maybe_empty(%left: I64, %right: I64):
-        %empty: bool = %left == %right
+        %empty: Bool = %left == %right
         branch %empty ? empty() : prepare(%left, %right)
 
     block empty():
@@ -414,11 +414,11 @@ routine LazySegmentTree<T, L, Ops>::range_query(#self: Ptr<LazySegmentTree<T, L,
         jump loop(%l, %r + 1, %left_acc, %right_acc)
 
     block loop(%l: I64, %r: I64, %left_acc: T, %right_acc: T):
-        %done: bool = sge(%l, %r)
+        %done: Bool = sge(%l, %r)
         branch %done ? finish(%left_acc, %right_acc) : take_left(%l, %r, %left_acc, %right_acc)
 
     block take_left(%l: I64, %r: I64, %left_acc: T, %right_acc: T):
-        %use_left: bool = #self.is_right_child(%l)
+        %use_left: Bool = #self.is_right_child(%l)
         branch %use_left ? use_left(%l, %r, %left_acc, %right_acc) : take_right(%l, %r, %left_acc, %right_acc)
 
     block use_left(%l: I64, %r: I64, %left_acc: T, %right_acc: T):
@@ -428,7 +428,7 @@ routine LazySegmentTree<T, L, Ops>::range_query(#self: Ptr<LazySegmentTree<T, L,
         jump take_right(%l + 1, %r, %next_left, %right_acc)
 
     block take_right(%l: I64, %r: I64, %left_acc: T, %right_acc: T):
-        %use_right: bool = #self.is_right_child(%r)
+        %use_right: Bool = #self.is_right_child(%r)
         branch %use_right ? use_right(%l, %r, %left_acc, %right_acc) : climb(%l, %r, %left_acc, %right_acc)
 
     block use_right(%l: I64, %r: I64, %left_acc: T, %right_acc: T):
@@ -451,7 +451,7 @@ routine LazySegmentTree<T, L, Ops>::free(#self: Ptr<LazySegmentTree<T, L, Ops>>,
     block entry():
         #data: Ptr<T> := #self.data
         #lazy: Ptr<L> := #self.lazy
-        %has_data: bool = #data != null
+        %has_data: Bool = #data != null
         branch %has_data ? free_data(#data, #lazy) : free_lazy(#lazy)
 
     block free_data(#data: Ptr<T>, #lazy: Ptr<L>):
@@ -459,7 +459,7 @@ routine LazySegmentTree<T, L, Ops>::free(#self: Ptr<LazySegmentTree<T, L, Ops>>,
         jump free_lazy(#lazy)
 
     block free_lazy(#lazy: Ptr<L>):
-        %has_lazy: bool = #lazy != null
+        %has_lazy: Bool = #lazy != null
         branch %has_lazy ? release_lazy(#lazy) : reset()
 
     block release_lazy(#lazy: Ptr<L>):

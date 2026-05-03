@@ -1,4 +1,4 @@
-; Disl stdlib: prelude
+﻿; Disl stdlib: prelude
 ;
 ; Compiler-intrinsic operations auto-imported into every translation unit.
 ; These map directly to LLVM IR instructions and have no runtime cost beyond
@@ -18,12 +18,16 @@
 
 @[external("llvm"), symbol("icmp slt")]
 routine slt<T>(%a: T, %b: T) -> Bool
+    require T: typename
 @[external("llvm"), symbol("icmp sgt")]
 routine sgt<T>(%a: T, %b: T) -> Bool
+    require T: typename
 @[external("llvm"), symbol("icmp sle")]
 routine sle<T>(%a: T, %b: T) -> Bool
+    require T: typename
 @[external("llvm"), symbol("icmp sge")]
 routine sge<T>(%a: T, %b: T) -> Bool
+    require T: typename
 
 ; ============================================================
 ; Integer comparisons (unsigned interpretation of same bits)
@@ -31,12 +35,16 @@ routine sge<T>(%a: T, %b: T) -> Bool
 
 @[external("llvm"), symbol("icmp ult")]
 routine ult<T>(%a: T, %b: T) -> Bool
+    require T: typename
 @[external("llvm"), symbol("icmp ugt")]
 routine ugt<T>(%a: T, %b: T) -> Bool
+    require T: typename
 @[external("llvm"), symbol("icmp ule")]
 routine ule<T>(%a: T, %b: T) -> Bool
+    require T: typename
 @[external("llvm"), symbol("icmp uge")]
 routine uge<T>(%a: T, %b: T) -> Bool
+    require T: typename
 
 ; ============================================================
 ; Division and remainder
@@ -44,12 +52,16 @@ routine uge<T>(%a: T, %b: T) -> Bool
 
 @[external("llvm"), symbol("sdiv")]
 routine sdiv<T>(%a: T, %b: T) -> T
+    require T: typename
 @[external("llvm"), symbol("srem")]
 routine srem<T>(%a: T, %b: T) -> T
+    require T: typename
 @[external("llvm"), symbol("udiv")]
 routine udiv<T>(%a: T, %b: T) -> T
+    require T: typename
 @[external("llvm"), symbol("urem")]
 routine urem<T>(%a: T, %b: T) -> T
+    require T: typename
 
 ; ============================================================
 ; Bit shifts
@@ -57,10 +69,13 @@ routine urem<T>(%a: T, %b: T) -> T
 
 @[external("llvm"), symbol("shl")]
 routine shl<T>(%val: T, %amt: T) -> T
+    require T: typename
 @[external("llvm"), symbol("ashr")]
 routine ashr<T>(%val: T, %amt: T) -> T  ; arithmetic (sign-extend)
+    require T: typename
 @[external("llvm"), symbol("lshr")]
 routine lshr<T>(%val: T, %amt: T) -> T  ; logical (zero-fill)
+    require T: typename
 
 ; ============================================================
 ; Floating-point arithmetic
@@ -68,12 +83,16 @@ routine lshr<T>(%val: T, %amt: T) -> T  ; logical (zero-fill)
 
 @[external("llvm"), symbol("fadd")]
 routine fadd<T>(%a: T, %b: T) -> T
+    require T: typename
 @[external("llvm"), symbol("fsub")]
 routine fsub<T>(%a: T, %b: T) -> T
+    require T: typename
 @[external("llvm"), symbol("fmul")]
 routine fmul<T>(%a: T, %b: T) -> T
+    require T: typename
 @[external("llvm"), symbol("fdiv")]
 routine fdiv<T>(%a: T, %b: T) -> T
+    require T: typename
 
 ; ============================================================
 ; Floating-point comparisons (ordered — false if either NaN)
@@ -81,16 +100,22 @@ routine fdiv<T>(%a: T, %b: T) -> T
 
 @[external("llvm"), symbol("fcmp oeq")]
 routine feq<T>(%a: T, %b: T) -> Bool
+    require T: typename
 @[external("llvm"), symbol("fcmp one")]
 routine fne<T>(%a: T, %b: T) -> Bool
+    require T: typename
 @[external("llvm"), symbol("fcmp olt")]
 routine flt<T>(%a: T, %b: T) -> Bool
+    require T: typename
 @[external("llvm"), symbol("fcmp ogt")]
 routine fgt<T>(%a: T, %b: T) -> Bool
+    require T: typename
 @[external("llvm"), symbol("fcmp ole")]
 routine fle<T>(%a: T, %b: T) -> Bool
+    require T: typename
 @[external("llvm"), symbol("fcmp oge")]
 routine fge<T>(%a: T, %b: T) -> Bool
+    require T: typename
 
 ; ============================================================
 ; Type conversions
@@ -98,20 +123,36 @@ routine fge<T>(%a: T, %b: T) -> Bool
 
 @[external("llvm"), symbol("sext")]
 routine sext<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
 @[external("llvm"), symbol("zext")]
 routine zext<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
 @[external("llvm"), symbol("trunc")]
 routine trunc<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
 @[external("llvm"), symbol("bitcast")]
 routine bitcast<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
 @[external("llvm"), symbol("fptosi")]
 routine fptosi<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
 @[external("llvm"), symbol("sitofp")]
 routine sitofp<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
 @[external("llvm"), symbol("fpext")]
 routine fpext<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
 @[external("llvm"), symbol("fptrunc")]
 routine fptrunc<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
 
 ; ============================================================
 ; Bit manipulation (LLVM intrinsics)
@@ -119,12 +160,16 @@ routine fptrunc<From, To>(%val: From) -> To
 
 @[external("llvm"), symbol("llvm.ctpop")]
 routine popcount<T>(%val: T) -> T
+    require T: typename
 @[external("llvm"), symbol("llvm.ctlz")]
 routine clz<T>(%val: T, %is_zero_undef: Bool) -> T
+    require T: typename
 @[external("llvm"), symbol("llvm.cttz")]
 routine ctz<T>(%val: T, %is_zero_undef: Bool) -> T
+    require T: typename
 @[external("llvm"), symbol("llvm.bswap")]
 routine bswap<T>(%val: T) -> T
+    require T: typename
 
 ; ============================================================
 ; Misc
@@ -132,8 +177,10 @@ routine bswap<T>(%val: T) -> T
 
 @[external("llvm"), symbol("sizeof")]
 routine sizeof<T>() -> I64
+    require T: typename
 @[external("llvm"), symbol("alignof")]
 routine alignof<T>() -> I64
+    require T: typename
 
 @[external("llvm"), symbol("llvm.trap"), noreturn]
 routine trap() -> Void

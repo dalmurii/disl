@@ -13,10 +13,10 @@
 ; owns the data is responsible for knowing which view is currently active.
 
 @[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_int(%fmt: ptr<char>, %x: i64) -> i32
+routine c_printf_int(%fmt: ptr<I8>, %x: I64) -> I32
 
 @[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_float(%fmt: ptr<char>, %x: f64) -> i32
+routine c_printf_float(%fmt: ptr<I8>, %x: F64) -> I32
 
 ; ============================================================
 ; A generic two-way overlay. Stdlib could ship UnionTwo / UnionThree, or
@@ -25,41 +25,41 @@ routine c_printf_float(%fmt: ptr<char>, %x: f64) -> i32
 
 struct UnionTwo<A, B>
     @aligned(max(alignof<A>(), alignof<B>()))
-    storage: array<i8, max(sizeof<A>(), sizeof<B>())>
+    storage: array<I8, max(sizeof<A>(), sizeof<B>())>
 
 ; ============================================================
 ; Section 1: Manual tagged sum type
 ;
-; Result<i64, i32> — either an Ok value or an error code. The tag lives
+; Result<I64, I32> — either an Ok value or an error code. The tag lives
 ; in the wrapping struct; the overlay carries the payload bytes.
 ; ============================================================
 
-enum ResultTag: i32
+enum ResultTag: I32
     Ok = 0
     Err = 1
 
 struct Result
     tag: ResultTag
-    payload: UnionTwo<i64, i32>
+    payload: UnionTwo<I64, I32>
 
-routine Result::ok(%value: i64) -> Result
+routine Result::ok(%value: I64) -> Result
     block entry():
-        #payload_buf: ptr<UnionTwo<i64, i32>> = alloca<UnionTwo<i64, i32>>
-        #ok_view: ptr<i64> = bitcast<ptr<UnionTwo<i64, i32>>, ptr<i64>>(#payload_buf)
+        #payload_buf: ptr<UnionTwo<I64, I32>> = alloca<UnionTwo<I64, I32>>
+        #ok_view: ptr<I64> = bitcast<ptr<UnionTwo<I64, I32>>, ptr<I64>>(#payload_buf)
         #ok_view = %value
-        %payload: UnionTwo<i64, i32> := #payload_buf
+        %payload: UnionTwo<I64, I32> := #payload_buf
         %r: Result = Result {
             tag: ResultTag::Ok,
             payload: %payload
         }
         return %r
 
-routine Result::err(%code: i32) -> Result
+routine Result::err(%code: I32) -> Result
     block entry():
-        #payload_buf: ptr<UnionTwo<i64, i32>> = alloca<UnionTwo<i64, i32>>
-        #err_view: ptr<i32> = bitcast<ptr<UnionTwo<i64, i32>>, ptr<i32>>(#payload_buf)
+        #payload_buf: ptr<UnionTwo<I64, I32>> = alloca<UnionTwo<I64, I32>>
+        #err_view: ptr<I32> = bitcast<ptr<UnionTwo<I64, I32>>, ptr<I32>>(#payload_buf)
         #err_view = %code
-        %payload: UnionTwo<i64, i32> := #payload_buf
+        %payload: UnionTwo<I64, I32> := #payload_buf
         %r: Result = Result {
             tag: ResultTag::Err,
             payload: %payload
@@ -76,17 +76,17 @@ routine Result::print(#self: ptr<Result>) -> void
             _ -> unreachable
 
     block print_ok():
-        #payload: ptr<UnionTwo<i64, i32>> = #self.payload
-        #ok_view: ptr<i64> = bitcast<ptr<UnionTwo<i64, i32>>, ptr<i64>>(#payload)
-        %v: i64 := #ok_view
+        #payload: ptr<UnionTwo<I64, I32>> = #self.payload
+        #ok_view: ptr<I64> = bitcast<ptr<UnionTwo<I64, I32>>, ptr<I64>>(#payload)
+        %v: I64 := #ok_view
         c_printf_int("Ok(%lld)\n", %v)
         return
 
     block print_err():
-        #payload: ptr<UnionTwo<i64, i32>> = #self.payload
-        #err_view: ptr<i32> = bitcast<ptr<UnionTwo<i64, i32>>, ptr<i32>>(#payload)
-        %code: i32 := #err_view
-        %code64: i64 = sext<i32, i64>(%code)
+        #payload: ptr<UnionTwo<I64, I32>> = #self.payload
+        #err_view: ptr<I32> = bitcast<ptr<UnionTwo<I64, I32>>, ptr<I32>>(#payload)
+        %code: I32 := #err_view
+        %code64: I64 = sext<I32, I64>(%code)
         c_printf_int("Err(%lld)\n", %code64)
         return
 
@@ -99,42 +99,42 @@ routine Result::print(#self: ptr<Result>) -> void
 ; ============================================================
 
 struct Number
-    @aligned(max(alignof<i64>(), alignof<f64>()))
-    storage: array<i8, max(sizeof<i64>(), sizeof<f64>())>
+    @aligned(max(alignof<I64>(), alignof<F64>()))
+    storage: array<i8, max(sizeof<I64>(), sizeof<F64>())>
 
-routine Number::from_int(%n: i64) -> Number
+routine Number::from_int(%n: I64) -> Number
     block entry():
         #buf: ptr<Number> = alloca<Number>
-        #int_view: ptr<i64> = bitcast<ptr<Number>, ptr<i64>>(#buf)
+        #int_view: ptr<I64> = bitcast<ptr<Number>, ptr<I64>>(#buf)
         #int_view = %n
         %u: Number := #buf
         return %u
 
-routine Number::from_float(%f: f64) -> Number
+routine Number::from_float(%f: F64) -> Number
     block entry():
         #buf: ptr<Number> = alloca<Number>
-        #float_view: ptr<f64> = bitcast<ptr<Number>, ptr<f64>>(#buf)
+        #float_view: ptr<F64> = bitcast<ptr<Number>, ptr<F64>>(#buf)
         #float_view = %f
         %u: Number := #buf
         return %u
 
-routine Number::as_int(#self: ptr<Number>) -> i64
+routine Number::as_int(#self: ptr<Number>) -> I64
     block entry():
-        #view: ptr<i64> = bitcast<ptr<Number>, ptr<i64>>(#self)
-        %n: i64 := #view
+        #view: ptr<I64> = bitcast<ptr<Number>, ptr<I64>>(#self)
+        %n: I64 := #view
         return %n
 
-routine Number::as_float(#self: ptr<Number>) -> f64
+routine Number::as_float(#self: ptr<Number>) -> F64
     block entry():
-        #view: ptr<f64> = bitcast<ptr<Number>, ptr<f64>>(#self)
-        %f: f64 := #view
+        #view: ptr<F64> = bitcast<ptr<Number>, ptr<F64>>(#self)
+        %f: F64 := #view
         return %f
 
 ; ============================================================
 ; main
 ; ============================================================
 
-routine main() -> i32
+routine main() -> I32
     block entry():
         ; --- tagged result ---
         %ok: Result = Result::ok(42)
@@ -152,8 +152,8 @@ routine main() -> i32
         #int_ptr: ptr<Number> = alloca<Number>([%as_int])
         #flt_ptr: ptr<Number> = alloca<Number>([%as_float])
 
-        %i: i64 = #int_ptr.as_int()
-        %f: f64 = #flt_ptr.as_float()
+        %i: I64 = #int_ptr.as_int()
+        %f: F64 = #flt_ptr.as_float()
         c_printf_int("Number int view: %lld\n", %i)
         c_printf_float("Number float view: %f\n", %f)
 

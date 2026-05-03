@@ -1,4 +1,4 @@
-; Disl stdlib collection: ArrayIter<T, N>
+﻿; Disl stdlib collection: ArrayIter<T, N>
 ;
 ; Forward iterator over a fixed-size Array<T, N> held behind a pointer.
 ; The length N is computed once at construction via sizeof division and stored
@@ -7,11 +7,15 @@
 ; Satisfies concept Iterator<T, ArrayIter<T, N>>.
 
 struct ArrayIter<T, N>
+    require T: typename
+    require N: I64
     data:   Ptr<T>   ; bitcast of the original Ptr<Array<T, N>>
     index:  I64
     length: I64      ; = N, resolved at monomorphisation
 
 routine ArrayIter<T, N>.new(#arr: Ptr<Array<T, N>>) -> ArrayIter<T, N>
+    require T: typename
+    require N: I64
     block entry():
         #data:  Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#arr)
         %n:     I64    = sdiv(sizeof<Array<T, N>>(), sizeof<T>())
@@ -19,6 +23,8 @@ routine ArrayIter<T, N>.new(#arr: Ptr<Array<T, N>>) -> ArrayIter<T, N>
         return(%iter)
 
 routine ArrayIter<T, N>.next(#self: Ptr<ArrayIter<T, N>>) -> Option<T>
+    require T: typename
+    require N: I64
     block entry():
         %index:  I64  := #self.index
         %length: I64  := #self.length

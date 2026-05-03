@@ -1,9 +1,10 @@
-; Disl stdlib collection: HashSet<T>
+﻿; Disl stdlib collection: HashSet<T>
 ;
 ; Open-addressed hash set with struct-of-arrays layout. Probing walks compact
 ; states/hashes arrays before touching keys. The allocator is stored in the struct.
 
 struct HashSet<T>
+    require T: typename
     keys: Ptr<T>
     hashes: Ptr<I64>
     states: Ptr<I8>
@@ -19,6 +20,7 @@ routine HashSet<T>.new(
     %equals_fn: Callable<@callconv("c"), (T, T), Bool>,
     #alloc: Ptr<Allocator>
 ) -> HashSet<T>
+    require T: typename
     block entry():
         %set: HashSet<T> = HashSet<T> {
             keys: null,
@@ -34,11 +36,13 @@ routine HashSet<T>.new(
         return(%set)
 
 routine HashSet<T>.length(#self: Ptr<HashSet<T>>) -> I64
+    require T: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
 routine HashSet<T>.slot(#self: Ptr<HashSet<T>>, %key: T, %hash: I64) -> I64
+    require T: typename
     block entry():
         %capacity: I64 := #self.capacity
         %mask: I64 = %capacity - 1
@@ -83,6 +87,7 @@ routine HashSet<T>.slot(#self: Ptr<HashSet<T>>, %key: T, %hash: I64) -> I64
         jump probe(%next, %first_tombstone)
 
 routine HashSet<T>.find(#self: Ptr<HashSet<T>>, %key: T) -> I64
+    require T: typename
     block entry():
         %capacity: I64 := #self.capacity
         %empty: Bool = %capacity == 0
@@ -97,12 +102,14 @@ routine HashSet<T>.find(#self: Ptr<HashSet<T>>, %key: T) -> I64
         branch %found ? return(%slot): return(-1)
 
 routine HashSet<T>.contains(#self: Ptr<HashSet<T>>, %key: T) -> Bool
+    require T: typename
     block entry():
         %slot: I64 = #self.find(%key)
         %found: Bool = sge(%slot, 0)
         return(%found)
 
 routine HashSet<T>.rehash(#self: Ptr<HashSet<T>>, %new_capacity: I64) -> Void
+    require T: typename
     block entry():
         #alloc: Ptr<Allocator> := #self.alloc
         #old_keys: Ptr<T> := #self.keys
@@ -123,11 +130,11 @@ routine HashSet<T>.rehash(#self: Ptr<HashSet<T>>, %new_capacity: I64) -> Void
         %done: Bool = sge(%i, %new_capacity)
         branch %done ? install(#old_keys, #old_hashes, #old_states, %old_capacity, #new_keys, #new_hashes, #new_states, %new_capacity, #alloc) : clear_one(%i, #old_keys, #old_hashes, #old_states, %old_capacity, #new_keys, #new_hashes, #new_states, %new_capacity, #alloc)
 
-    block clear_one(%i: I64, #old_keys: Ptr<T>, #old_hashes: Ptr<I64>, #old_states: Ptr<I8>, %old_capacity: i64, #new_keys: Ptr<T>, #new_hashes: Ptr<i64>, #new_states: Ptr<I8>, %new_capacity: i64, #alloc: Ptr<Allocator>):
+    block clear_one(%i: I64, #old_keys: Ptr<T>, #old_hashes: Ptr<I64>, #old_states: Ptr<I8>, %old_capacity: I64, #new_keys: Ptr<T>, #new_hashes: Ptr<I64>, #new_states: Ptr<I8>, %new_capacity: I64, #alloc: Ptr<Allocator>):
         #new_states[%i] = 0
         jump clear_loop(%i + 1, #old_keys, #old_hashes, #old_states, %old_capacity, #new_keys, #new_hashes, #new_states, %new_capacity, #alloc)
 
-    block install(#old_keys: Ptr<T>, #old_hashes: Ptr<i64>, #old_states: Ptr<I8>, %old_capacity: i64, #new_keys: Ptr<T>, #new_hashes: Ptr<i64>, #new_states: Ptr<I8>, %new_capacity: i64, #alloc: Ptr<Allocator>):
+    block install(#old_keys: Ptr<T>, #old_hashes: Ptr<I64>, #old_states: Ptr<I8>, %old_capacity: I64, #new_keys: Ptr<T>, #new_hashes: Ptr<I64>, #new_states: Ptr<I8>, %new_capacity: I64, #alloc: Ptr<Allocator>):
         #self.keys = #new_keys
         #self.hashes = #new_hashes
         #self.states = #new_states
@@ -136,33 +143,34 @@ routine HashSet<T>.rehash(#self: Ptr<HashSet<T>>, %new_capacity: I64) -> Void
         #self.capacity = %new_capacity
         jump move_loop(0, #old_keys, #old_hashes, #old_states, %old_capacity, #alloc)
 
-    block move_loop(%i: i64, #old_keys: Ptr<T>, #old_hashes: Ptr<i64>, #old_states: Ptr<I8>, %old_capacity: i64, #alloc: Ptr<Allocator>):
+    block move_loop(%i: I64, #old_keys: Ptr<T>, #old_hashes: Ptr<I64>, #old_states: Ptr<I8>, %old_capacity: I64, #alloc: Ptr<Allocator>):
         %done: Bool = sge(%i, %old_capacity)
         branch %done ? release_old(#old_keys, #old_hashes, #old_states, #alloc) : move_one(%i, #old_keys, #old_hashes, #old_states, %old_capacity, #alloc)
 
-    block move_one(%i: i64, #old_keys: Ptr<T>, #old_hashes: Ptr<i64>, #old_states: Ptr<I8>, %old_capacity: i64, #alloc: Ptr<Allocator>):
+    block move_one(%i: I64, #old_keys: Ptr<T>, #old_hashes: Ptr<I64>, #old_states: Ptr<I8>, %old_capacity: I64, #alloc: Ptr<Allocator>):
         %state: I8 := #old_states[%i]
         %occupied: Bool = %state == 1
         branch %occupied ? insert_old(%i, #old_keys, #old_hashes, #old_states, %old_capacity, #alloc) : move_loop(%i + 1, #old_keys, #old_hashes, #old_states, %old_capacity, #alloc)
 
-    block insert_old(%i: i64, #old_keys: Ptr<T>, #old_hashes: Ptr<i64>, #old_states: Ptr<I8>, %old_capacity: i64, #alloc: Ptr<Allocator>):
+    block insert_old(%i: I64, #old_keys: Ptr<T>, #old_hashes: Ptr<I64>, #old_states: Ptr<I8>, %old_capacity: I64, #alloc: Ptr<Allocator>):
         %key: T := #old_keys[%i]
         #self.add_direct(%key)
         jump move_loop(%i + 1, #old_keys, #old_hashes, #old_states, %old_capacity, #alloc)
 
-    block release_old(#old_keys: Ptr<T>, #old_hashes: Ptr<i64>, #old_states: Ptr<I8>, #alloc: Ptr<Allocator>):
+    block release_old(#old_keys: Ptr<T>, #old_hashes: Ptr<I64>, #old_states: Ptr<I8>, #alloc: Ptr<Allocator>):
         %has_old: Bool = #old_states != null
         branch %has_old ? free_old(#old_keys, #old_hashes, #old_states, #alloc) : return()
 
-    block free_old(#old_keys: Ptr<T>, #old_hashes: Ptr<i64>, #old_states: Ptr<I8>, #alloc: Ptr<Allocator>):
+    block free_old(#old_keys: Ptr<T>, #old_hashes: Ptr<I64>, #old_states: Ptr<I8>, #alloc: Ptr<Allocator>):
         free<T>(#alloc, #old_keys)
-        free<i64>(#alloc, #old_hashes)
+        free<I64>(#alloc, #old_hashes)
         free<i8>(#alloc, #old_states)
         return()
 
 routine HashSet<T>.ensure(#self: Ptr<HashSet<T>>) -> Void
+    require T: typename
     block entry():
-        %capacity: i64 := #self.capacity
+        %capacity: I64 := #self.capacity
         %empty: Bool = %capacity == 0
         branch %empty ? first() : check(%capacity)
 
@@ -170,82 +178,86 @@ routine HashSet<T>.ensure(#self: Ptr<HashSet<T>>) -> Void
         #self.rehash(8)
         return()
 
-    block check(%capacity: i64):
-        %length: i64 := #self.length
-        %tombstones: i64 := #self.tombstones
-        %used: i64 = %length + %tombstones
-        %limit: i64 = sdiv(%capacity * 3, 4)
+    block check(%capacity: I64):
+        %length: I64 := #self.length
+        %tombstones: I64 := #self.tombstones
+        %used: I64 = %length + %tombstones
+        %limit: I64 = sdiv(%capacity * 3, 4)
         %full: Bool = sge(%used + 1, %limit)
         branch %full ? grow(%capacity) : return()
 
-    block grow(%capacity: i64):
+    block grow(%capacity: I64):
         #self.rehash(%capacity * 2)
         return()
 
 ; Insert without growing — used internally by rehash after new arrays are in place.
 routine HashSet<T>.add_direct(#self: Ptr<HashSet<T>>, %key: T) -> Bool
+    require T: typename
     block entry():
-        %hash: i64 = #self.hash_fn(%key)
-        %slot: i64 = #self.slot(%key, %hash)
+        %hash: I64 = #self.hash_fn(%key)
+        %slot: I64 = #self.slot(%key, %hash)
         #states: Ptr<i8> := #self.states
         %state: i8 := #states[%slot]
         %exists: Bool = %state == 1
         branch %exists ? return(false): add(%slot, %key, %hash, %state)
 
-    block add(%slot: i64, %key: T, %hash: i64, %state: i8):
-        %was_tombstone: bool = %state == 2
+    block add(%slot: I64, %key: T, %hash: I64, %state: i8):
+        %was_tombstone: Bool = %state == 2
         branch %was_tombstone ? reuse(%slot, %key, %hash) : write(%slot, %key, %hash)
 
-    block reuse(%slot: i64, %key: T, %hash: i64):
-        %tombstones: i64 := #self.tombstones
+    block reuse(%slot: I64, %key: T, %hash: I64):
+        %tombstones: I64 := #self.tombstones
         #self.tombstones = %tombstones - 1
         jump write(%slot, %key, %hash)
 
-    block write(%slot: i64, %key: T, %hash: i64):
+    block write(%slot: I64, %key: T, %hash: I64):
         #keys: Ptr<T> := #self.keys
-        #hashes: Ptr<i64> := #self.hashes
+        #hashes: Ptr<I64> := #self.hashes
         #states: Ptr<i8> := #self.states
         #keys[%slot] = %key
         #hashes[%slot] = %hash
         #states[%slot] = 1
-        %length: i64 := #self.length
+        %length: I64 := #self.length
         #self.length = %length + 1
         return(true)
 
-routine HashSet<T>.add(#self: Ptr<HashSet<T>>, %key: T) -> bool
+routine HashSet<T>.add(#self: Ptr<HashSet<T>>, %key: T) -> Bool
+    require T: typename
     block entry:
         #self.ensure()
-        %added: bool = #self.add_direct(%key)
+        %added: Bool = #self.add_direct(%key)
         return(%added)
 
-routine HashSet<T>.remove(#self: Ptr<HashSet<T>>, %key: T) -> bool
+routine HashSet<T>.remove(#self: Ptr<HashSet<T>>, %key: T) -> Bool
+    require T: typename
     block entry:
-        %slot: i64 = #self.find(%key)
-        %found: bool = sge(%slot, 0)
+        %slot: I64 = #self.find(%key)
+        %found: Bool = sge(%slot, 0)
         branch %found ? remove(%slot) : return(false)
 
-    block remove(%slot: i64):
+    block remove(%slot: I64):
         #states: Ptr<i8> := #self.states
         #states[%slot] = 2
-        %length: i64 := #self.length
-        %tombstones: i64 := #self.tombstones
+        %length: I64 := #self.length
+        %tombstones: I64 := #self.tombstones
         #self.length = %length - 1
         #self.tombstones = %tombstones + 1
         return(true)
 
 routine HashSet<T>.free(#self: Ptr<HashSet<T>>) -> Void
+    require T: typename
     block entry:
         #states: Ptr<i8> := #self.states
-        %empty: bool = #states == null
+        %empty: Bool = #states == null
         branch %empty ? reset() : release()
 
     block release():
         #alloc: Ptr<Allocator> := #self.alloc
         #keys: Ptr<T> := #self.keys
-        #hashes: Ptr<i64> := #self.hashes
+        #hashes: Ptr<I64> := #self.hashes
         #states: Ptr<i8> := #self.states
         free<T>(#alloc, #keys)
-        free<i64>(#alloc, #hashes)
+        free<I64>(#alloc, #hashes)
         free<i8>(#alloc, #states)
         jump reset()
 

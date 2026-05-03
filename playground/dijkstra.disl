@@ -14,10 +14,10 @@
 ; ── C FFI ─────────────────────────────────────────────────────────────────────
 
 @[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_s(%fmt: Ptr<Char>) -> I32
+routine c_printf_s(%fmt: Ptr<I8>) -> I32
 
 @[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_nd(%fmt: Ptr<Char>, %node: I64, %dist: I64) -> I32
+routine c_printf_nd(%fmt: Ptr<I8>, %node: I64, %dist: I64) -> I32
 
 ; ── Types ─────────────────────────────────────────────────────────────────────
 

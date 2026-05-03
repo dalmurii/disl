@@ -1,9 +1,10 @@
-; Disl stdlib collection: PriorityQueue<T>
+﻿; Disl stdlib collection: PriorityQueue<T>
 ;
 ; Binary min-heap. compare_fn(a, b) returns < 0 when a has higher priority
 ; than b. The allocator is stored in the struct.
 
 struct PriorityQueue<T>
+    require T: typename
     data: Ptr<T>
     length: I64
     capacity: I64
@@ -14,6 +15,7 @@ routine PriorityQueue<T>.new(
     %compare_fn: Callable<@callconv("c"), (T, T), I32>,
     #alloc: Ptr<Allocator>
 ) -> PriorityQueue<T>
+    require T: typename
     block entry():
         %queue: PriorityQueue<T> = PriorityQueue<T> {
             data: null,
@@ -25,17 +27,20 @@ routine PriorityQueue<T>.new(
         return(%queue)
 
 routine PriorityQueue<T>.length(#self: Ptr<PriorityQueue<T>>) -> I64
+    require T: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
 routine PriorityQueue<T>.is_empty(#self: Ptr<PriorityQueue<T>>) -> Bool
+    require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
         return(%empty)
 
 routine PriorityQueue<T>.reserve(#self: Ptr<PriorityQueue<T>>, %capacity: I64) -> Void
+    require T: typename
     block entry():
         %old_capacity: I64 := #self.capacity
         %enough: Bool = sge(%old_capacity, %capacity)
@@ -54,38 +59,41 @@ routine PriorityQueue<T>.reserve(#self: Ptr<PriorityQueue<T>>, %capacity: I64) -
         return()
 
 routine PriorityQueue<T>.ensure(#self: Ptr<PriorityQueue<T>>, %wanted: I64) -> Void
+    require T: typename
     block entry():
         %capacity: I64 := #self.capacity
-        %enough: bool = sge(%capacity, %wanted)
+        %enough: Bool = sge(%capacity, %wanted)
         branch %enough ? return() : choose(%capacity, %wanted)
 
     block choose(%capacity: I64, %wanted: I64):
-        %empty: bool = %capacity == 0
+        %empty: Bool = %capacity == 0
         branch %empty ? initial(%wanted) : double(%capacity, %wanted)
 
     block initial(%wanted: I64):
         %base: I64 = 8
-        %use_wanted: bool = sgt(%wanted, %base)
+        %use_wanted: Bool = sgt(%wanted, %base)
         %new_capacity: I64 = %use_wanted ? %wanted : %base
         #self.reserve(%new_capacity)
         return()
 
     block double(%capacity: I64, %wanted: I64):
         %next: I64 = %capacity * 2
-        %enough: bool = sge(%next, %wanted)
+        %enough: Bool = sge(%next, %wanted)
         branch %enough ? reserve(%next) : double(%next, %wanted)
 
     block reserve(%new_capacity: I64):
         #self.reserve(%new_capacity)
         return()
 
-routine PriorityQueue<T>.less(#self: Ptr<PriorityQueue<T>>, %a: T, %b: T) -> bool
+routine PriorityQueue<T>.less(#self: Ptr<PriorityQueue<T>>, %a: T, %b: T) -> Bool
+    require T: typename
     block entry():
         %cmp: I32 = #self.compare_fn(%a, %b)
-        %less: bool = slt(%cmp, 0)
+        %less: Bool = slt(%cmp, 0)
         return(%less)
 
 routine PriorityQueue<T>.push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
+    require T: typename
     block entry():
         %length: I64 := #self.length
         %wanted: I64 = %length + 1
@@ -96,7 +104,7 @@ routine PriorityQueue<T>.push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
         jump sift_up(%length)
 
     block sift_up(%index: I64):
-        %at_root: bool = %index == 0
+        %at_root: Bool = %index == 0
         branch %at_root ? return() : compare_parent(%index)
 
     block compare_parent(%index: I64):
@@ -104,7 +112,7 @@ routine PriorityQueue<T>.push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
         #data: Ptr<T> := #self.data
         %child_value: T := #data[%index]
         %parent_value: T := #data[%parent]
-        %less: bool = #self.less(%child_value, %parent_value)
+        %less: Bool = #self.less(%child_value, %parent_value)
         branch %less ? swap(%index, %parent, %child_value, %parent_value) : return()
 
     block swap(%index: I64, %parent: I64, %child_value: T, %parent_value: T):
@@ -114,9 +122,10 @@ routine PriorityQueue<T>.push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
         jump sift_up(%parent)
 
 routine PriorityQueue<T>.peek(#self: Ptr<PriorityQueue<T>>) -> T
+    require T: typename
     block entry():
         %length: I64 := #self.length
-        %empty: bool = %length == 0
+        %empty: Bool = %length == 0
         branch %empty ? trap() : load()
 
     block load():
@@ -125,9 +134,10 @@ routine PriorityQueue<T>.peek(#self: Ptr<PriorityQueue<T>>) -> T
         return(%value)
 
 routine PriorityQueue<T>.pop(#self: Ptr<PriorityQueue<T>>) -> T
+    require T: typename
     block entry():
         %length: I64 := #self.length
-        %empty: bool = %length == 0
+        %empty: Bool = %length == 0
         branch %empty ? trap() : remove_root(%length)
 
     block remove_root(%length: I64):
@@ -135,7 +145,7 @@ routine PriorityQueue<T>.pop(#self: Ptr<PriorityQueue<T>>) -> T
         %result: T := #data[0]
         %new_length: I64 = %length - 1
         #self.length = %new_length
-        %now_empty: bool = %new_length == 0
+        %now_empty: Bool = %new_length == 0
         branch %now_empty ? return(%result): move_last(%result, %new_length)
 
     block move_last(%result: T, %new_length: I64):
@@ -148,19 +158,19 @@ routine PriorityQueue<T>.pop(#self: Ptr<PriorityQueue<T>>) -> T
         %length: I64 := #self.length
         %left: I64 = %index * 2 + 1
         %right: I64 = %left + 1
-        %has_left: bool = slt(%left, %length)
+        %has_left: Bool = slt(%left, %length)
         branch %has_left ? choose_child(%index, %left, %right, %result) : return(%result)
 
     block choose_child(%index: I64, %left: I64, %right: I64, %result: T):
         %length: I64 := #self.length
-        %has_right: bool = slt(%right, %length)
+        %has_right: Bool = slt(%right, %length)
         branch %has_right ? compare_children(%index, %left, %right, %result) : compare_with_child(%index, %left, %result)
 
     block compare_children(%index: I64, %left: I64, %right: I64, %result: T):
         #data: Ptr<T> := #self.data
         %left_value: T := #data[%left]
         %right_value: T := #data[%right]
-        %right_less: bool = #self.less(%right_value, %left_value)
+        %right_less: Bool = #self.less(%right_value, %left_value)
         %child: I64 = %right_less ? %right : %left
         jump compare_with_child(%index, %child, %result)
 
@@ -168,7 +178,7 @@ routine PriorityQueue<T>.pop(#self: Ptr<PriorityQueue<T>>) -> T
         #data: Ptr<T> := #self.data
         %index_value: T := #data[%index]
         %child_value: T := #data[%child]
-        %child_less: bool = #self.less(%child_value, %index_value)
+        %child_less: Bool = #self.less(%child_value, %index_value)
         branch %child_less ? swap_down(%index, %child, %index_value, %child_value, %result) : return(%result)
 
     block swap_down(%index: I64, %child: I64, %index_value: T, %child_value: T, %result: T):
@@ -178,14 +188,16 @@ routine PriorityQueue<T>.pop(#self: Ptr<PriorityQueue<T>>) -> T
         jump sift_down(%child, %result)
 
 routine PriorityQueue<T>.clear(#self: Ptr<PriorityQueue<T>>) -> Void
+    require T: typename
     block entry():
         #self.length = 0
         return()
 
 routine PriorityQueue<T>.free(#self: Ptr<PriorityQueue<T>>) -> Void
+    require T: typename
     block entry():
         #data: Ptr<T> := #self.data
-        %empty: bool = #data == null
+        %empty: Bool = #data == null
         branch %empty ? reset() : release(#data)
 
     block release(#data: Ptr<T>):

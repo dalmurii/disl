@@ -1,15 +1,17 @@
-; Disl stdlib collection: List<T>
+﻿; Disl stdlib collection: List<T>
 ;
 ; Dynamic array. The allocator is stored in the struct; callers do not pass it
 ; to individual operations.
 
 struct List<T>
+    require T: typename
     data: Ptr<T>
     length: I64
     capacity: I64
     alloc: Ptr<Allocator>
 
 routine List<T>.new(#alloc: Ptr<Allocator>) -> List<T>
+    require T: typename
     block entry():
         %list: List<T> = List<T> {
             data: null,
@@ -20,17 +22,20 @@ routine List<T>.new(#alloc: Ptr<Allocator>) -> List<T>
         return(%list)
 
 routine List<T>.length(#self: Ptr<List<T>>) -> I64
+    require T: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
 routine List<T>.is_empty(#self: Ptr<List<T>>) -> Bool
+    require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
         return(%empty)
 
 routine List<T>.reserve(#self: Ptr<List<T>>, %capacity: I64) -> Void
+    require T: typename
     block entry():
         %old_capacity: I64 := #self.capacity
         %enough: Bool = sge(%old_capacity, %capacity)
@@ -49,6 +54,7 @@ routine List<T>.reserve(#self: Ptr<List<T>>, %capacity: I64) -> Void
         return()
 
 routine List<T>.ensure_capacity(#self: Ptr<List<T>>, %wanted: I64) -> Void
+    require T: typename
     block entry():
         %capacity: I64 := #self.capacity
         %enough: Bool = sge(%capacity, %wanted)
@@ -75,6 +81,7 @@ routine List<T>.ensure_capacity(#self: Ptr<List<T>>, %wanted: I64) -> Void
         return()
 
 routine List<T>.push(#self: Ptr<List<T>>, %value: T) -> Void
+    require T: typename
     block entry():
         %length: I64 := #self.length
         %wanted: I64 = %length + 1
@@ -85,6 +92,7 @@ routine List<T>.push(#self: Ptr<List<T>>, %value: T) -> Void
         return()
 
 routine List<T>.pop(#self: Ptr<List<T>>) -> T
+    require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
@@ -98,6 +106,7 @@ routine List<T>.pop(#self: Ptr<List<T>>) -> T
         return(%value)
 
 routine List<T>.get(#self: Ptr<List<T>>, %index: I64) -> T
+    require T: typename
     block entry():
         %length: I64 := #self.length
         %not_negative: Bool = sge(%index, 0)
@@ -111,6 +120,7 @@ routine List<T>.get(#self: Ptr<List<T>>, %index: I64) -> T
         return(%value)
 
 routine List<T>.set(#self: Ptr<List<T>>, %index: I64, %value: T) -> Void
+    require T: typename
     block entry():
         %length: I64 := #self.length
         %not_negative: Bool = sge(%index, 0)
@@ -124,11 +134,13 @@ routine List<T>.set(#self: Ptr<List<T>>, %index: I64, %value: T) -> Void
         return()
 
 routine List<T>.clear(#self: Ptr<List<T>>) -> Void
+    require T: typename
     block entry():
         #self.length = 0
         return()
 
 routine List<T>.free(#self: Ptr<List<T>>) -> Void
+    require T: typename
     block entry():
         #data: Ptr<T> := #self.data
         %empty: Bool = #data == null
