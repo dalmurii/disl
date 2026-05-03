@@ -1,0 +1,34 @@
+; Disl stdlib collection: DequeIter<T>
+;
+; Forward iterator over Deque<T>, yielding elements front-to-back.
+; Delegates index-to-physical mapping to Deque::get, which handles the
+; ring-buffer arithmetic (start + index) % capacity internally.
+;
+; Satisfies concept Iterator<T, DequeIter<T>>.
+
+struct DequeIter<T>
+    deque: Ptr<Deque<T>>
+    index: I64
+
+routine DequeIter<T>::new(#deque: Ptr<Deque<T>>) -> DequeIter<T>
+    block entry():
+        %iter: DequeIter<T> = DequeIter<T> { deque: #deque, index: 0 }
+        return %iter
+
+routine DequeIter<T>::next(#self: Ptr<DequeIter<T>>) -> Option<T>
+    block entry():
+        #deque: Ptr<Deque<T>> := #self.deque
+        %len:   I64           = #deque.length()
+        %index: I64           := #self.index
+        %done:  Bool          = sge(%index, %len)
+        branch %done ? return_none() : return_some(%index, #deque)
+
+    block return_none():
+        %none: Option<T> = Option<T>::none()
+        return %none
+
+    block return_some(%index: I64, #deque: Ptr<Deque<T>>):
+        %value: T = #deque.get(%index)
+        #self.index = %index + 1
+        %some: Option<T> = Option<T>::some(%value)
+        return %some

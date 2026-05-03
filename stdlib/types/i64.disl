@@ -1,0 +1,71 @@
+; Disl stdlib: I64 — 64-bit signed integer
+;
+; Maps to LLVM IR i64.
+
+@llvm("i64")
+struct I64
+
+; ── constants ─────────────────────────────────────────────────────────────────
+
+const I64::MIN: I64 = -9223372036854775808
+const I64::MAX: I64 =  9223372036854775807
+
+; ── bit operations ────────────────────────────────────────────────────────────
+
+routine I64::count_ones(%self: I64) -> I64
+    block entry():
+        %result: I64 = popcount<I64>(%self)
+        return %result
+
+routine I64::leading_zeros(%self: I64) -> I64
+    block entry():
+        %result: I64 = clz<I64>(%self, false)
+        return %result
+
+routine I64::trailing_zeros(%self: I64) -> I64
+    block entry():
+        %result: I64 = ctz<I64>(%self, false)
+        return %result
+
+routine I64::swap_bytes(%self: I64) -> I64
+    block entry():
+        %result: I64 = bswap<I64>(%self)
+        return %result
+
+; ── arithmetic ────────────────────────────────────────────────────────────────
+
+routine I64::abs(%self: I64) -> I64
+    block entry():
+        %is_neg: Bool = slt<I64>(%self, 0)
+        %neg: I64 = 0 - %self
+        %result: I64 = %is_neg ? %neg : %self
+        return %result
+
+; ── narrowing conversions ─────────────────────────────────────────────────────
+
+routine I64::to_i8(%self: I64) -> I8
+    block entry():
+        %result: I8 = trunc<I64, I8>(%self)
+        return %result
+
+routine I64::to_i16(%self: I64) -> I16
+    block entry():
+        %result: I16 = trunc<I64, I16>(%self)
+        return %result
+
+routine I64::to_i32(%self: I64) -> I32
+    block entry():
+        %result: I32 = trunc<I64, I32>(%self)
+        return %result
+
+; ── float conversions ─────────────────────────────────────────────────────────
+
+routine I64::to_f32(%self: I64) -> F32
+    block entry():
+        %result: F32 = sitofp<I64, F32>(%self)
+        return %result
+
+routine I64::to_f64(%self: I64) -> F64
+    block entry():
+        %result: F64 = sitofp<I64, F64>(%self)
+        return %result

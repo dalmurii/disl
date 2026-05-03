@@ -1,0 +1,139 @@
+; Disl stdlib: prelude
+;
+; Compiler-intrinsic operations auto-imported into every translation unit.
+; These map directly to LLVM IR instructions and have no runtime cost beyond
+; the instruction itself.
+;
+; Declared as external("llvm") so the compiler can lower them directly to the
+; corresponding LLVM instruction or intrinsic during codegen.
+;
+; All operations are generic over their operand type:
+;   integer ops  — T in { I8, I16, I32, I64 }
+;   float ops    — T in { F32, F64 }
+;   conversions  — From/To unconstrained; caller picks concrete types
+
+; ============================================================
+; Integer comparisons (signed)
+; ============================================================
+
+@[external("llvm"), symbol("icmp slt")]
+routine slt<T>(%a: T, %b: T) -> Bool
+@[external("llvm"), symbol("icmp sgt")]
+routine sgt<T>(%a: T, %b: T) -> Bool
+@[external("llvm"), symbol("icmp sle")]
+routine sle<T>(%a: T, %b: T) -> Bool
+@[external("llvm"), symbol("icmp sge")]
+routine sge<T>(%a: T, %b: T) -> Bool
+
+; ============================================================
+; Integer comparisons (unsigned interpretation of same bits)
+; ============================================================
+
+@[external("llvm"), symbol("icmp ult")]
+routine ult<T>(%a: T, %b: T) -> Bool
+@[external("llvm"), symbol("icmp ugt")]
+routine ugt<T>(%a: T, %b: T) -> Bool
+@[external("llvm"), symbol("icmp ule")]
+routine ule<T>(%a: T, %b: T) -> Bool
+@[external("llvm"), symbol("icmp uge")]
+routine uge<T>(%a: T, %b: T) -> Bool
+
+; ============================================================
+; Division and remainder
+; ============================================================
+
+@[external("llvm"), symbol("sdiv")]
+routine sdiv<T>(%a: T, %b: T) -> T
+@[external("llvm"), symbol("srem")]
+routine srem<T>(%a: T, %b: T) -> T
+@[external("llvm"), symbol("udiv")]
+routine udiv<T>(%a: T, %b: T) -> T
+@[external("llvm"), symbol("urem")]
+routine urem<T>(%a: T, %b: T) -> T
+
+; ============================================================
+; Bit shifts
+; ============================================================
+
+@[external("llvm"), symbol("shl")]
+routine shl<T>(%val: T, %amt: T) -> T
+@[external("llvm"), symbol("ashr")]
+routine ashr<T>(%val: T, %amt: T) -> T  ; arithmetic (sign-extend)
+@[external("llvm"), symbol("lshr")]
+routine lshr<T>(%val: T, %amt: T) -> T  ; logical (zero-fill)
+
+; ============================================================
+; Floating-point arithmetic
+; ============================================================
+
+@[external("llvm"), symbol("fadd")]
+routine fadd<T>(%a: T, %b: T) -> T
+@[external("llvm"), symbol("fsub")]
+routine fsub<T>(%a: T, %b: T) -> T
+@[external("llvm"), symbol("fmul")]
+routine fmul<T>(%a: T, %b: T) -> T
+@[external("llvm"), symbol("fdiv")]
+routine fdiv<T>(%a: T, %b: T) -> T
+
+; ============================================================
+; Floating-point comparisons (ordered — false if either NaN)
+; ============================================================
+
+@[external("llvm"), symbol("fcmp oeq")]
+routine feq<T>(%a: T, %b: T) -> Bool
+@[external("llvm"), symbol("fcmp one")]
+routine fne<T>(%a: T, %b: T) -> Bool
+@[external("llvm"), symbol("fcmp olt")]
+routine flt<T>(%a: T, %b: T) -> Bool
+@[external("llvm"), symbol("fcmp ogt")]
+routine fgt<T>(%a: T, %b: T) -> Bool
+@[external("llvm"), symbol("fcmp ole")]
+routine fle<T>(%a: T, %b: T) -> Bool
+@[external("llvm"), symbol("fcmp oge")]
+routine fge<T>(%a: T, %b: T) -> Bool
+
+; ============================================================
+; Type conversions
+; ============================================================
+
+@[external("llvm"), symbol("sext")]
+routine sext<From, To>(%val: From) -> To
+@[external("llvm"), symbol("zext")]
+routine zext<From, To>(%val: From) -> To
+@[external("llvm"), symbol("trunc")]
+routine trunc<From, To>(%val: From) -> To
+@[external("llvm"), symbol("bitcast")]
+routine bitcast<From, To>(%val: From) -> To
+@[external("llvm"), symbol("fptosi")]
+routine fptosi<From, To>(%val: From) -> To
+@[external("llvm"), symbol("sitofp")]
+routine sitofp<From, To>(%val: From) -> To
+@[external("llvm"), symbol("fpext")]
+routine fpext<From, To>(%val: From) -> To
+@[external("llvm"), symbol("fptrunc")]
+routine fptrunc<From, To>(%val: From) -> To
+
+; ============================================================
+; Bit manipulation (LLVM intrinsics)
+; ============================================================
+
+@[external("llvm"), symbol("llvm.ctpop")]
+routine popcount<T>(%val: T) -> T
+@[external("llvm"), symbol("llvm.ctlz")]
+routine clz<T>(%val: T, %is_zero_undef: Bool) -> T
+@[external("llvm"), symbol("llvm.cttz")]
+routine ctz<T>(%val: T, %is_zero_undef: Bool) -> T
+@[external("llvm"), symbol("llvm.bswap")]
+routine bswap<T>(%val: T) -> T
+
+; ============================================================
+; Misc
+; ============================================================
+
+@[external("llvm"), symbol("sizeof")]
+routine sizeof<T>() -> I64
+@[external("llvm"), symbol("alignof")]
+routine alignof<T>() -> I64
+
+@[external("llvm"), symbol("llvm.trap"), noreturn]
+routine trap() -> Void

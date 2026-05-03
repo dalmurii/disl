@@ -1,0 +1,23 @@
+; Disl stdlib: Bool — 1-bit boolean
+;
+; Maps to LLVM IR i1.
+
+@llvm("i1")
+struct Bool
+
+; ── conversions ───────────────────────────────────────────────────────────────
+
+routine Bool::to_i8(%self: Bool) -> I8
+    block entry():
+        %result: I8 = zext<Bool, I8>(%self)
+        return %result
+
+routine Bool::to_i32(%self: Bool) -> I32
+    block entry():
+        %result: I32 = zext<Bool, I32>(%self)
+        return %result
+
+routine Bool::to_i64(%self: Bool) -> I64
+    block entry():
+        %result: I64 = zext<Bool, I64>(%self)
+        return %result

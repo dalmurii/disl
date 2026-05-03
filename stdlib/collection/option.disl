@@ -1,0 +1,76 @@
+; Disl stdlib collection: Option<T> and KVPair<K, V>
+;
+; Option<T> is a tagged union — the standard way to represent a value that may
+; be absent.  It is the return type of every collection iterator's next().
+;
+; Layout:
+;   tag     : OptionTag (I32, 4 bytes)
+;   payload : Array<I8, sizeof<T>()> aligned to alignof<T>()
+;
+; The payload bytes are only meaningful when tag == Some.
+; Callers must check is_some() or branch on the tag before calling unwrap().
+;
+; KVPair<K, V> is a plain value pair used by HashMap and BTreeMap iterators.
+
+; ── Option ────────────────────────────────────────────────────────────────────
+
+enum OptionTag: I32
+    None = 0
+    Some = 1
+
+struct Option<T>
+    tag: OptionTag
+    @aligned(alignof<T>())
+    payload: Array<I8, sizeof<T>()>
+
+routine Option<T>::none() -> Option<T>
+    block entry():
+        #buf: Ptr<Option<T>> = alloca<Option<T>>
+        zero<Option<T>>(#buf, 1)
+        %opt: Option<T> := #buf
+        return %opt
+
+routine Option<T>::some(%value: T) -> Option<T>
+    block entry():
+        #buf: Ptr<Option<T>> = alloca<Option<T>>
+        #buf.tag = OptionTag::Some
+        #payload: Ptr<Array<I8, sizeof<T>()>> = #buf.payload
+        #typed: Ptr<T> = bitcast<Ptr<Array<I8, sizeof<T>()>>, Ptr<T>>(#payload)
+        #typed = %value
+        %opt: Option<T> := #buf
+        return %opt
+
+; Both predicates take the Option by value — only the tag field is read,
+; so no pointer is needed and the caller avoids an alloca.
+routine Option<T>::is_some(%self: Option<T>) -> Bool
+    block entry():
+        %tag: OptionTag = %self.tag
+        %result: Bool = %tag == OptionTag::Some
+        return %result
+
+routine Option<T>::is_none(%self: Option<T>) -> Bool
+    block entry():
+        %tag: OptionTag = %self.tag
+        %result: Bool = %tag == OptionTag::None
+        return %result
+
+; unwrap takes a pointer so the payload GEP is cheap — no struct copy needed.
+; Traps if tag is None.
+routine Option<T>::unwrap(#self: Ptr<Option<T>>) -> T
+    block entry():
+        %tag: OptionTag := #self.tag
+        %is_some: Bool = %tag == OptionTag::Some
+        branch %is_some ? load() : trap()
+
+    block load():
+        #payload: Ptr<Array<I8, sizeof<T>()>> = #self.payload
+        #typed: Ptr<T> = bitcast<Ptr<Array<I8, sizeof<T>()>>, Ptr<T>>(#payload)
+        %value: T := #typed
+        return %value
+
+; ── KVPair ────────────────────────────────────────────────────────────────────
+
+; Yielded by HashMap and BTreeMap iterators.
+struct KVPair<K, V>
+    key:   K
+    value: V

@@ -1,0 +1,53 @@
+; Disl stdlib: F32 — 32-bit IEEE 754 floating-point
+;
+; Maps to LLVM IR float.
+
+@llvm("float")
+struct F32
+
+; ── constants ─────────────────────────────────────────────────────────────────
+
+const F32::INFINITY:     F32 = 0x7F800000  ; +inf bits
+const F32::NEG_INFINITY: F32 = 0xFF800000  ; -inf bits
+const F32::NAN:          F32 = 0x7FC00000  ; canonical quiet NaN bits
+
+; ── arithmetic ────────────────────────────────────────────────────────────────
+
+routine F32::abs(%self: F32) -> F32
+    block entry():
+        %zero: F32 = 0.0
+        %is_neg: Bool = flt<F32>(%self, %zero)
+        %neg: F32 = fsub<F32>(%zero, %self)
+        %result: F32 = %is_neg ? %neg : %self
+        return %result
+
+routine F32::min(%self: F32, %other: F32) -> F32
+    block entry():
+        %self_less: Bool = flt<F32>(%self, %other)
+        %result: F32 = %self_less ? %self : %other
+        return %result
+
+routine F32::max(%self: F32, %other: F32) -> F32
+    block entry():
+        %self_more: Bool = fgt<F32>(%self, %other)
+        %result: F32 = %self_more ? %self : %other
+        return %result
+
+; ── widening conversion ───────────────────────────────────────────────────────
+
+routine F32::to_f64(%self: F32) -> F64
+    block entry():
+        %result: F64 = fpext<F32, F64>(%self)
+        return %result
+
+; ── float-to-int conversions (truncates toward zero) ─────────────────────────
+
+routine F32::to_i32(%self: F32) -> I32
+    block entry():
+        %result: I32 = fptosi<F32, I32>(%self)
+        return %result
+
+routine F32::to_i64(%self: F32) -> I64
+    block entry():
+        %result: I64 = fptosi<F32, I64>(%self)
+        return %result

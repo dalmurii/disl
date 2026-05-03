@@ -1,0 +1,588 @@
+; Disl stdlib collection: BTreeList<T>
+;
+; Sequence tree with a fixed node value capacity of NODE_VALUES. Nodes store
+; arrays inline. The allocator is stored in BTreeList; node helpers still
+; receive it as a parameter.
+;
+; Internal nodes use `length` as the child count (no separator keys — navigation
+; is purely by subtree_count). Leaf nodes use `length` as the value count.
+
+const NODE_VALUES: I64 = 7
+const NODE_CHILDREN: I64 = NODE_VALUES + 1
+const NODE_MIN: I64 = sdiv(NODE_VALUES + 1, 2)
+
+struct BTreeListNode<T>
+    leaf: Bool
+    length: I64
+    subtree_count: I64
+    values: Array<T, NODE_VALUES>
+    children: Array<Ptr<BTreeListNode<T>>, NODE_CHILDREN>
+
+struct BTreeList<T>
+    root: Ptr<BTreeListNode<T>>
+    length: I64
+    alloc: Ptr<Allocator>
+
+routine BTreeList<T>::new(#alloc: Ptr<Allocator>) -> BTreeList<T>
+    block entry():
+        %list: BTreeList<T> = BTreeList<T> {
+            root: null,
+            length: 0,
+            alloc: #alloc
+        }
+        return %list
+
+routine BTreeList<T>::length(#self: Ptr<BTreeList<T>>) -> I64
+    block entry():
+        %length: I64 := #self.length
+        return %length
+
+routine BTreeListNode<T>::new(%leaf: Bool, #alloc: Ptr<Allocator>) -> Ptr<BTreeListNode<T>>
+    block entry():
+        #node: Ptr<BTreeListNode<T>> = alloc<BTreeListNode<T>>(#alloc, 1)
+        %failed: Bool = #node == null
+        branch %failed ? trap() : init(#node, %leaf)
+
+    block init(#node: Ptr<BTreeListNode<T>>, %leaf: Bool):
+        #node.leaf = %leaf
+        #node.length = 0
+        #node.subtree_count = 0
+        return #node
+
+routine BTreeListNode<T>::count(#self: Ptr<BTreeListNode<T>>) -> I64
+    block entry():
+        %empty: Bool = #self == null
+        branch %empty ? return 0 : count(#self)
+
+    block count(#self: Ptr<BTreeListNode<T>>):
+        %count: I64 := #self.subtree_count
+        return %count
+
+routine BTreeListNode<T>::recount(#self: Ptr<BTreeListNode<T>>) -> Void
+    block entry():
+        %leaf: Bool := #self.leaf
+        %length: I64 := #self.length
+        branch %leaf ? leaf_count(%length) : internal_count(%length)
+
+    block leaf_count(%length: I64):
+        #self.subtree_count = %length
+        return
+
+    block internal_count(%length: I64):
+        jump loop(0, 0, %length)
+
+    block loop(%i: I64, %sum: I64, %length: I64):
+        %done: Bool = sge(%i, %length)
+        branch %done ? finish(%sum) : add_child(%i, %sum, %length)
+
+    block add_child(%i: I64, %sum: I64, %length: i64):
+        #child: Ptr<BTreeListNode<T>> := #self.children[%i]
+        %child_count: i64 = #child.count()
+        jump loop(%i + 1, %sum + %child_count, %length)
+
+    block finish(%sum: i64):
+        #self.subtree_count = %sum
+        return
+
+routine BTreeList<T>::get(#self: Ptr<BTreeList<T>>, %order: i64) -> T
+    block entry():
+        %not_negative: Bool = sge(%order, 0)
+        %length: i64 := #self.length
+        %before_end: Bool = slt(%order, %length)
+        %in_bounds: Bool = %not_negative & %before_end
+        branch %in_bounds ? select_root(%order) : trap()
+
+    block select_root(%order: i64):
+        #root: Ptr<BTreeListNode<T>> := #self.root
+        jump select_node(#root, %order)
+
+    block select_node(#node: Ptr<BTreeListNode<T>>, %order: i64):
+        %leaf: bool := #node.leaf
+        branch %leaf ? leaf_get(#node, %order) : internal_get(#node, %order)
+
+    block leaf_get(#node: Ptr<BTreeListNode<T>>, %order: i64):
+        %value: T := #node.values[%order]
+        return %value
+
+    block internal_get(#node: Ptr<BTreeListNode<T>>, %order: i64):
+        jump scan(#node, %order, 0)
+
+    block scan(#node: Ptr<BTreeListNode<T>>, %order: i64, %i: i64):
+        #child: Ptr<BTreeListNode<T>> := #node.children[%i]
+        %child_count: i64 = #child.count()
+        %in_child: bool = slt(%order, %child_count)
+        branch %in_child ? select_node(#child, %order) : scan(#node, %order - %child_count, %i + 1)
+
+routine BTreeList<T>::set(#self: Ptr<BTreeList<T>>, %order: i64, %value: T) -> Void
+    block entry():
+        %not_negative: bool = sge(%order, 0)
+        %length: i64 := #self.length
+        %before_end: bool = slt(%order, %length)
+        %in_bounds: bool = %not_negative & %before_end
+        branch %in_bounds ? set_root(%order, %value) : trap()
+
+    block set_root(%order: i64, %value: T):
+        #root: Ptr<BTreeListNode<T>> := #self.root
+        jump set_node(#root, %order, %value)
+
+    block set_node(#node: Ptr<BTreeListNode<T>>, %order: i64, %value: T):
+        %leaf: bool := #node.leaf
+        branch %leaf ? leaf_set(#node, %order, %value) : internal_set(#node, %order, %value)
+
+    block leaf_set(#node: Ptr<BTreeListNode<T>>, %order: i64, %value: T):
+        #node.values[%order] = %value
+        return
+
+    block internal_set(#node: Ptr<BTreeListNode<T>>, %order: i64, %value: T):
+        jump scan(#node, %order, %value, 0)
+
+    block scan(#node: Ptr<BTreeListNode<T>>, %order: i64, %value: T, %i: i64):
+        #child: Ptr<BTreeListNode<T>> := #node.children[%i]
+        %child_count: i64 = #child.count()
+        %in_child: bool = slt(%order, %child_count)
+        branch %in_child ? set_node(#child, %order, %value) : scan(#node, %order - %child_count, %value, %i + 1)
+
+routine BTreeList<T>::push(#self: Ptr<BTreeList<T>>, %value: T) -> Void
+    block entry():
+        %length: i64 := #self.length
+        #self.insert(%length, %value)
+        return
+
+routine BTreeListNode<T>::split_child(#self: Ptr<BTreeListNode<T>>, %index: i64, #alloc: Ptr<Allocator>) -> Void
+    block entry():
+        #left: Ptr<BTreeListNode<T>> := #self.children[%index]
+        %leaf: bool := #left.leaf
+        #right: Ptr<BTreeListNode<T>> = BTreeListNode<T>::new(%leaf, #alloc)
+        %length: i64 := #left.length
+        %mid: i64 = sdiv(%length, 2)
+        %right_count: i64 = %length - %mid
+        branch %leaf ? copy_values(#left, #right, %mid, %right_count) : copy_children(#left, #right, %mid, %right_count)
+
+    block copy_values(#left: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %mid: i64, %right_count: i64):
+        #right.values.copy(0, #left.values, %mid, %right_count)
+        jump promote(#left, #right, %mid, %right_count)
+
+    block copy_children(#left: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %mid: i64, %right_count: i64):
+        jump child_loop(0, #left, #right, %mid, %right_count)
+
+    block child_loop(%i: i64, #left: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %mid: i64, %right_count: i64):
+        %done: bool = sge(%i, %right_count)
+        branch %done ? promote(#left, #right, %mid, %right_count) : child_copy(%i, #left, #right, %mid, %right_count)
+
+    block child_copy(%i: i64, #left: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %mid: i64, %right_count: i64):
+        %src: i64 = %mid + %i
+        #child: Ptr<BTreeListNode<T>> := #left.children[%src]
+        #right.children[%i] = #child
+        jump child_loop(%i + 1, #left, #right, %mid, %right_count)
+
+    block promote(#left: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %mid: i64, %right_count: i64):
+        %parent_length: i64 := #self.length
+        jump shift_children(%parent_length, #left, #right, %mid, %right_count)
+
+    block shift_children(%i: i64, #left: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %mid: i64, %right_count: i64):
+        %stop: i64 = %index + 1
+        %done: bool = slt(%i, %stop)
+        branch %done ? install(#left, #right, %mid, %right_count) : move_child(%i, #left, #right, %mid, %right_count)
+
+    block move_child(%i: i64, #left: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %mid: i64, %right_count: i64):
+        #child: Ptr<BTreeListNode<T>> := #self.children[%i]
+        #self.children[%i + 1] = #child
+        jump shift_children(%i - 1, #left, #right, %mid, %right_count)
+
+    block install(#left: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %mid: i64, %right_count: i64):
+        #self.children[%index + 1] = #right
+        #left.length = %mid
+        #right.length = %right_count
+        %parent_length: i64 := #self.length
+        #self.length = %parent_length + 1
+        #left.recount()
+        #right.recount()
+        #self.recount()
+        return
+
+; Insert variant: an order equal to the rightmost subtree's count means
+; "append at the end of that child", so `remaining == count` keeps us in
+; the current child rather than overflowing into a non-existent next one.
+routine BTreeListNode<T>::find_child(#self: Ptr<BTreeListNode<T>>, %order: i64, #out_local: Ptr<i64>) -> i64
+    block entry():
+        jump loop(0, %order)
+
+    block loop(%i: i64, %remaining: i64):
+        #child: Ptr<BTreeListNode<T>> := #self.children[%i]
+        %count: i64 = #child.count()
+        %in_child: bool = sle(%remaining, %count)
+        branch %in_child ? found(%i, %remaining) : loop(%i + 1, %remaining - %count)
+
+    block found(%i: i64, %remaining: i64):
+        #out_local = %remaining
+        return %i
+
+; Remove variant: order must address an existing element, so `remaining`
+; must be strictly less than the child's count — at exact subtree
+; boundaries the element belongs to the next sibling, not the trailing
+; position of this one.
+routine BTreeListNode<T>::find_child_strict(#self: Ptr<BTreeListNode<T>>, %order: i64, #out_local: Ptr<i64>) -> i64
+    block entry():
+        jump loop(0, %order)
+
+    block loop(%i: i64, %remaining: i64):
+        #child: Ptr<BTreeListNode<T>> := #self.children[%i]
+        %count: i64 = #child.count()
+        %in_child: bool = slt(%remaining, %count)
+        branch %in_child ? found(%i, %remaining) : loop(%i + 1, %remaining - %count)
+
+    block found(%i: i64, %remaining: i64):
+        #out_local = %remaining
+        return %i
+
+routine BTreeListNode<T>::insert_nonfull(#self: Ptr<BTreeListNode<T>>, %order: i64, %value: T, #alloc: Ptr<Allocator>) -> Void
+    block entry():
+        %leaf: bool := #self.leaf
+        branch %leaf ? insert_leaf(%order, %value) : insert_internal(%order, %value)
+
+    block insert_leaf(%order: i64, %value: T):
+        %length: i64 := #self.length
+        #self.values.shift_right(%order, %length)
+        #self.values[%order] = %value
+        #self.length = %length + 1
+        #self.subtree_count = %length + 1
+        return
+
+    block insert_internal(%order: i64, %value: T):
+        #local_order: Ptr<i64> = alloca<i64>
+        %slot: i64 = #self.find_child(%order, #local_order)
+        %local_order: i64 := #local_order
+        #child: Ptr<BTreeListNode<T>> := #self.children[%slot]
+        %child_length: i64 := #child.length
+        %full: bool = %child_length == NODE_VALUES
+        branch %full ? split_then_insert(%slot, %local_order, %value) : descend(%slot, #child, %local_order, %value)
+
+    block split_then_insert(%slot: i64, %local_order: i64, %value: T):
+        #self.split_child(%slot, #alloc)
+        #left: Ptr<BTreeListNode<T>> := #self.children[%slot]
+        %left_count: i64 = #left.count()
+        %go_right: bool = sgt(%local_order, %left_count)
+        branch %go_right ? descend_right(%slot, %local_order, %left_count, %value) : descend_left(%slot, %local_order, %value)
+
+    block descend_left(%slot: i64, %local_order: i64, %value: T):
+        #child: Ptr<BTreeListNode<T>> := #self.children[%slot]
+        jump descend(%slot, #child, %local_order, %value)
+
+    block descend_right(%slot: i64, %local_order: i64, %left_count: i64, %value: T):
+        %right_slot: i64 = %slot + 1
+        %right_order: i64 = %local_order - %left_count
+        #child: Ptr<BTreeListNode<T>> := #self.children[%right_slot]
+        jump descend(%right_slot, #child, %right_order, %value)
+
+    block descend(%slot: i64, #child: Ptr<BTreeListNode<T>>, %local_order: i64, %value: T):
+        #child.insert_nonfull(%local_order, %value, #alloc)
+        #self.recount()
+        return
+
+routine BTreeList<T>::insert(#self: Ptr<BTreeList<T>>, %order: i64, %value: T) -> Void
+    block entry():
+        %not_negative: bool = sge(%order, 0)
+        %length: i64 := #self.length
+        %at_or_before_end: bool = sle(%order, %length)
+        %in_bounds: bool = %not_negative & %at_or_before_end
+        branch %in_bounds ? insert_checked(%order, %value) : trap()
+
+    block insert_checked(%order: i64, %value: T):
+        #alloc: Ptr<Allocator> := #self.alloc
+        #root: Ptr<BTreeListNode<T>> := #self.root
+        %empty: bool = #root == null
+        branch %empty ? first_root(%value, #alloc) : insert_root(#root, %order, %value, #alloc)
+
+    block first_root(%value: T, #alloc: Ptr<Allocator>):
+        #root: Ptr<BTreeListNode<T>> = BTreeListNode<T>::new(true, #alloc)
+        #root.values[0] = %value
+        #root.length = 1
+        #root.subtree_count = 1
+        #self.root = #root
+        #self.length = 1
+        return
+
+    block insert_root(#root: Ptr<BTreeListNode<T>>, %order: i64, %value: T, #alloc: Ptr<Allocator>):
+        %root_length: i64 := #root.length
+        %full: bool = %root_length == NODE_VALUES
+        branch %full ? split_root(#root, %order, %value, #alloc) : insert_nonfull(#root, %order, %value, #alloc)
+
+    block split_root(#old_root: Ptr<BTreeListNode<T>>, %order: i64, %value: T, #alloc: Ptr<Allocator>):
+        #new_root: Ptr<BTreeListNode<T>> = BTreeListNode<T>::new(false, #alloc)
+        #new_root.children[0] = #old_root
+        #new_root.length = 1
+        #self.root = #new_root
+        #new_root.split_child(0, #alloc)
+        jump insert_nonfull(#new_root, %order, %value, #alloc)
+
+    block insert_nonfull(#root: Ptr<BTreeListNode<T>>, %order: i64, %value: T, #alloc: Ptr<Allocator>):
+        #root.insert_nonfull(%order, %value, #alloc)
+        %length: i64 := #self.length
+        #self.length = %length + 1
+        return
+
+; Capacity = NODE_VALUES, t = NODE_MIN. Internal-node `length` is the
+; child count, so the underflow threshold (length < NODE_MIN) is shared
+; with leaves. Helpers below ensure a child has length >= NODE_MIN before
+; any deletion descent.
+
+routine BTreeListNode<T>::borrow_from_left(#self: Ptr<BTreeListNode<T>>, %i: i64) -> Void
+    block entry():
+        #left: Ptr<BTreeListNode<T>> := #self.children[%i - 1]
+        #child: Ptr<BTreeListNode<T>> := #self.children[%i]
+        %left_length: i64 := #left.length
+        %child_length: i64 := #child.length
+        %leaf: bool := #child.leaf
+        branch %leaf ? leaf_borrow(#left, #child, %left_length, %child_length) : internal_borrow(#left, #child, %left_length, %child_length)
+
+    block leaf_borrow(#left: Ptr<BTreeListNode<T>>, #child: Ptr<BTreeListNode<T>>, %left_length: i64, %child_length: i64):
+        #child.values.shift_right(0, %child_length)
+        %v: T := #left.values[%left_length - 1]
+        #child.values[0] = %v
+        jump finalize(#left, #child, %left_length, %child_length)
+
+    block internal_borrow(#left: Ptr<BTreeListNode<T>>, #child: Ptr<BTreeListNode<T>>, %left_length: i64, %child_length: i64):
+        #child.children.shift_right(0, %child_length)
+        #moved: Ptr<BTreeListNode<T>> := #left.children[%left_length - 1]
+        #child.children[0] = #moved
+        jump finalize(#left, #child, %left_length, %child_length)
+
+    block finalize(#left: Ptr<BTreeListNode<T>>, #child: Ptr<BTreeListNode<T>>, %left_length: i64, %child_length: i64):
+        #left.length = %left_length - 1
+        #child.length = %child_length + 1
+        #left.recount()
+        #child.recount()
+        #self.recount()
+        return
+
+routine BTreeListNode<T>::borrow_from_right(#self: Ptr<BTreeListNode<T>>, %i: i64) -> Void
+    block entry():
+        #child: Ptr<BTreeListNode<T>> := #self.children[%i]
+        #right: Ptr<BTreeListNode<T>> := #self.children[%i + 1]
+        %child_length: i64 := #child.length
+        %right_length: i64 := #right.length
+        %leaf: bool := #child.leaf
+        branch %leaf ? leaf_borrow(#child, #right, %child_length, %right_length) : internal_borrow(#child, #right, %child_length, %right_length)
+
+    block leaf_borrow(#child: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %child_length: i64, %right_length: i64):
+        %v: T := #right.values[0]
+        #child.values[%child_length] = %v
+        #right.values.shift_left(0, %right_length)
+        jump finalize(#child, #right, %child_length, %right_length)
+
+    block internal_borrow(#child: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %child_length: i64, %right_length: i64):
+        #moved: Ptr<BTreeListNode<T>> := #right.children[0]
+        #child.children[%child_length] = #moved
+        #right.children.shift_left(0, %right_length)
+        jump finalize(#child, #right, %child_length, %right_length)
+
+    block finalize(#child: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %child_length: i64, %right_length: i64):
+        #child.length = %child_length + 1
+        #right.length = %right_length - 1
+        #child.recount()
+        #right.recount()
+        #self.recount()
+        return
+
+routine BTreeListNode<T>::merge_children(#self: Ptr<BTreeListNode<T>>, %i: i64, #alloc: Ptr<Allocator>) -> Void
+    block entry():
+        #left: Ptr<BTreeListNode<T>> := #self.children[%i]
+        #right: Ptr<BTreeListNode<T>> := #self.children[%i + 1]
+        %left_length: i64 := #left.length
+        %right_length: i64 := #right.length
+        %leaf: bool := #left.leaf
+        branch %leaf ? leaf_merge(#left, #right, %left_length, %right_length) : internal_merge(#left, #right, %left_length, %right_length)
+
+    block leaf_merge(#left: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %left_length: i64, %right_length: i64):
+        #left.values.copy(%left_length, #right.values, 0, %right_length)
+        jump finalize(#left, #right, %left_length, %right_length)
+
+    block internal_merge(#left: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %left_length: i64, %right_length: i64):
+        #left.children.copy(%left_length, #right.children, 0, %right_length)
+        jump finalize(#left, #right, %left_length, %right_length)
+
+    block finalize(#left: Ptr<BTreeListNode<T>>, #right: Ptr<BTreeListNode<T>>, %left_length: i64, %right_length: i64):
+        %merged_length: i64 = %left_length + %right_length
+        #left.length = %merged_length
+        %parent_length: i64 := #self.length
+        #self.children.shift_left(%i + 1, %parent_length)
+        #self.length = %parent_length - 1
+        free<BTreeListNode<T>>(#alloc, #right)
+        #left.recount()
+        #self.recount()
+        return
+
+; remove descends with rebalancing inlined: when a borrow or merge fires the
+; local order index has to be adjusted to account for the entries that moved
+; into (or out of) the descent target, so we cannot factor out a generic
+; ensure_min the way the keyed B-tree variants do.
+routine BTreeListNode<T>::remove(#self: Ptr<BTreeListNode<T>>, %order: i64, #alloc: Ptr<Allocator>) -> T
+    block entry():
+        %leaf: bool := #self.leaf
+        branch %leaf ? remove_leaf(%order) : remove_internal(%order)
+
+    block remove_leaf(%order: i64):
+        %value: T := #self.values[%order]
+        %length: i64 := #self.length
+        #self.values.shift_left(%order, %length)
+        #self.length = %length - 1
+        #self.subtree_count = %length - 1
+        return %value
+
+    block remove_internal(%order: i64):
+        #local_order_Ptr: Ptr<i64> = alloca<i64>
+        %slot: i64 = #self.find_child_strict(%order, #local_order_Ptr)
+        %local_order: i64 := #local_order_Ptr
+        #child: Ptr<BTreeListNode<T>> := #self.children[%slot]
+        %child_length: i64 := #child.length
+        %ok: bool = sge(%child_length, NODE_MIN)
+        branch %ok ? descend(%slot, %local_order) : rebalance(%slot, %local_order)
+
+    block descend(%slot: i64, %local_order: i64):
+        #child: Ptr<BTreeListNode<T>> := #self.children[%slot]
+        %value: T = #child.remove(%local_order, #alloc)
+        #self.recount()
+        return %value
+
+    block rebalance(%slot: i64, %local_order: i64):
+        %has_left: bool = sgt(%slot, 0)
+        branch %has_left ? check_left(%slot, %local_order) : right_only(%slot, %local_order)
+
+    block check_left(%slot: i64, %local_order: i64):
+        #left: Ptr<BTreeListNode<T>> := #self.children[%slot - 1]
+        %left_length: i64 := #left.length
+        %left_ok: bool = sge(%left_length, NODE_MIN)
+        branch %left_ok ? do_borrow_left(%slot, %local_order) : right_with_left(%slot, %local_order)
+
+    ; Borrow/merge change the descent target's leading subtree_count, so we
+    ; diff #child.count() (= subtree_count) across the operation to recover
+    ; the local-order offset. This works uniformly for leaves (where each
+    ; moved value contributes 1) and internals (where the moved entry is a
+    ; whole child subtree of arbitrary count).
+    block do_borrow_left(%slot: i64, %local_order: i64):
+        #child: Ptr<BTreeListNode<T>> := #self.children[%slot]
+        %old_count: i64 = #child.count()
+        #self.borrow_from_left(%slot)
+        %new_count: i64 = #child.count()
+        %delta: i64 = %new_count - %old_count
+        %new_local: i64 = %local_order + %delta
+        jump descend(%slot, %new_local)
+
+    block right_with_left(%slot: i64, %local_order: i64):
+        %parent_length: i64 := #self.length
+        %right_index: i64 = %slot + 1
+        %has_right: bool = slt(%right_index, %parent_length)
+        branch %has_right ? check_right_after_left(%slot, %local_order) : do_merge_left(%slot, %local_order)
+
+    block check_right_after_left(%slot: i64, %local_order: i64):
+        #right: Ptr<BTreeListNode<T>> := #self.children[%slot + 1]
+        %right_length: i64 := #right.length
+        %right_ok: bool = sge(%right_length, NODE_MIN)
+        branch %right_ok ? do_borrow_right(%slot, %local_order) : do_merge_left(%slot, %local_order)
+
+    block do_borrow_right(%slot: i64, %local_order: i64):
+        #self.borrow_from_right(%slot)
+        jump descend(%slot, %local_order)
+
+    block do_merge_left(%slot: i64, %local_order: i64):
+        #left: Ptr<BTreeListNode<T>> := #self.children[%slot - 1]
+        %left_count: i64 = #left.count()
+        #self.merge_children(%slot - 1, #alloc)
+        %new_slot: i64 = %slot - 1
+        %new_local: i64 = %left_count + %local_order
+        jump descend(%new_slot, %new_local)
+
+    block right_only(%slot: i64, %local_order: i64):
+        %parent_length: i64 := #self.length
+        %right_index: i64 = %slot + 1
+        %has_right: bool = slt(%right_index, %parent_length)
+        branch %has_right ? check_right_only(%slot, %local_order) : trap()
+
+    block check_right_only(%slot: i64, %local_order: i64):
+        #right: Ptr<BTreeListNode<T>> := #self.children[%slot + 1]
+        %right_length: i64 := #right.length
+        %right_ok: bool = sge(%right_length, NODE_MIN)
+        branch %right_ok ? do_borrow_right(%slot, %local_order) : do_merge_right(%slot, %local_order)
+
+    block do_merge_right(%slot: i64, %local_order: i64):
+        #self.merge_children(%slot, #alloc)
+        jump descend(%slot, %local_order)
+
+routine BTreeList<T>::remove(#self: Ptr<BTreeList<T>>, %order: i64) -> T
+    block entry():
+        %not_negative: bool = sge(%order, 0)
+        %length: i64 := #self.length
+        %before_end: bool = slt(%order, %length)
+        %in_bounds: bool = %not_negative & %before_end
+        branch %in_bounds ? remove_root(%order) : trap()
+
+    block remove_root(%order: i64):
+        #alloc: Ptr<Allocator> := #self.alloc
+        #root: Ptr<BTreeListNode<T>> := #self.root
+        %value: T = #root.remove(%order, #alloc)
+        %length: i64 := #self.length
+        #self.length = %length - 1
+        %leaf: bool := #root.leaf
+        branch %leaf ? maybe_clear(#root, %value) : maybe_shrink(#root, %value)
+
+    block maybe_clear(#root: Ptr<BTreeListNode<T>>, %value: T):
+        %root_length: i64 := #root.length
+        %empty: bool = %root_length == 0
+        branch %empty ? clear_root(#root, %value) : return %value
+
+    block maybe_shrink(#root: Ptr<BTreeListNode<T>>, %value: T):
+        %root_length: i64 := #root.length
+        %only_one: bool = %root_length == 1
+        branch %only_one ? shrink(#root, %value) : return %value
+
+    block clear_root(#root: Ptr<BTreeListNode<T>>, %value: T):
+        #alloc: Ptr<Allocator> := #self.alloc
+        free<BTreeListNode<T>>(#alloc, #root)
+        #self.root = null
+        return %value
+
+    block shrink(#root: Ptr<BTreeListNode<T>>, %value: T):
+        #alloc: Ptr<Allocator> := #self.alloc
+        #new_root: Ptr<BTreeListNode<T>> := #root.children[0]
+        free<BTreeListNode<T>>(#alloc, #root)
+        #self.root = #new_root
+        return %value
+
+; Internal nodes use `length` as the child count (indices 0..length-1).
+routine BTreeListNode<T>::free_recursive(#self: Ptr<BTreeListNode<T>>, #alloc: Ptr<Allocator>) -> Void
+    block entry():
+        %leaf: bool := #self.leaf
+        branch %leaf ? free_self() : free_children()
+
+    block free_children():
+        %length: i64 := #self.length
+        jump child_loop(0, %length)
+
+    block child_loop(%i: i64, %length: i64):
+        %done: bool = sge(%i, %length)
+        branch %done ? free_self() : free_child(%i, %length)
+
+    block free_child(%i: i64, %length: i64):
+        #child: Ptr<BTreeListNode<T>> := #self.children[%i]
+        #child.free_recursive(#alloc)
+        jump child_loop(%i + 1, %length)
+
+    block free_self():
+        free<BTreeListNode<T>>(#alloc, #self)
+        return
+
+routine BTreeList<T>::free(#self: Ptr<BTreeList<T>>) -> Void
+    block entry():
+        #root: Ptr<BTreeListNode<T>> := #self.root
+        %empty: bool = #root == null
+        branch %empty ? reset() : free_root(#root)
+
+    block free_root(#root: Ptr<BTreeListNode<T>>):
+        #alloc: Ptr<Allocator> := #self.alloc
+        #root.free_recursive(#alloc)
+        jump reset()
+
+    block reset():
+        #self.root = null
+        #self.length = 0
+        return

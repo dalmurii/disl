@@ -1,0 +1,61 @@
+; Disl stdlib: I16 — 16-bit signed integer
+;
+; Maps to LLVM IR i16.
+
+@llvm("i16")
+struct I16
+
+; ── constants ─────────────────────────────────────────────────────────────────
+
+const I16::MIN: I16 = -32768
+const I16::MAX: I16 =  32767
+
+; ── bit operations ────────────────────────────────────────────────────────────
+
+routine I16::count_ones(%self: I16) -> I16
+    block entry():
+        %result: I16 = popcount<I16>(%self)
+        return %result
+
+routine I16::leading_zeros(%self: I16) -> I16
+    block entry():
+        %result: I16 = clz<I16>(%self, false)
+        return %result
+
+routine I16::trailing_zeros(%self: I16) -> I16
+    block entry():
+        %result: I16 = ctz<I16>(%self, false)
+        return %result
+
+routine I16::swap_bytes(%self: I16) -> I16
+    block entry():
+        %result: I16 = bswap<I16>(%self)
+        return %result
+
+; ── arithmetic ────────────────────────────────────────────────────────────────
+
+routine I16::abs(%self: I16) -> I16
+    block entry():
+        %is_neg: Bool = slt<I16>(%self, 0)
+        %neg: I16 = 0 - %self
+        %result: I16 = %is_neg ? %neg : %self
+        return %result
+
+; ── narrowing conversions ─────────────────────────────────────────────────────
+
+routine I16::to_i8(%self: I16) -> I8
+    block entry():
+        %result: I8 = trunc<I16, I8>(%self)
+        return %result
+
+; ── widening conversions (sign-extending) ─────────────────────────────────────
+
+routine I16::to_i32(%self: I16) -> I32
+    block entry():
+        %result: I32 = sext<I16, I32>(%self)
+        return %result
+
+routine I16::to_i64(%self: I16) -> I64
+    block entry():
+        %result: I64 = sext<I16, I64>(%self)
+        return %result

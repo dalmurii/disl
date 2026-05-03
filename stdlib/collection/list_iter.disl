@@ -1,0 +1,33 @@
+; Disl stdlib collection: ListIter<T>
+;
+; Forward iterator over List<T>.  Borrows the list — the list must outlive the
+; iterator.  next() returns Option<T>::none() after the last element.
+;
+; Satisfies concept Iterator<T, ListIter<T>>.
+
+struct ListIter<T>
+    list:  Ptr<List<T>>
+    index: I64
+
+routine ListIter<T>::new(#list: Ptr<List<T>>) -> ListIter<T>
+    block entry():
+        %iter: ListIter<T> = ListIter<T> { list: #list, index: 0 }
+        return %iter
+
+routine ListIter<T>::next(#self: Ptr<ListIter<T>>) -> Option<T>
+    block entry():
+        #list:  Ptr<List<T>> := #self.list
+        %len:   I64          = #list.length()
+        %index: I64          := #self.index
+        %done:  Bool         = sge(%index, %len)
+        branch %done ? return_none() : return_some(%index, #list)
+
+    block return_none():
+        %none: Option<T> = Option<T>::none()
+        return %none
+
+    block return_some(%index: I64, #list: Ptr<List<T>>):
+        %value: T = #list.get(%index)
+        #self.index = %index + 1
+        %some: Option<T> = Option<T>::some(%value)
+        return %some

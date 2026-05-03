@@ -1,0 +1,42 @@
+; Disl stdlib collection: BTreeMapIter<K, V>
+;
+; In-order iterator over BTreeMap<K, V>.  Yields KVPair<K, V> with keys in
+; ascending sorted order, using the order-statistic routines key_order and
+; get_order.  Each next() makes two O(log n) tree walks (one per field).
+;
+; See btree_set_iter.disl for a note on the O(n log n) vs O(n) tradeoff.
+;
+; KVPair<K, V> is defined in option.disl.
+;
+; Satisfies concept Iterator<KVPair<K, V>, BTreeMapIter<K, V>>.
+
+struct BTreeMapIter<K, V>
+    map:   Ptr<BTreeMap<K, V>>
+    order: I64
+    total: I64
+
+routine BTreeMapIter<K, V>::new(#map: Ptr<BTreeMap<K, V>>) -> BTreeMapIter<K, V>
+    block entry():
+        %total: I64 = #map.length()
+        %iter: BTreeMapIter<K, V> = BTreeMapIter<K, V> { map: #map, order: 0, total: %total }
+        return %iter
+
+routine BTreeMapIter<K, V>::next(#self: Ptr<BTreeMapIter<K, V>>) -> Option<KVPair<K, V>>
+    block entry():
+        %order: I64  := #self.order
+        %total: I64  := #self.total
+        %done:  Bool = sge(%order, %total)
+        branch %done ? return_none() : return_some(%order)
+
+    block return_none():
+        %none: Option<KVPair<K, V>> = Option<KVPair<K, V>>::none()
+        return %none
+
+    block return_some(%order: I64):
+        #map:   Ptr<BTreeMap<K, V>> := #self.map
+        %key:   K                   = #map.key_order(%order)
+        %value: V                   = #map.get_order(%order)
+        %pair:  KVPair<K, V>        = KVPair<K, V> { key: %key, value: %value }
+        #self.order = %order + 1
+        %some: Option<KVPair<K, V>> = Option<KVPair<K, V>>::some(%pair)
+        return %some

@@ -1,0 +1,73 @@
+; Disl stdlib: I32 — 32-bit signed integer
+;
+; Maps to LLVM IR i32.
+
+@llvm("i32")
+struct I32
+
+; ── constants ─────────────────────────────────────────────────────────────────
+
+const I32::MIN: I32 = -2147483648
+const I32::MAX: I32 =  2147483647
+
+; ── bit operations ────────────────────────────────────────────────────────────
+
+routine I32::count_ones(%self: I32) -> I32
+    block entry():
+        %result: I32 = popcount<I32>(%self)
+        return %result
+
+routine I32::leading_zeros(%self: I32) -> I32
+    block entry():
+        %result: I32 = clz<I32>(%self, false)
+        return %result
+
+routine I32::trailing_zeros(%self: I32) -> I32
+    block entry():
+        %result: I32 = ctz<I32>(%self, false)
+        return %result
+
+routine I32::swap_bytes(%self: I32) -> I32
+    block entry():
+        %result: I32 = bswap<I32>(%self)
+        return %result
+
+; ── arithmetic ────────────────────────────────────────────────────────────────
+
+routine I32::abs(%self: I32) -> I32
+    block entry():
+        %is_neg: Bool = slt<I32>(%self, 0)
+        %neg: I32 = 0 - %self
+        %result: I32 = %is_neg ? %neg : %self
+        return %result
+
+; ── narrowing conversions ─────────────────────────────────────────────────────
+
+routine I32::to_i8(%self: I32) -> I8
+    block entry():
+        %result: I8 = trunc<I32, I8>(%self)
+        return %result
+
+routine I32::to_i16(%self: I32) -> I16
+    block entry():
+        %result: I16 = trunc<I32, I16>(%self)
+        return %result
+
+; ── widening conversions (sign-extending) ─────────────────────────────────────
+
+routine I32::to_i64(%self: I32) -> I64
+    block entry():
+        %result: I64 = sext<I32, I64>(%self)
+        return %result
+
+; ── float conversions ─────────────────────────────────────────────────────────
+
+routine I32::to_f32(%self: I32) -> F32
+    block entry():
+        %result: F32 = sitofp<I32, F32>(%self)
+        return %result
+
+routine I32::to_f64(%self: I32) -> F64
+    block entry():
+        %result: F64 = sitofp<I32, F64>(%self)
+        return %result

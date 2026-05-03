@@ -1,0 +1,51 @@
+; Disl stdlib collection: fixed array helpers
+;
+; These helpers operate on Array<T, N> fields inside larger structures. The
+; range convention is half-open: [start, end).
+
+routine Array<T, N>::shift_right(#self: Ptr<Array<T, N>>, %start: I64, %end: I64) -> Void
+    block entry():
+        jump loop(%end)
+
+    block loop(%i: I64):
+        %done: Bool = sle(%i, %start)
+        branch %done ? return : move(%i)
+
+    block move(%i: I64):
+        %from: I64 = %i - 1
+        %value: T := #self[%from]
+        #self[%i] = %value
+        jump loop(%from)
+
+routine Array<T, N>::shift_left(#self: Ptr<Array<T, N>>, %start: I64, %end: I64) -> Void
+    block entry():
+        jump loop(%start)
+
+    block loop(%i: I64):
+        %last: I64 = %end - 1
+        %done: Bool = sge(%i, %last)
+        branch %done ? return : move(%i)
+
+    block move(%i: I64):
+        %from: I64 = %i + 1
+        %value: T := #self[%from]
+        #self[%i] = %value
+        jump loop(%from)
+
+routine Array<T, N>::copy(#self: Ptr<Array<T, N>>, %dst_start: I64, #src: Ptr<Array<T, N>>, %src_start: I64, %count: I64) -> Void
+    block entry():
+        jump loop(0)
+
+    block loop(%i: I64):
+        %done: Bool = sge(%i, %count)
+        branch %done ? finish() : copy_one(%i)
+
+    block copy_one(%i: I64):
+        %src_index: I64 = %src_start + %i
+        %dst_index: I64 = %dst_start + %i
+        %value: T := #src[%src_index]
+        #self[%dst_index] = %value
+        jump loop(%i + 1)
+
+    block finish():
+        return

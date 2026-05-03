@@ -1,0 +1,110 @@
+; Disl stdlib: String
+;
+; String is a non-owning immutable view over a UTF-8 byte sequence:
+;   data   — Ptr<I8> to the first byte (null-terminated for C interop)
+;   length — I64 byte count (not including the null terminator)
+;
+; String literal syntax ("hello") desugars directly to a String constant —
+; no heap allocation, no allocator needed.
+;
+; String never owns its bytes.  The caller is responsible for ensuring the
+; pointed-to data outlives the String.  For heap-owned byte buffers, use
+; List<I8>; call List<I8>::as_ptr() and List<I8>::length() to get a String.
+;
+; Factory routines (concat, repeat) take an explicit Ptr<Allocator> and
+; return a String whose data must be freed by the caller via free<I8>.
+
+struct String
+    data:   Ptr<I8>
+    length: I64
+
+; ── construction ──────────────────────────────────────────────────────────────
+
+routine String::empty() -> String
+    block entry():
+        %str: String = String { data: null, length: 0 }
+        return %str
+
+routine String::from_ptr(#data: Ptr<I8>, %length: I64) -> String
+    block entry():
+        %str: String = String { data: #data, length: %length }
+        return %str
+
+; ── predicates ────────────────────────────────────────────────────────────────
+
+routine String::is_empty(%self: String) -> Bool
+    block entry():
+        %result: Bool = %self.length == 0
+        return %result
+
+; ── element access ────────────────────────────────────────────────────────────
+
+routine String::byte_at(%self: String, %index: I64) -> I8
+    block entry():
+        %not_negative: Bool = sge<I64>(%index, 0)
+        %before_end:   Bool = slt<I64>(%index, %self.length)
+        %in_bounds:    Bool = %not_negative & %before_end
+        branch %in_bounds ? load(%index) : trap()
+
+    block load(%index: I64):
+        #data: Ptr<I8> = %self.data
+        %byte: I8 := #data[%index]
+        return %byte
+
+; ── slicing ───────────────────────────────────────────────────────────────────
+
+; Returns a sub-view [start, end).  Traps if range is out of bounds.
+routine String::slice(%self: String, %start: I64, %end: I64) -> String
+    block entry():
+        %valid_start: Bool = sge<I64>(%start, 0)
+        %valid_end:   Bool = sle<I64>(%end, %self.length)
+        %valid_order: Bool = sle<I64>(%start, %end)
+        %valid: Bool = (%valid_start & %valid_end) & %valid_order
+        branch %valid ? make(%start, %end) : trap()
+
+    block make(%start: I64, %end: I64):
+        #base: Ptr<I8> = %self.data
+        #from: Ptr<I8> = #base[%start]
+        %length: I64   = %end - %start
+        %result: String = String { data: #from, length: %length }
+        return %result
+
+; ── heap-allocating operations ────────────────────────────────────────────────
+
+; Allocates a new buffer containing a followed by b.
+; Caller must free the returned String's data pointer via free<I8>.
+routine String::concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> String
+    block entry():
+        %length: I64 = %a.length + %b.length
+        %buf_size: I64 = %length + 1
+        #data: Ptr<I8> = alloc<I8>(#alloc, %buf_size)
+        %failed: Bool = #data == null
+        branch %failed ? trap() : copy_a(#data)
+
+    block copy_a(#data: Ptr<I8>):
+        #src_a: Ptr<I8> = %a.data
+        %len_a: I64     = %a.length
+        copy<I8>(#data, #src_a, %len_a)
+        jump copy_b(#data, %len_a)
+
+    block copy_b(#data: Ptr<I8>, %offset: I64):
+        #dst: Ptr<I8>   = #data[%offset]
+        #src_b: Ptr<I8> = %b.data
+        %len_b: I64     = %b.length
+        copy<I8>(#dst, #src_b, %len_b)
+        %length: I64    = %offset + %len_b
+        #data[%length]  = 0
+        %result: String = String { data: #data, length: %length }
+        return %result
+
+; ── iterators ─────────────────────────────────────────────────────────────────
+
+routine String::bytes(%self: String) -> StringBytesIter
+    block entry():
+        %iter: StringBytesIter = StringBytesIter { str: %self, index: 0 }
+        return %iter
+
+routine String::chars(%self: String) -> StringCharsIter
+    block entry():
+        %iter: StringCharsIter = StringCharsIter { str: %self, index: 0 }
+        return %iter

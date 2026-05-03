@@ -1,0 +1,48 @@
+; Disl stdlib collection: HashSetIter<T>
+;
+; Slot-scanning iterator over HashSet<T>.  Visits every occupied slot in
+; arbitrary (hash) order.  Skips empty (0) and tombstone (2) slots.
+;
+; Iteration order is unspecified and depends on the hash function and load.
+; Mutating the set during iteration produces undefined behaviour.
+;
+; Satisfies concept Iterator<T, HashSetIter<T>>.
+
+struct HashSetIter<T>
+    set:  Ptr<HashSet<T>>
+    slot: I64
+
+routine HashSetIter<T>::new(#set: Ptr<HashSet<T>>) -> HashSetIter<T>
+    block entry():
+        %iter: HashSetIter<T> = HashSetIter<T> { set: #set, slot: 0 }
+        return %iter
+
+routine HashSetIter<T>::next(#self: Ptr<HashSetIter<T>>) -> Option<T>
+    block entry():
+        #set:     Ptr<HashSet<T>> := #self.set
+        %capacity: I64            := #set.capacity
+        %slot:     I64            := #self.slot
+        jump scan(%slot, %capacity, #set)
+
+    ; Advance until we hit an occupied slot or exhaust the table.
+    ; sge(slot, 0) is true when capacity==0, so an empty set returns None safely.
+    block scan(%slot: I64, %capacity: I64, #set: Ptr<HashSet<T>>):
+        %exhausted: Bool = sge(%slot, %capacity)
+        branch %exhausted ? return_none() : check(%slot, %capacity, #set)
+
+    block check(%slot: I64, %capacity: I64, #set: Ptr<HashSet<T>>):
+        #states:   Ptr<I8> := #set.states
+        %state:    I8      := #states[%slot]
+        %occupied: Bool    = %state == 1
+        branch %occupied ? yield(%slot, #set) : scan(%slot + 1, %capacity, #set)
+
+    block return_none():
+        %none: Option<T> = Option<T>::none()
+        return %none
+
+    block yield(%slot: I64, #set: Ptr<HashSet<T>>):
+        #keys:  Ptr<T> := #set.keys
+        %key:   T      := #keys[%slot]
+        #self.slot = %slot + 1
+        %some: Option<T> = Option<T>::some(%key)
+        return %some

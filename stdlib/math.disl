@@ -1,0 +1,49 @@
+; Disl stdlib: math helpers
+;
+; Generic over numeric type T.
+; Integer variants use slt/sgt for ordering; float variants use flt/fgt.
+; Caller selects the right routine for their type — no implicit dispatch.
+
+; ── integer ───────────────────────────────────────────────────────────────────
+
+routine abs_int<T>(%x: T) -> T
+    block entry():
+        %zero: T = 0
+        %is_neg: Bool = slt<T>(%x, %zero)
+        %neg: T = %zero - %x
+        %result: T = %is_neg ? %neg : %x
+        return %result
+
+routine min_int<T>(%a: T, %b: T) -> T
+    block entry():
+        %a_less: Bool = slt<T>(%a, %b)
+        %result: T = %a_less ? %a : %b
+        return %result
+
+routine max_int<T>(%a: T, %b: T) -> T
+    block entry():
+        %a_more: Bool = sgt<T>(%a, %b)
+        %result: T = %a_more ? %a : %b
+        return %result
+
+; ── float ─────────────────────────────────────────────────────────────────────
+
+routine abs_float<T>(%x: T) -> T
+    block entry():
+        %zero: T = 0.0
+        %is_neg: Bool = flt<T>(%x, %zero)
+        %neg: T = fsub<T>(%zero, %x)
+        %result: T = %is_neg ? %neg : %x
+        return %result
+
+routine min_float<T>(%a: T, %b: T) -> T
+    block entry():
+        %a_less: Bool = flt<T>(%a, %b)
+        %result: T = %a_less ? %a : %b
+        return %result
+
+routine max_float<T>(%a: T, %b: T) -> T
+    block entry():
+        %a_more: Bool = fgt<T>(%a, %b)
+        %result: T = %a_more ? %a : %b
+        return %result

@@ -1,0 +1,50 @@
+; Disl stdlib collection: HashMapIter<K, V>
+;
+; Slot-scanning iterator over HashMap<K, V>.  Yields KVPair<K, V> for every
+; occupied slot in arbitrary (hash) order.  Skips empty and tombstone slots.
+;
+; KVPair<K, V> is defined in option.disl and shared with BTreeMapIter.
+;
+; Mutating the map during iteration produces undefined behaviour.
+;
+; Satisfies concept Iterator<KVPair<K, V>, HashMapIter<K, V>>.
+
+struct HashMapIter<K, V>
+    map:  Ptr<HashMap<K, V>>
+    slot: I64
+
+routine HashMapIter<K, V>::new(#map: Ptr<HashMap<K, V>>) -> HashMapIter<K, V>
+    block entry():
+        %iter: HashMapIter<K, V> = HashMapIter<K, V> { map: #map, slot: 0 }
+        return %iter
+
+routine HashMapIter<K, V>::next(#self: Ptr<HashMapIter<K, V>>) -> Option<KVPair<K, V>>
+    block entry():
+        #map:      Ptr<HashMap<K, V>> := #self.map
+        %capacity: I64                := #map.capacity
+        %slot:     I64                := #self.slot
+        jump scan(%slot, %capacity, #map)
+
+    block scan(%slot: I64, %capacity: I64, #map: Ptr<HashMap<K, V>>):
+        %exhausted: Bool = sge(%slot, %capacity)
+        branch %exhausted ? return_none() : check(%slot, %capacity, #map)
+
+    block check(%slot: I64, %capacity: I64, #map: Ptr<HashMap<K, V>>):
+        #states:   Ptr<I8> := #map.states
+        %state:    I8      := #states[%slot]
+        %occupied: Bool    = %state == 1
+        branch %occupied ? yield(%slot, #map) : scan(%slot + 1, %capacity, #map)
+
+    block return_none():
+        %none: Option<KVPair<K, V>> = Option<KVPair<K, V>>::none()
+        return %none
+
+    block yield(%slot: I64, #map: Ptr<HashMap<K, V>>):
+        #keys:   Ptr<K> := #map.keys
+        #values: Ptr<V> := #map.values
+        %key:    K      := #keys[%slot]
+        %value:  V      := #values[%slot]
+        %pair:   KVPair<K, V> = KVPair<K, V> { key: %key, value: %value }
+        #self.slot = %slot + 1
+        %some: Option<KVPair<K, V>> = Option<KVPair<K, V>>::some(%pair)
+        return %some
