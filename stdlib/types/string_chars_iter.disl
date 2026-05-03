@@ -2,8 +2,8 @@
 ;
 ; Forward iterator over the Unicode codepoints (I32) of a UTF-8 String.
 ; Advances by a variable number of bytes per step via utf8_decode.
-; next() returns Option<I32>::none() after the last codepoint.
-; Returns Option<I32>::some(-1) for any malformed byte sequence and
+; next() returns Option<I32>.none() after the last codepoint.
+; Returns Option<I32>.some(-1) for any malformed byte sequence and
 ; advances past the offending byte so iteration always terminates.
 ;
 ; Satisfies concept Iterator<I32, StringCharsIter>.
@@ -12,12 +12,12 @@ struct StringCharsIter
     str:   String
     index: I64
 
-routine StringCharsIter::new(%str: String) -> StringCharsIter
+routine StringCharsIter.new(%str: String) -> StringCharsIter
     block entry():
         %iter: StringCharsIter = StringCharsIter { str: %str, index: 0 }
-        return %iter
+        return(%iter)
 
-routine StringCharsIter::next(#self: Ptr<StringCharsIter>) -> Option<I32>
+routine StringCharsIter.next(#self: Ptr<StringCharsIter>) -> Option<I32>
     block entry():
         %index: I64  := #self.index
         %str: String := #self.str
@@ -25,8 +25,8 @@ routine StringCharsIter::next(#self: Ptr<StringCharsIter>) -> Option<I32>
         branch %done ? return_none() : decode(%index, %str)
 
     block return_none():
-        %none: Option<I32> = Option<I32>::none()
-        return %none
+        %none: Option<I32> = Option<I32>.none()
+        return(%none)
 
     block decode(%index: I64, %str: String):
         #data: Ptr<I8>      = %str.data
@@ -38,5 +38,5 @@ routine StringCharsIter::next(#self: Ptr<StringCharsIter>) -> Option<I32>
         %safe_next: I64 = %index + 1
         %advance: I64  = %is_err ? %safe_next : %next
         #self.index = %advance
-        %some: Option<I32> = Option<I32>::some(%cp)
-        return %some
+        %some: Option<I32> = Option<I32>.some(%cp)
+        return(%some)

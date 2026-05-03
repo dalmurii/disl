@@ -9,7 +9,7 @@
 ;
 ; String never owns its bytes.  The caller is responsible for ensuring the
 ; pointed-to data outlives the String.  For heap-owned byte buffers, use
-; List<I8>; call List<I8>::as_ptr() and List<I8>::length() to get a String.
+; List<I8>; call List<I8>.as_ptr() and List<I8>.length() to get a String.
 ;
 ; Factory routines (concat, repeat) take an explicit Ptr<Allocator> and
 ; return a String whose data must be freed by the caller via free<I8>.
@@ -20,26 +20,26 @@ struct String
 
 ; ── construction ──────────────────────────────────────────────────────────────
 
-routine String::empty() -> String
+routine String.empty() -> String
     block entry():
         %str: String = String { data: null, length: 0 }
-        return %str
+        return(%str)
 
-routine String::from_ptr(#data: Ptr<I8>, %length: I64) -> String
+routine String.from_ptr(#data: Ptr<I8>, %length: I64) -> String
     block entry():
         %str: String = String { data: #data, length: %length }
-        return %str
+        return(%str)
 
 ; ── predicates ────────────────────────────────────────────────────────────────
 
-routine String::is_empty(%self: String) -> Bool
+routine String.is_empty(%self: String) -> Bool
     block entry():
         %result: Bool = %self.length == 0
-        return %result
+        return(%result)
 
 ; ── element access ────────────────────────────────────────────────────────────
 
-routine String::byte_at(%self: String, %index: I64) -> I8
+routine String.byte_at(%self: String, %index: I64) -> I8
     block entry():
         %not_negative: Bool = sge<I64>(%index, 0)
         %before_end:   Bool = slt<I64>(%index, %self.length)
@@ -49,12 +49,12 @@ routine String::byte_at(%self: String, %index: I64) -> I8
     block load(%index: I64):
         #data: Ptr<I8> = %self.data
         %byte: I8 := #data[%index]
-        return %byte
+        return(%byte)
 
 ; ── slicing ───────────────────────────────────────────────────────────────────
 
 ; Returns a sub-view [start, end).  Traps if range is out of bounds.
-routine String::slice(%self: String, %start: I64, %end: I64) -> String
+routine String.slice(%self: String, %start: I64, %end: I64) -> String
     block entry():
         %valid_start: Bool = sge<I64>(%start, 0)
         %valid_end:   Bool = sle<I64>(%end, %self.length)
@@ -67,13 +67,13 @@ routine String::slice(%self: String, %start: I64, %end: I64) -> String
         #from: Ptr<I8> = #base[%start]
         %length: I64   = %end - %start
         %result: String = String { data: #from, length: %length }
-        return %result
+        return(%result)
 
 ; ── heap-allocating operations ────────────────────────────────────────────────
 
 ; Allocates a new buffer containing a followed by b.
 ; Caller must free the returned String's data pointer via free<I8>.
-routine String::concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> String
+routine String.concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> String
     block entry():
         %length: I64 = %a.length + %b.length
         %buf_size: I64 = %length + 1
@@ -95,16 +95,16 @@ routine String::concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> String
         %length: I64    = %offset + %len_b
         #data[%length]  = 0
         %result: String = String { data: #data, length: %length }
-        return %result
+        return(%result)
 
 ; ── iterators ─────────────────────────────────────────────────────────────────
 
-routine String::bytes(%self: String) -> StringBytesIter
+routine String.bytes(%self: String) -> StringBytesIter
     block entry():
         %iter: StringBytesIter = StringBytesIter { str: %self, index: 0 }
-        return %iter
+        return(%iter)
 
-routine String::chars(%self: String) -> StringCharsIter
+routine String.chars(%self: String) -> StringCharsIter
     block entry():
         %iter: StringCharsIter = StringCharsIter { str: %self, index: 0 }
-        return %iter
+        return(%iter)

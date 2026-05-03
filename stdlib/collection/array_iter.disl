@@ -11,14 +11,14 @@ struct ArrayIter<T, N>
     index:  I64
     length: I64      ; = N, resolved at monomorphisation
 
-routine ArrayIter<T, N>::new(#arr: Ptr<Array<T, N>>) -> ArrayIter<T, N>
+routine ArrayIter<T, N>.new(#arr: Ptr<Array<T, N>>) -> ArrayIter<T, N>
     block entry():
         #data:  Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#arr)
         %n:     I64    = sdiv(sizeof<Array<T, N>>(), sizeof<T>())
         %iter:  ArrayIter<T, N> = ArrayIter<T, N> { data: #data, index: 0, length: %n }
-        return %iter
+        return(%iter)
 
-routine ArrayIter<T, N>::next(#self: Ptr<ArrayIter<T, N>>) -> Option<T>
+routine ArrayIter<T, N>.next(#self: Ptr<ArrayIter<T, N>>) -> Option<T>
     block entry():
         %index:  I64  := #self.index
         %length: I64  := #self.length
@@ -26,12 +26,12 @@ routine ArrayIter<T, N>::next(#self: Ptr<ArrayIter<T, N>>) -> Option<T>
         branch %done ? return_none() : return_some(%index)
 
     block return_none():
-        %none: Option<T> = Option<T>::none()
-        return %none
+        %none: Option<T> = Option<T>.none()
+        return(%none)
 
     block return_some(%index: I64):
         #data:  Ptr<T> := #self.data
         %value: T      := #data[%index]
         #self.index = %index + 1
-        %some: Option<T> = Option<T>::some(%value)
-        return %some
+        %some: Option<T> = Option<T>.some(%value)
+        return(%some)

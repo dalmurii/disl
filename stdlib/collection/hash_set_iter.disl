@@ -12,12 +12,12 @@ struct HashSetIter<T>
     set:  Ptr<HashSet<T>>
     slot: I64
 
-routine HashSetIter<T>::new(#set: Ptr<HashSet<T>>) -> HashSetIter<T>
+routine HashSetIter<T>.new(#set: Ptr<HashSet<T>>) -> HashSetIter<T>
     block entry():
         %iter: HashSetIter<T> = HashSetIter<T> { set: #set, slot: 0 }
-        return %iter
+        return(%iter)
 
-routine HashSetIter<T>::next(#self: Ptr<HashSetIter<T>>) -> Option<T>
+routine HashSetIter<T>.next(#self: Ptr<HashSetIter<T>>) -> Option<T>
     block entry():
         #set:     Ptr<HashSet<T>> := #self.set
         %capacity: I64            := #set.capacity
@@ -37,12 +37,12 @@ routine HashSetIter<T>::next(#self: Ptr<HashSetIter<T>>) -> Option<T>
         branch %occupied ? yield(%slot, #set) : scan(%slot + 1, %capacity, #set)
 
     block return_none():
-        %none: Option<T> = Option<T>::none()
-        return %none
+        %none: Option<T> = Option<T>.none()
+        return(%none)
 
     block yield(%slot: I64, #set: Ptr<HashSet<T>>):
         #keys:  Ptr<T> := #set.keys
         %key:   T      := #keys[%slot]
         #self.slot = %slot + 1
-        %some: Option<T> = Option<T>::some(%key)
-        return %some
+        %some: Option<T> = Option<T>.some(%key)
+        return(%some)

@@ -9,7 +9,7 @@ struct List<T>
     capacity: I64
     alloc: Ptr<Allocator>
 
-routine List<T>::new(#alloc: Ptr<Allocator>) -> List<T>
+routine List<T>.new(#alloc: Ptr<Allocator>) -> List<T>
     block entry():
         %list: List<T> = List<T> {
             data: null,
@@ -17,24 +17,24 @@ routine List<T>::new(#alloc: Ptr<Allocator>) -> List<T>
             capacity: 0,
             alloc: #alloc
         }
-        return %list
+        return(%list)
 
-routine List<T>::length(#self: Ptr<List<T>>) -> I64
+routine List<T>.length(#self: Ptr<List<T>>) -> I64
     block entry():
         %length: I64 := #self.length
-        return %length
+        return(%length)
 
-routine List<T>::is_empty(#self: Ptr<List<T>>) -> Bool
+routine List<T>.is_empty(#self: Ptr<List<T>>) -> Bool
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
-        return %empty
+        return(%empty)
 
-routine List<T>::reserve(#self: Ptr<List<T>>, %capacity: I64) -> Void
+routine List<T>.reserve(#self: Ptr<List<T>>, %capacity: I64) -> Void
     block entry():
         %old_capacity: I64 := #self.capacity
         %enough: Bool = sge(%old_capacity, %capacity)
-        branch %enough ? return : grow(%capacity)
+        branch %enough ? return() : grow(%capacity)
 
     block grow(%capacity: I64):
         #alloc: Ptr<Allocator> := #self.alloc
@@ -46,13 +46,13 @@ routine List<T>::reserve(#self: Ptr<List<T>>, %capacity: I64) -> Void
     block install(#new_data: Ptr<T>, %capacity: I64):
         #self.data = #new_data
         #self.capacity = %capacity
-        return
+        return()
 
-routine List<T>::ensure_capacity(#self: Ptr<List<T>>, %wanted: I64) -> Void
+routine List<T>.ensure_capacity(#self: Ptr<List<T>>, %wanted: I64) -> Void
     block entry():
         %capacity: I64 := #self.capacity
         %enough: Bool = sge(%capacity, %wanted)
-        branch %enough ? return : choose(%capacity, %wanted)
+        branch %enough ? return() : choose(%capacity, %wanted)
 
     block choose(%capacity: I64, %wanted: I64):
         %empty: Bool = %capacity == 0
@@ -63,7 +63,7 @@ routine List<T>::ensure_capacity(#self: Ptr<List<T>>, %wanted: I64) -> Void
         %use_wanted: Bool = sgt(%wanted, %base)
         %new_capacity: I64 = %use_wanted ? %wanted : %base
         #self.reserve(%new_capacity)
-        return
+        return()
 
     block double(%capacity: I64, %wanted: I64):
         %next: I64 = %capacity * 2
@@ -72,9 +72,9 @@ routine List<T>::ensure_capacity(#self: Ptr<List<T>>, %wanted: I64) -> Void
 
     block reserve(%new_capacity: I64):
         #self.reserve(%new_capacity)
-        return
+        return()
 
-routine List<T>::push(#self: Ptr<List<T>>, %value: T) -> Void
+routine List<T>.push(#self: Ptr<List<T>>, %value: T) -> Void
     block entry():
         %length: I64 := #self.length
         %wanted: I64 = %length + 1
@@ -82,9 +82,9 @@ routine List<T>::push(#self: Ptr<List<T>>, %value: T) -> Void
         #data: Ptr<T> := #self.data
         #data[%length] = %value
         #self.length = %wanted
-        return
+        return()
 
-routine List<T>::pop(#self: Ptr<List<T>>) -> T
+routine List<T>.pop(#self: Ptr<List<T>>) -> T
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
@@ -95,9 +95,9 @@ routine List<T>::pop(#self: Ptr<List<T>>) -> T
         #data: Ptr<T> := #self.data
         %value: T := #data[%index]
         #self.length = %index
-        return %value
+        return(%value)
 
-routine List<T>::get(#self: Ptr<List<T>>, %index: I64) -> T
+routine List<T>.get(#self: Ptr<List<T>>, %index: I64) -> T
     block entry():
         %length: I64 := #self.length
         %not_negative: Bool = sge(%index, 0)
@@ -108,9 +108,9 @@ routine List<T>::get(#self: Ptr<List<T>>, %index: I64) -> T
     block load(%index: I64):
         #data: Ptr<T> := #self.data
         %value: T := #data[%index]
-        return %value
+        return(%value)
 
-routine List<T>::set(#self: Ptr<List<T>>, %index: I64, %value: T) -> Void
+routine List<T>.set(#self: Ptr<List<T>>, %index: I64, %value: T) -> Void
     block entry():
         %length: I64 := #self.length
         %not_negative: Bool = sge(%index, 0)
@@ -121,14 +121,14 @@ routine List<T>::set(#self: Ptr<List<T>>, %index: I64, %value: T) -> Void
     block store(%index: I64, %value: T):
         #data: Ptr<T> := #self.data
         #data[%index] = %value
-        return
+        return()
 
-routine List<T>::clear(#self: Ptr<List<T>>) -> Void
+routine List<T>.clear(#self: Ptr<List<T>>) -> Void
     block entry():
         #self.length = 0
-        return
+        return()
 
-routine List<T>::free(#self: Ptr<List<T>>) -> Void
+routine List<T>.free(#self: Ptr<List<T>>) -> Void
     block entry():
         #data: Ptr<T> := #self.data
         %empty: Bool = #data == null
@@ -143,4 +143,4 @@ routine List<T>::free(#self: Ptr<List<T>>) -> Void
         #self.data = null
         #self.length = 0
         #self.capacity = 0
-        return
+        return()

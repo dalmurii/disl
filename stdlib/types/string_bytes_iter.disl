@@ -1,7 +1,7 @@
 ; Disl stdlib: StringBytesIter
 ;
 ; Forward iterator over the raw bytes (I8) of a String.
-; next() returns Option<I8>::none() after the last byte.
+; next() returns Option<I8>.none() after the last byte.
 ;
 ; Satisfies concept Iterator<I8, StringBytesIter>.
 
@@ -9,12 +9,12 @@ struct StringBytesIter
     str:   String
     index: I64
 
-routine StringBytesIter::new(%str: String) -> StringBytesIter
+routine StringBytesIter.new(%str: String) -> StringBytesIter
     block entry():
         %iter: StringBytesIter = StringBytesIter { str: %str, index: 0 }
-        return %iter
+        return(%iter)
 
-routine StringBytesIter::next(#self: Ptr<StringBytesIter>) -> Option<I8>
+routine StringBytesIter.next(#self: Ptr<StringBytesIter>) -> Option<I8>
     block entry():
         %index: I64 := #self.index
         %str: String := #self.str
@@ -22,12 +22,12 @@ routine StringBytesIter::next(#self: Ptr<StringBytesIter>) -> Option<I8>
         branch %done ? return_none() : return_some(%index, %str)
 
     block return_none():
-        %none: Option<I8> = Option<I8>::none()
-        return %none
+        %none: Option<I8> = Option<I8>.none()
+        return(%none)
 
     block return_some(%index: I64, %str: String):
         #data: Ptr<I8> = %str.data
         %byte: I8 := #data[%index]
         #self.index = %index + 1
-        %some: Option<I8> = Option<I8>::some(%byte)
-        return %some
+        %some: Option<I8> = Option<I8>.some(%byte)
+        return(%some)

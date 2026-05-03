@@ -7,47 +7,47 @@ struct F64
 
 ; ── constants ─────────────────────────────────────────────────────────────────
 
-const F64::INFINITY:     F64 = 0x7FF0000000000000  ; +inf bits
-const F64::NEG_INFINITY: F64 = 0xFFF0000000000000  ; -inf bits
-const F64::NAN:          F64 = 0x7FF8000000000000  ; canonical quiet NaN bits
+const F64.INFINITY:     F64 = 0x7FF0000000000000  ; +inf bits
+const F64.NEG_INFINITY: F64 = 0xFFF0000000000000  ; -inf bits
+const F64.NAN:          F64 = 0x7FF8000000000000  ; canonical quiet NaN bits
 
 ; ── arithmetic ────────────────────────────────────────────────────────────────
 
-routine F64::abs(%self: F64) -> F64
+routine F64.abs(%self: F64) -> F64
     block entry():
         %zero: F64 = 0.0
         %is_neg: Bool = flt<F64>(%self, %zero)
         %neg: F64 = fsub<F64>(%zero, %self)
         %result: F64 = %is_neg ? %neg : %self
-        return %result
+        return(%result)
 
-routine F64::min(%self: F64, %other: F64) -> F64
+routine F64.min(%self: F64, %other: F64) -> F64
     block entry():
         %self_less: Bool = flt<F64>(%self, %other)
         %result: F64 = %self_less ? %self : %other
-        return %result
+        return(%result)
 
-routine F64::max(%self: F64, %other: F64) -> F64
+routine F64.max(%self: F64, %other: F64) -> F64
     block entry():
         %self_more: Bool = fgt<F64>(%self, %other)
         %result: F64 = %self_more ? %self : %other
-        return %result
+        return(%result)
 
 ; ── narrowing conversion ──────────────────────────────────────────────────────
 
-routine F64::to_f32(%self: F64) -> F32
+routine F64.to_f32(%self: F64) -> F32
     block entry():
         %result: F32 = fptrunc<F64, F32>(%self)
-        return %result
+        return(%result)
 
 ; ── float-to-int conversions (truncates toward zero) ─────────────────────────
 
-routine F64::to_i32(%self: F64) -> I32
+routine F64.to_i32(%self: F64) -> I32
     block entry():
         %result: I32 = fptosi<F64, I32>(%self)
-        return %result
+        return(%result)
 
-routine F64::to_i64(%self: F64) -> I64
+routine F64.to_i64(%self: F64) -> I64
     block entry():
         %result: I64 = fptosi<F64, I64>(%self)
-        return %result
+        return(%result)

@@ -44,19 +44,19 @@ struct Allocator
 routine heap_alloc_fn(#state: Ptr, %size: I64) -> Ptr
     block entry:
         #result: Ptr = c_malloc(%size)
-        return #result
+        return(#result)
 
 @callconv("c")
 routine heap_realloc_fn(#state: Ptr, #old_Ptr: Ptr, %size: I64) -> Ptr
     block entry:
         #result: Ptr = c_realloc(#old_Ptr, %size)
-        return #result
+        return(#result)
 
 @callconv("c")
 routine heap_free_fn(#state: Ptr, #Ptr: Ptr) -> Void
     block entry:
         c_free(#Ptr)
-        return
+        return()
 
 ; ============================================================
 ; Allocator factory
@@ -70,7 +70,7 @@ routine make_heap_allocator() -> Allocator
             free_fn:    heap_free_fn,
             state:      null
         }
-        return %alloc
+        return(%alloc)
 
 ; ============================================================
 ; Generic memory routines (prelude surface)
@@ -81,7 +81,7 @@ routine alloc<T>(#alloc: Ptr<Allocator>, %count: I64) -> Ptr<T>
         %size: I64 = sizeof<T> * %count
         #raw: Ptr = #alloc.alloc_fn(#alloc.state, %size)
         #typed: Ptr<T> = bitcast<Ptr, Ptr<T>>(#raw)
-        return #typed
+        return(#typed)
 
 routine realloc<T>(#alloc: Ptr<Allocator>, #Ptr: Ptr<T>, %new_count: I64) -> Ptr<T>
     block entry:
@@ -89,20 +89,20 @@ routine realloc<T>(#alloc: Ptr<Allocator>, #Ptr: Ptr<T>, %new_count: I64) -> Ptr
         #raw_old: Ptr = bitcast<Ptr<T>, Ptr>(#Ptr)
         #raw: Ptr = #alloc.realloc_fn(#alloc.state, #raw_old, %size)
         #typed: Ptr<T> = bitcast<Ptr, Ptr<T>>(#raw)
-        return #typed
+        return(#typed)
 
 routine free<T>(#alloc: Ptr<Allocator>, #Ptr: Ptr<T>) -> Void
     block entry:
         #raw: Ptr = bitcast<Ptr<T>, Ptr>(#Ptr)
         #alloc.free_fn(#alloc.state, #raw)
-        return
+        return()
 
 routine zero<T>(#Ptr: Ptr<T>, %count: I64) -> Void
     block entry:
         %size: I64 = sizeof<T> * %count
         #raw: Ptr = bitcast<Ptr<T>, Ptr>(#Ptr)
         c_memset(#raw, 0, %size)
-        return
+        return()
 
 routine copy<T>(#dst: Ptr<T>, #src: Ptr<T>, %count: I64) -> Void
     block entry:
@@ -110,4 +110,4 @@ routine copy<T>(#dst: Ptr<T>, #src: Ptr<T>, %count: I64) -> Void
         #raw_dst: Ptr = bitcast<Ptr<T>, Ptr>(#dst)
         #raw_src: Ptr = bitcast<Ptr<T>, Ptr>(#src)
         c_memcpy(#raw_dst, #raw_src, %size)
-        return
+        return()

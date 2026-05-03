@@ -22,7 +22,7 @@ struct BTreeMap<K, V>
     compare_fn: Callable<@callconv("c"), (K, K), I32>
     alloc: Ptr<Allocator>
 
-routine BTreeMap<K, V>::new(
+routine BTreeMap<K, V>.new(
     %compare_fn: Callable<@callconv("c"), (K, K), I32>,
     #alloc: Ptr<Allocator>
 ) -> BTreeMap<K, V>
@@ -33,14 +33,14 @@ routine BTreeMap<K, V>::new(
             compare_fn: %compare_fn,
             alloc: #alloc
         }
-        return %map
+        return(%map)
 
-routine BTreeMap<K, V>::length(#self: Ptr<BTreeMap<K, V>>) -> I64
+routine BTreeMap<K, V>.length(#self: Ptr<BTreeMap<K, V>>) -> I64
     block entry():
         %length: I64 := #self.length
-        return %length
+        return(%length)
 
-routine BTreeMapNode<K, V>::new(%leaf: Bool, #alloc: Ptr<Allocator>) -> Ptr<BTreeMapNode<K, V>>
+routine BTreeMapNode<K, V>.new(%leaf: Bool, #alloc: Ptr<Allocator>) -> Ptr<BTreeMapNode<K, V>>
     block entry():
         #node: Ptr<BTreeMapNode<K, V>> = alloc<BTreeMapNode<K, V>>(#alloc, 1)
         %failed: Bool = #node == null
@@ -50,18 +50,18 @@ routine BTreeMapNode<K, V>::new(%leaf: Bool, #alloc: Ptr<Allocator>) -> Ptr<BTre
         #node.leaf = %leaf
         #node.length = 0
         #node.subtree_count = 0
-        return #node
+        return(#node)
 
-routine BTreeMapNode<K, V>::count(#self: Ptr<BTreeMapNode<K, V>>) -> I64
+routine BTreeMapNode<K, V>.count(#self: Ptr<BTreeMapNode<K, V>>) -> I64
     block entry():
         %empty: Bool = #self == null
-        branch %empty ? return 0 : count(#self)
+        branch %empty ? return(0) : count(#self)
 
     block count(#self: Ptr<BTreeMapNode<K, V>>):
         %count: I64 := #self.subtree_count
-        return %count
+        return(%count)
 
-routine BTreeMapNode<K, V>::recount(#self: Ptr<BTreeMapNode<K, V>>) -> Void
+routine BTreeMapNode<K, V>.recount(#self: Ptr<BTreeMapNode<K, V>>) -> Void
     block entry():
         %leaf: Bool := #self.leaf
         %length: I64 := #self.length
@@ -69,7 +69,7 @@ routine BTreeMapNode<K, V>::recount(#self: Ptr<BTreeMapNode<K, V>>) -> Void
 
     block leaf_count(%length: I64):
         #self.subtree_count = %length
-        return
+        return()
 
     block internal_count(%length: I64):
         jump loop(0, 0, %length)
@@ -88,24 +88,24 @@ routine BTreeMapNode<K, V>::recount(#self: Ptr<BTreeMapNode<K, V>>) -> Void
 
     block finish(%sum: I64):
         #self.subtree_count = %sum
-        return
+        return()
 
-routine BTreeMap<K, V>::find_index(#self: Ptr<BTreeMap<K, V>>, #node: Ptr<BTreeMapNode<K, V>>, %key: K) -> I64
+routine BTreeMap<K, V>.find_index(#self: Ptr<BTreeMap<K, V>>, #node: Ptr<BTreeMapNode<K, V>>, %key: K) -> I64
     block entry():
         jump loop(0)
 
     block loop(%i: I64):
         %length: I64 := #node.length
         %done: Bool = sge(%i, %length)
-        branch %done ? return %i : compare(%i)
+        branch %done ? return(%i) : compare(%i)
 
     block compare(%i: I64):
         %node_key: K := #node.keys[%i]
         %cmp: I32 = #self.compare_fn(%key, %node_key)
         %before_or_equal: Bool = sle(%cmp, 0)
-        branch %before_or_equal ? return %i : loop(%i + 1)
+        branch %before_or_equal ? return(%i) : loop(%i + 1)
 
-routine BTreeMap<K, V>::get(#self: Ptr<BTreeMap<K, V>>, %key: K) -> V
+routine BTreeMap<K, V>.get(#self: Ptr<BTreeMap<K, V>>, %key: K) -> V
     block entry():
         #root: Ptr<BTreeMapNode<K, V>> := #self.root
         %empty: Bool = #root == null
@@ -133,13 +133,13 @@ routine BTreeMap<K, V>::get(#self: Ptr<BTreeMap<K, V>>, %key: K) -> V
 
     block load(#node: Ptr<BTreeMapNode<K, V>>, %i: I64):
         %value: V := #node.values[%i]
-        return %value
+        return(%value)
 
-routine BTreeMap<K, V>::contains(#self: Ptr<BTreeMap<K, V>>, %key: K) -> bool
+routine BTreeMap<K, V>.contains(#self: Ptr<BTreeMap<K, V>>, %key: K) -> bool
     block entry():
         #root: Ptr<BTreeMapNode<K, V>> := #self.root
         %empty: bool = #root == null
-        branch %empty ? return false : search(#root, %key)
+        branch %empty ? return(false) : search(#root, %key)
 
     block search(#node: Ptr<BTreeMapNode<K, V>>, %key: K):
         %i: i64 = #self.find_index(#node, %key)
@@ -151,17 +151,17 @@ routine BTreeMap<K, V>::contains(#self: Ptr<BTreeMap<K, V>>, %key: K) -> bool
         %node_key: K := #node.keys[%i]
         %cmp: I32 = #self.compare_fn(%key, %node_key)
         %equal: bool = %cmp == 0
-        branch %equal ? return true : descend_or_missing(#node, %i, %key)
+        branch %equal ? return(true) : descend_or_missing(#node, %i, %key)
 
     block descend_or_missing(#node: Ptr<BTreeMapNode<K, V>>, %i: i64, %key: K):
         %leaf: bool := #node.leaf
-        branch %leaf ? return false : descend(#node, %i, %key)
+        branch %leaf ? return(false) : descend(#node, %i, %key)
 
     block descend(#node: Ptr<BTreeMapNode<K, V>>, %i: i64, %key: K):
         #child: Ptr<BTreeMapNode<K, V>> := #node.children[%i]
         jump search(#child, %key)
 
-routine BTreeMap<K, V>::get_order(#self: Ptr<BTreeMap<K, V>>, %order: i64) -> V
+routine BTreeMap<K, V>.get_order(#self: Ptr<BTreeMap<K, V>>, %order: i64) -> V
     block entry():
         %not_negative: bool = sge(%order, 0)
         %length: i64 := #self.length
@@ -210,9 +210,9 @@ routine BTreeMap<K, V>::get_order(#self: Ptr<BTreeMap<K, V>>, %order: i64) -> V
 
     block load_order(#node: Ptr<BTreeMapNode<K, V>>, %i: i64):
         %value: V := #node.values[%i]
-        return %value
+        return(%value)
 
-routine BTreeMap<K, V>::key_order(#self: Ptr<BTreeMap<K, V>>, %order: i64) -> K
+routine BTreeMap<K, V>.key_order(#self: Ptr<BTreeMap<K, V>>, %order: i64) -> K
     block entry():
         %not_negative: bool = sge(%order, 0)
         %length: i64 := #self.length
@@ -261,13 +261,13 @@ routine BTreeMap<K, V>::key_order(#self: Ptr<BTreeMap<K, V>>, %order: i64) -> K
 
     block load_key(#node: Ptr<BTreeMapNode<K, V>>, %i: i64):
         %key: K := #node.keys[%i]
-        return %key
+        return(%key)
 
-routine BTreeMapNode<K, V>::split_child(#self: Ptr<BTreeMapNode<K, V>>, %index: i64, #alloc: Ptr<Allocator>) -> Void
+routine BTreeMapNode<K, V>.split_child(#self: Ptr<BTreeMapNode<K, V>>, %index: i64, #alloc: Ptr<Allocator>) -> Void
     block entry():
         #left: Ptr<BTreeMapNode<K, V>> := #self.children[%index]
         %leaf: bool := #left.leaf
-        #right: Ptr<BTreeMapNode<K, V>> = BTreeMapNode<K, V>::new(%leaf, #alloc)
+        #right: Ptr<BTreeMapNode<K, V>> = BTreeMapNode<K, V>.new(%leaf, #alloc)
         %mid: i64 = sdiv(NODE_KEYS, 2)
         %right_count: i64 = NODE_KEYS - %mid - 1
         #right.keys.copy(0, #left.keys, %mid + 1, %right_count)
@@ -316,9 +316,9 @@ routine BTreeMapNode<K, V>::split_child(#self: Ptr<BTreeMapNode<K, V>>, %index: 
         #left.recount()
         #right.recount()
         #self.recount()
-        return
+        return()
 
-routine BTreeMapNode<K, V>::insert_nonfull(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K, %value: V, #alloc: Ptr<Allocator>) -> Void
+routine BTreeMapNode<K, V>.insert_nonfull(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K, %value: V, #alloc: Ptr<Allocator>) -> Void
     block entry():
         %leaf: bool := #self.leaf
         branch %leaf ? insert_leaf() : insert_internal()
@@ -332,7 +332,7 @@ routine BTreeMapNode<K, V>::insert_nonfull(#self: Ptr<BTreeMapNode<K, V>>, #map:
         #self.values[%slot] = %value
         #self.length = %length + 1
         #self.subtree_count = %length + 1
-        return
+        return()
 
     block insert_internal():
         %slot: i64 = #map.find_index(#self, %key)
@@ -353,9 +353,9 @@ routine BTreeMapNode<K, V>::insert_nonfull(#self: Ptr<BTreeMapNode<K, V>>, #map:
     block descend(%slot: i64, #child: Ptr<BTreeMapNode<K, V>>):
         #child.insert_nonfull(#map, %key, %value, #alloc)
         #self.recount()
-        return
+        return()
 
-routine BTreeMap<K, V>::put(#self: Ptr<BTreeMap<K, V>>, %key: K, %value: V) -> Void
+routine BTreeMap<K, V>.put(#self: Ptr<BTreeMap<K, V>>, %key: K, %value: V) -> Void
     block entry():
         #root: Ptr<BTreeMapNode<K, V>> := #self.root
         %empty: bool = #root == null
@@ -363,18 +363,18 @@ routine BTreeMap<K, V>::put(#self: Ptr<BTreeMap<K, V>>, %key: K, %value: V) -> V
 
     block first_root():
         #alloc: Ptr<Allocator> := #self.alloc
-        #root: Ptr<BTreeMapNode<K, V>> = BTreeMapNode<K, V>::new(true, #alloc)
+        #root: Ptr<BTreeMapNode<K, V>> = BTreeMapNode<K, V>.new(true, #alloc)
         #root.keys[0] = %key
         #root.values[0] = %value
         #root.length = 1
         #root.subtree_count = 1
         #self.root = #root
         #self.length = 1
-        return
+        return()
 
     block maybe_replace(#root: Ptr<BTreeMapNode<K, V>>):
         %replaced: bool = #root.replace(#self, %key, %value)
-        branch %replaced ? return : insert_root(#root)
+        branch %replaced ? return() : insert_root(#root)
 
     block insert_root(#root: Ptr<BTreeMapNode<K, V>>):
         #alloc: Ptr<Allocator> := #self.alloc
@@ -383,7 +383,7 @@ routine BTreeMap<K, V>::put(#self: Ptr<BTreeMap<K, V>>, %key: K, %value: V) -> V
         branch %full ? split_root(#root, #alloc) : insert_nonfull(#root, #alloc)
 
     block split_root(#old_root: Ptr<BTreeMapNode<K, V>>, #alloc: Ptr<Allocator>):
-        #new_root: Ptr<BTreeMapNode<K, V>> = BTreeMapNode<K, V>::new(false, #alloc)
+        #new_root: Ptr<BTreeMapNode<K, V>> = BTreeMapNode<K, V>.new(false, #alloc)
         #new_root.children[0] = #old_root
         #self.root = #new_root
         #new_root.split_child(0, #alloc)
@@ -393,9 +393,9 @@ routine BTreeMap<K, V>::put(#self: Ptr<BTreeMap<K, V>>, %key: K, %value: V) -> V
         #root.insert_nonfull(#self, %key, %value, #alloc)
         %length: i64 := #self.length
         #self.length = %length + 1
-        return
+        return()
 
-routine BTreeMapNode<K, V>::replace(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K, %value: V) -> bool
+routine BTreeMapNode<K, V>.replace(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K, %value: V) -> bool
     block entry():
         %slot: i64 = #map.find_index(#self, %key)
         %length: i64 := #self.length
@@ -410,18 +410,18 @@ routine BTreeMapNode<K, V>::replace(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BT
 
     block replace(%slot: i64):
         #self.values[%slot] = %value
-        return true
+        return(true)
 
     block descend_or_missing(%slot: i64):
         %leaf: bool := #self.leaf
-        branch %leaf ? return false : descend(%slot)
+        branch %leaf ? return(false): descend(%slot)
 
     block descend(%slot: i64):
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%slot]
         %replaced: bool = #child.replace(#map, %key, %value)
-        return %replaced
+        return(%replaced)
 
-routine BTreeMapNode<K, V>::remove_leaf_at(#self: Ptr<BTreeMapNode<K, V>>, %index: i64) -> V
+routine BTreeMapNode<K, V>.remove_leaf_at(#self: Ptr<BTreeMapNode<K, V>>, %index: i64) -> V
     block entry:
         %old: V := #self.values[%index]
         %length: i64 := #self.length
@@ -429,14 +429,14 @@ routine BTreeMapNode<K, V>::remove_leaf_at(#self: Ptr<BTreeMapNode<K, V>>, %inde
         #self.values.shift_left(%index, %length)
         #self.length = %length - 1
         #self.subtree_count = %length - 1
-        return %old
+        return(%old)
 
 ; Capacity = NODE_KEYS, t = NODE_MIN_KEYS. Non-root nodes maintain
 ; length >= NODE_MIN_KEYS - 1.
 ; Helpers below ensure a child has length >= 4 (= t) before any deletion
 ; descent so the child can absorb a one-key drop without underflowing.
 
-routine BTreeMapNode<K, V>::borrow_from_left(#self: Ptr<BTreeMapNode<K, V>>, %i: i64) -> Void
+routine BTreeMapNode<K, V>.borrow_from_left(#self: Ptr<BTreeMapNode<K, V>>, %i: i64) -> Void
     block entry:
         #left: Ptr<BTreeMapNode<K, V>> := #self.children[%i - 1]
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
@@ -468,9 +468,9 @@ routine BTreeMapNode<K, V>::borrow_from_left(#self: Ptr<BTreeMapNode<K, V>>, %i:
         #left.recount()
         #child.recount()
         #self.recount()
-        return
+        return()
 
-routine BTreeMapNode<K, V>::borrow_from_right(#self: Ptr<BTreeMapNode<K, V>>, %i: i64) -> Void
+routine BTreeMapNode<K, V>.borrow_from_right(#self: Ptr<BTreeMapNode<K, V>>, %i: i64) -> Void
     block entry:
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
         #right: Ptr<BTreeMapNode<K, V>> := #self.children[%i + 1]
@@ -502,9 +502,9 @@ routine BTreeMapNode<K, V>::borrow_from_right(#self: Ptr<BTreeMapNode<K, V>>, %i
         #child.recount()
         #right.recount()
         #self.recount()
-        return
+        return()
 
-routine BTreeMapNode<K, V>::merge_children(#self: Ptr<BTreeMapNode<K, V>>, %i: i64, #alloc: Ptr<Allocator>) -> Void
+routine BTreeMapNode<K, V>.merge_children(#self: Ptr<BTreeMapNode<K, V>>, %i: i64, #alloc: Ptr<Allocator>) -> Void
     block entry:
         #left: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
         #right: Ptr<BTreeMapNode<K, V>> := #self.children[%i + 1]
@@ -538,14 +538,14 @@ routine BTreeMapNode<K, V>::merge_children(#self: Ptr<BTreeMapNode<K, V>>, %i: i
         free<BTreeMapNode<K, V>>(#alloc, #right)
         #left.recount()
         #self.recount()
-        return
+        return()
 
-routine BTreeMapNode<K, V>::ensure_min(#self: Ptr<BTreeMapNode<K, V>>, %i: i64, #alloc: Ptr<Allocator>) -> i64
+routine BTreeMapNode<K, V>.ensure_min(#self: Ptr<BTreeMapNode<K, V>>, %i: i64, #alloc: Ptr<Allocator>) -> i64
     block entry:
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
         %child_length: i64 := #child.length
         %ok: bool = sge(%child_length, NODE_MIN_KEYS)
-        branch %ok ? return %i : try_left()
+        branch %ok ? return(%i): try_left()
 
     block try_left():
         %has_left: bool = sgt(%i, 0)
@@ -559,7 +559,7 @@ routine BTreeMapNode<K, V>::ensure_min(#self: Ptr<BTreeMapNode<K, V>>, %i: i64, 
 
     block do_borrow_left():
         #self.borrow_from_left(%i)
-        return %i
+        return(%i)
 
     block try_right(%has_left: bool):
         %parent_length: i64 := #self.length
@@ -574,7 +574,7 @@ routine BTreeMapNode<K, V>::ensure_min(#self: Ptr<BTreeMapNode<K, V>>, %i: i64, 
 
     block do_borrow_right():
         #self.borrow_from_right(%i)
-        return %i
+        return(%i)
 
     block pick_merge(%has_left: bool):
         branch %has_left ? merge_with_left() : merge_with_right()
@@ -584,13 +584,13 @@ routine BTreeMapNode<K, V>::ensure_min(#self: Ptr<BTreeMapNode<K, V>>, %i: i64, 
 
     block merge_with_left():
         #self.merge_children(%i - 1, #alloc)
-        return %i - 1
+        return(%i - 1)
 
     block merge_with_right():
         #self.merge_children(%i, #alloc)
-        return %i
+        return(%i)
 
-routine BTreeMapNode<K, V>::take_max_key(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, #out_value: Ptr<V>) -> K
+routine BTreeMapNode<K, V>.take_max_key(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, #out_value: Ptr<V>) -> K
     block entry:
         %leaf: bool := #self.leaf
         branch %leaf ? leaf_take() : descend()
@@ -601,7 +601,7 @@ routine BTreeMapNode<K, V>::take_max_key(#self: Ptr<BTreeMapNode<K, V>>, #map: P
         %key: K := #self.keys[%index]
         %value: V = #self.remove_leaf_at(%index)
         #out_value = %value
-        return %key
+        return(%key)
 
     block descend():
         %length: i64 := #self.length
@@ -610,9 +610,9 @@ routine BTreeMapNode<K, V>::take_max_key(#self: Ptr<BTreeMapNode<K, V>>, #map: P
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%actual]
         %key: K = #child.take_max_key(#map, #out_value)
         #self.recount()
-        return %key
+        return(%key)
 
-routine BTreeMapNode<K, V>::take_min_key(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, #out_value: Ptr<V>) -> K
+routine BTreeMapNode<K, V>.take_min_key(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, #out_value: Ptr<V>) -> K
     block entry:
         %leaf: bool := #self.leaf
         branch %leaf ? leaf_take() : descend()
@@ -621,7 +621,7 @@ routine BTreeMapNode<K, V>::take_min_key(#self: Ptr<BTreeMapNode<K, V>>, #map: P
         %key: K := #self.keys[0]
         %value: V = #self.remove_leaf_at(0)
         #out_value = %value
-        return %key
+        return(%key)
 
     block descend():
         #alloc: Ptr<Allocator> := #map.alloc
@@ -629,9 +629,9 @@ routine BTreeMapNode<K, V>::take_min_key(#self: Ptr<BTreeMapNode<K, V>>, #map: P
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%actual]
         %key: K = #child.take_min_key(#map, #out_value)
         #self.recount()
-        return %key
+        return(%key)
 
-routine BTreeMapNode<K, V>::remove(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K) -> bool
+routine BTreeMapNode<K, V>.remove(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K) -> bool
     block entry:
         %slot: i64 = #map.find_index(#self, %key)
         %length: i64 := #self.length
@@ -650,7 +650,7 @@ routine BTreeMapNode<K, V>::remove(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTr
 
     block remove_leaf(%slot: i64):
         #self.remove_leaf_at(%slot)
-        return true
+        return(true)
 
     block remove_internal(%slot: i64):
         #left: Ptr<BTreeMapNode<K, V>> := #self.children[%slot]
@@ -666,7 +666,7 @@ routine BTreeMapNode<K, V>::remove(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTr
         #self.keys[%slot] = %replacement_key
         #self.values[%slot] = %replacement_value
         #self.recount()
-        return true
+        return(true)
 
     block try_succ(%slot: i64):
         #right: Ptr<BTreeMapNode<K, V>> := #self.children[%slot + 1]
@@ -682,7 +682,7 @@ routine BTreeMapNode<K, V>::remove(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTr
         #self.keys[%slot] = %replacement_key
         #self.values[%slot] = %replacement_value
         #self.recount()
-        return true
+        return(true)
 
     block merge_and_recurse(%slot: i64):
         #alloc: Ptr<Allocator> := #map.alloc
@@ -690,11 +690,11 @@ routine BTreeMapNode<K, V>::remove(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTr
         #merged: Ptr<BTreeMapNode<K, V>> := #self.children[%slot]
         %removed: bool = #merged.remove(#map, %key)
         #self.recount()
-        return %removed
+        return(%removed)
 
     block descend_or_missing(%slot: i64):
         %leaf: bool := #self.leaf
-        branch %leaf ? return false : descend(%slot)
+        branch %leaf ? return(false): descend(%slot)
 
     block descend(%slot: i64):
         #alloc: Ptr<Allocator> := #map.alloc
@@ -702,9 +702,9 @@ routine BTreeMapNode<K, V>::remove(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTr
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%actual]
         %removed: bool = #child.remove(#map, %key)
         #self.recount()
-        return %removed
+        return(%removed)
 
-routine BTreeMap<K, V>::remove(#self: Ptr<BTreeMap<K, V>>, %key: K) -> bool
+routine BTreeMap<K, V>.remove(#self: Ptr<BTreeMap<K, V>>, %key: K) -> bool
     block entry:
         #root: Ptr<BTreeMapNode<K, V>> := #self.root
         %empty: bool = #root == null
@@ -719,7 +719,7 @@ routine BTreeMap<K, V>::remove(#self: Ptr<BTreeMap<K, V>>, %key: K) -> bool
         #self.length = %length - 1
         %root_length: i64 := #root.length
         %empty_root: bool = %root_length == 0
-        branch %empty_root ? maybe_shrink(#root) : return true
+        branch %empty_root ? maybe_shrink(#root) : return(true)
 
     block maybe_shrink(#root: Ptr<BTreeMapNode<K, V>>):
         %leaf: bool := #root.leaf
@@ -729,20 +729,20 @@ routine BTreeMap<K, V>::remove(#self: Ptr<BTreeMap<K, V>>, %key: K) -> bool
         #alloc: Ptr<Allocator> := #self.alloc
         free<BTreeMapNode<K, V>>(#alloc, #root)
         #self.root = null
-        return true
+        return(true)
 
     block shrink(#root: Ptr<BTreeMapNode<K, V>>):
         #alloc: Ptr<Allocator> := #self.alloc
         #new_root: Ptr<BTreeMapNode<K, V>> := #root.children[0]
         free<BTreeMapNode<K, V>>(#alloc, #root)
         #self.root = #new_root
-        return true
+        return(true)
 
     block missing():
-        return false
+        return(false)
 
 ; Internal nodes store `length` separator keys and `length + 1` children.
-routine BTreeMapNode<K, V>::free_recursive(#self: Ptr<BTreeMapNode<K, V>>, #alloc: Ptr<Allocator>) -> Void
+routine BTreeMapNode<K, V>.free_recursive(#self: Ptr<BTreeMapNode<K, V>>, #alloc: Ptr<Allocator>) -> Void
     block entry:
         %leaf: bool := #self.leaf
         branch %leaf ? free_self() : free_children()
@@ -763,9 +763,9 @@ routine BTreeMapNode<K, V>::free_recursive(#self: Ptr<BTreeMapNode<K, V>>, #allo
 
     block free_self():
         free<BTreeMapNode<K, V>>(#alloc, #self)
-        return
+        return()
 
-routine BTreeMap<K, V>::free(#self: Ptr<BTreeMap<K, V>>) -> Void
+routine BTreeMap<K, V>.free(#self: Ptr<BTreeMap<K, V>>) -> Void
     block entry:
         #root: Ptr<BTreeMapNode<K, V>> := #self.root
         %empty: bool = #root == null
@@ -779,4 +779,4 @@ routine BTreeMap<K, V>::free(#self: Ptr<BTreeMap<K, V>>) -> Void
     block reset():
         #self.root = null
         #self.length = 0
-        return
+        return()

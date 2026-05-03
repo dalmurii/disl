@@ -13,7 +13,7 @@ routine c_write(%fd: I32, #buf: Ptr<I8>, %count: I64) -> I64
 routine print(#str: Ptr<I8>, %len: I64) -> Void
     block entry():
         c_write(1, #str, %len)
-        return
+        return()
 
 routine println(#str: Ptr<I8>, %len: I64) -> Void
     block entry():
@@ -21,14 +21,14 @@ routine println(#str: Ptr<I8>, %len: I64) -> Void
         #newline: Ptr<I8> = alloca<I8>
         #newline = 10                          ; '\n'
         c_write(1, #newline, 1)
-        return
+        return()
 
 routine print_slice(%slice: StringSlice) -> Void
     block entry():
         #data: Ptr<I8> = %slice.data
         %len:  I64     = %slice.length
         c_write(1, #data, %len)
-        return
+        return()
 
 routine println_slice(%slice: StringSlice) -> Void
     block entry():
@@ -38,7 +38,7 @@ routine println_slice(%slice: StringSlice) -> Void
         #newline: Ptr<I8> = alloca<I8>
         #newline = 10                          ; '\n'
         c_write(1, #newline, 1)
-        return
+        return()
 
 ; ============================================================
 ; Integer printing (no heap allocation)
@@ -56,7 +56,7 @@ routine print_int(%n: I64) -> Void
         #buf: Ptr<I8> = alloca<I8>
         #buf = 48                              ; '0'
         c_write(1, #buf, 1)
-        return
+        return()
 
     block check_neg(%n: I64):
         %is_neg: Bool = slt(%n, 0)
@@ -97,4 +97,4 @@ routine print_int(%n: I64) -> Void
         %len: I64 = 19 - %pos
         #start: Ptr<I8> = #bytes[%pos]
         c_write(1, #start, %len)
-        return
+        return()

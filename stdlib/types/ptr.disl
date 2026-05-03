@@ -8,25 +8,25 @@ struct Ptr<T>
 
 ; ── predicates ────────────────────────────────────────────────────────────────
 
-routine Ptr<T>::is_null(#self: Ptr<T>) -> Bool
+routine Ptr<T>.is_null(#self: Ptr<T>) -> Bool
     block entry():
         %result: Bool = #self == null
-        return %result
+        return(%result)
 
 ; ── pointer arithmetic ────────────────────────────────────────────────────────
 
 ; Returns a pointer offset by %index elements of type T.
 ; Equivalent to a GEP in LLVM IR — no bounds checking.
-routine Ptr<T>::offset(#self: Ptr<T>, %index: I64) -> Ptr<T>
+routine Ptr<T>.offset(#self: Ptr<T>, %index: I64) -> Ptr<T>
     block entry():
         #result: Ptr<T> = #self[%index]
-        return #result
+        return(#result)
 
 ; ── casting ───────────────────────────────────────────────────────────────────
 
 ; Reinterprets this pointer as a pointer to a different type.
 ; No-op at the IR level — only changes the static type.
-routine Ptr<T>::cast<U>(#self: Ptr<T>) -> Ptr<U>
+routine Ptr<T>.cast<U>(#self: Ptr<T>) -> Ptr<U>
     block entry():
         #result: Ptr<U> = bitcast<Ptr<T>, Ptr<U>>(#self)
-        return #result
+        return(#result)

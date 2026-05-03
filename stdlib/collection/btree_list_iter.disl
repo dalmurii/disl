@@ -1,7 +1,7 @@
 ; Disl stdlib collection: BTreeListIter<T>
 ;
 ; In-order iterator over BTreeList<T>.  Yields elements from index 0 to
-; length-1 in insertion-order sequence, delegating to BTreeList::get for
+; length-1 in insertion-order sequence, delegating to BTreeList.get for
 ; each position.  Each next() is O(log n).
 ;
 ; See btree_set_iter.disl for a note on the O(n log n) vs O(n) tradeoff.
@@ -13,13 +13,13 @@ struct BTreeListIter<T>
     order: I64
     total: I64
 
-routine BTreeListIter<T>::new(#list: Ptr<BTreeList<T>>) -> BTreeListIter<T>
+routine BTreeListIter<T>.new(#list: Ptr<BTreeList<T>>) -> BTreeListIter<T>
     block entry():
         %total: I64 = #list.length()
         %iter: BTreeListIter<T> = BTreeListIter<T> { list: #list, order: 0, total: %total }
-        return %iter
+        return(%iter)
 
-routine BTreeListIter<T>::next(#self: Ptr<BTreeListIter<T>>) -> Option<T>
+routine BTreeListIter<T>.next(#self: Ptr<BTreeListIter<T>>) -> Option<T>
     block entry():
         %order: I64  := #self.order
         %total: I64  := #self.total
@@ -27,12 +27,12 @@ routine BTreeListIter<T>::next(#self: Ptr<BTreeListIter<T>>) -> Option<T>
         branch %done ? return_none() : return_some(%order)
 
     block return_none():
-        %none: Option<T> = Option<T>::none()
-        return %none
+        %none: Option<T> = Option<T>.none()
+        return(%none)
 
     block return_some(%order: I64):
         #list:  Ptr<BTreeList<T>> := #self.list
         %value: T                 = #list.get(%order)
         #self.order = %order + 1
-        %some: Option<T> = Option<T>::some(%value)
-        return %some
+        %some: Option<T> = Option<T>.some(%value)
+        return(%some)

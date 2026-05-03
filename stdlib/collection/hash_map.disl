@@ -21,7 +21,7 @@ struct HashMap<K, V>
     equals_fn: Callable<@callconv("c"), (K, K), Bool>
     alloc: Ptr<Allocator>
 
-routine HashMap<K, V>::new(
+routine HashMap<K, V>.new(
     %hash_fn: Callable<@callconv("c"), (K), I64>,
     %equals_fn: Callable<@callconv("c"), (K, K), Bool>,
     #alloc: Ptr<Allocator>
@@ -39,14 +39,14 @@ routine HashMap<K, V>::new(
             equals_fn: %equals_fn,
             alloc: #alloc
         }
-        return %map
+        return(%map)
 
-routine HashMap<K, V>::length(#self: Ptr<HashMap<K, V>>) -> I64
+routine HashMap<K, V>.length(#self: Ptr<HashMap<K, V>>) -> I64
     block entry():
         %length: I64 := #self.length
-        return %length
+        return(%length)
 
-routine HashMap<K, V>::slot(#self: Ptr<HashMap<K, V>>, %key: K, %hash: I64) -> I64
+routine HashMap<K, V>.slot(#self: Ptr<HashMap<K, V>>, %key: K, %hash: I64) -> I64
     block entry():
         %capacity: I64 := #self.capacity
         %mask: I64 = %capacity - 1
@@ -64,7 +64,7 @@ routine HashMap<K, V>::slot(#self: Ptr<HashMap<K, V>>, %key: K, %hash: I64) -> I
     block empty_slot(%index: I64, %first_tombstone: I64):
         %has_tombstone: Bool = sge(%first_tombstone, 0)
         %slot: I64 = %has_tombstone ? %first_tombstone : %index
-        return %slot
+        return(%slot)
 
     block tombstone_slot(%index: I64, %first_tombstone: I64):
         %seen: Bool = sge(%first_tombstone, 0)
@@ -83,18 +83,18 @@ routine HashMap<K, V>::slot(#self: Ptr<HashMap<K, V>>, %key: K, %hash: I64) -> I
         #keys: Ptr<K> := #self.keys
         %entry_key: K := #keys[%index]
         %equal: Bool = #self.equals_fn(%entry_key, %key)
-        branch %equal ? return %index : next(%index, %first_tombstone)
+        branch %equal ? return(%index): next(%index, %first_tombstone)
 
     block next(%index: I64, %first_tombstone: I64):
         %capacity: I64 := #self.capacity
         %next: I64 = (%index + 1) & (%capacity - 1)
         jump probe(%next, %first_tombstone)
 
-routine HashMap<K, V>::find(#self: Ptr<HashMap<K, V>>, %key: K) -> I64
+routine HashMap<K, V>.find(#self: Ptr<HashMap<K, V>>, %key: K) -> I64
     block entry():
         %capacity: I64 := #self.capacity
         %empty: Bool = %capacity == 0
-        branch %empty ? return -1 : hash()
+        branch %empty ? return(-1): hash()
 
     block hash():
         %hash: I64 = #self.hash_fn(%key)
@@ -102,15 +102,15 @@ routine HashMap<K, V>::find(#self: Ptr<HashMap<K, V>>, %key: K) -> I64
         #states: Ptr<I8> := #self.states
         %state: I8 := #states[%slot]
         %found: Bool = %state == 1
-        branch %found ? return %slot : return -1
+        branch %found ? return(%slot): return(-1)
 
-routine HashMap<K, V>::contains(#self: Ptr<HashMap<K, V>>, %key: K) -> Bool
+routine HashMap<K, V>.contains(#self: Ptr<HashMap<K, V>>, %key: K) -> Bool
     block entry():
         %slot: I64 = #self.find(%key)
         %found: Bool = sge(%slot, 0)
-        return %found
+        return(%found)
 
-routine HashMap<K, V>::rehash(#self: Ptr<HashMap<K, V>>, %new_capacity: I64) -> Void
+routine HashMap<K, V>.rehash(#self: Ptr<HashMap<K, V>>, %new_capacity: I64) -> Void
     block entry():
         #alloc: Ptr<Allocator> := #self.alloc
         #old_keys: Ptr<K> := #self.keys
@@ -166,16 +166,16 @@ routine HashMap<K, V>::rehash(#self: Ptr<HashMap<K, V>>, %new_capacity: I64) -> 
 
     block release_old(#old_keys: Ptr<K>, #old_values: Ptr<V>, #old_hashes: Ptr<i64>, #old_states: Ptr<i8>, #alloc: Ptr<Allocator>):
         %has_old: bool = #old_states != null
-        branch %has_old ? free_old(#old_keys, #old_values, #old_hashes, #old_states, #alloc) : return
+        branch %has_old ? free_old(#old_keys, #old_values, #old_hashes, #old_states, #alloc) : return()
 
     block free_old(#old_keys: Ptr<K>, #old_values: Ptr<V>, #old_hashes: Ptr<i64>, #old_states: Ptr<i8>, #alloc: Ptr<Allocator>):
         free<K>(#alloc, #old_keys)
         free<V>(#alloc, #old_values)
         free<i64>(#alloc, #old_hashes)
         free<i8>(#alloc, #old_states)
-        return
+        return()
 
-routine HashMap<K, V>::ensure(#self: Ptr<HashMap<K, V>>) -> Void
+routine HashMap<K, V>.ensure(#self: Ptr<HashMap<K, V>>) -> Void
     block entry():
         %capacity: i64 := #self.capacity
         %empty: bool = %capacity == 0
@@ -183,7 +183,7 @@ routine HashMap<K, V>::ensure(#self: Ptr<HashMap<K, V>>) -> Void
 
     block first():
         #self.rehash(8)
-        return
+        return()
 
     block check(%capacity: i64):
         %length: i64 := #self.length
@@ -191,14 +191,14 @@ routine HashMap<K, V>::ensure(#self: Ptr<HashMap<K, V>>) -> Void
         %used: i64 = %length + %tombstones
         %limit: i64 = sdiv(%capacity * 3, 4)
         %full: bool = sge(%used + 1, %limit)
-        branch %full ? grow(%capacity) : return
+        branch %full ? grow(%capacity) : return()
 
     block grow(%capacity: i64):
         #self.rehash(%capacity * 2)
-        return
+        return()
 
 ; Insert without growing — used internally by rehash after new arrays are in place.
-routine HashMap<K, V>::put_direct(#self: Ptr<HashMap<K, V>>, %key: K, %value: V) -> Void
+routine HashMap<K, V>.put_direct(#self: Ptr<HashMap<K, V>>, %key: K, %value: V) -> Void
     block entry():
         %hash: i64 = #self.hash_fn(%key)
         %slot: i64 = #self.slot(%key, %hash)
@@ -210,7 +210,7 @@ routine HashMap<K, V>::put_direct(#self: Ptr<HashMap<K, V>>, %key: K, %value: V)
     block replace(%slot: i64, %value: V):
         #values: Ptr<V> := #self.values
         #values[%slot] = %value
-        return
+        return()
 
     block add(%slot: i64, %key: K, %value: V, %hash: i64, %state: i8):
         %was_tombstone: bool = %state == 2
@@ -232,15 +232,15 @@ routine HashMap<K, V>::put_direct(#self: Ptr<HashMap<K, V>>, %key: K, %value: V)
         #states[%slot] = 1
         %length: i64 := #self.length
         #self.length = %length + 1
-        return
+        return()
 
-routine HashMap<K, V>::put(#self: Ptr<HashMap<K, V>>, %key: K, %value: V) -> Void
+routine HashMap<K, V>.put(#self: Ptr<HashMap<K, V>>, %key: K, %value: V) -> Void
     block entry():
         #self.ensure()
         #self.put_direct(%key, %value)
-        return
+        return()
 
-routine HashMap<K, V>::get(#self: Ptr<HashMap<K, V>>, %key: K) -> V
+routine HashMap<K, V>.get(#self: Ptr<HashMap<K, V>>, %key: K) -> V
     block entry():
         %slot: i64 = #self.find(%key)
         %found: bool = sge(%slot, 0)
@@ -249,13 +249,13 @@ routine HashMap<K, V>::get(#self: Ptr<HashMap<K, V>>, %key: K) -> V
     block load(%slot: i64):
         #values: Ptr<V> := #self.values
         %value: V := #values[%slot]
-        return %value
+        return(%value)
 
-routine HashMap<K, V>::remove(#self: Ptr<HashMap<K, V>>, %key: K) -> bool
+routine HashMap<K, V>.remove(#self: Ptr<HashMap<K, V>>, %key: K) -> bool
     block entry():
         %slot: i64 = #self.find(%key)
         %found: bool = sge(%slot, 0)
-        branch %found ? remove(%slot) : return false
+        branch %found ? remove(%slot) : return(false)
 
     block remove(%slot: i64):
         #states: Ptr<i8> := #self.states
@@ -264,9 +264,9 @@ routine HashMap<K, V>::remove(#self: Ptr<HashMap<K, V>>, %key: K) -> bool
         %tombstones: i64 := #self.tombstones
         #self.length = %length - 1
         #self.tombstones = %tombstones + 1
-        return true
+        return(true)
 
-routine HashMap<K, V>::free(#self: Ptr<HashMap<K, V>>) -> Void
+routine HashMap<K, V>.free(#self: Ptr<HashMap<K, V>>) -> Void
     block entry():
         #states: Ptr<i8> := #self.states
         %empty: bool = #states == null
@@ -292,4 +292,4 @@ routine HashMap<K, V>::free(#self: Ptr<HashMap<K, V>>) -> Void
         #self.length = 0
         #self.tombstones = 0
         #self.capacity = 0
-        return
+        return()

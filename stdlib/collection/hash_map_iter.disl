@@ -13,12 +13,12 @@ struct HashMapIter<K, V>
     map:  Ptr<HashMap<K, V>>
     slot: I64
 
-routine HashMapIter<K, V>::new(#map: Ptr<HashMap<K, V>>) -> HashMapIter<K, V>
+routine HashMapIter<K, V>.new(#map: Ptr<HashMap<K, V>>) -> HashMapIter<K, V>
     block entry():
         %iter: HashMapIter<K, V> = HashMapIter<K, V> { map: #map, slot: 0 }
-        return %iter
+        return(%iter)
 
-routine HashMapIter<K, V>::next(#self: Ptr<HashMapIter<K, V>>) -> Option<KVPair<K, V>>
+routine HashMapIter<K, V>.next(#self: Ptr<HashMapIter<K, V>>) -> Option<KVPair<K, V>>
     block entry():
         #map:      Ptr<HashMap<K, V>> := #self.map
         %capacity: I64                := #map.capacity
@@ -36,8 +36,8 @@ routine HashMapIter<K, V>::next(#self: Ptr<HashMapIter<K, V>>) -> Option<KVPair<
         branch %occupied ? yield(%slot, #map) : scan(%slot + 1, %capacity, #map)
 
     block return_none():
-        %none: Option<KVPair<K, V>> = Option<KVPair<K, V>>::none()
-        return %none
+        %none: Option<KVPair<K, V>> = Option<KVPair<K, V>>.none()
+        return(%none)
 
     block yield(%slot: I64, #map: Ptr<HashMap<K, V>>):
         #keys:   Ptr<K> := #map.keys
@@ -46,5 +46,5 @@ routine HashMapIter<K, V>::next(#self: Ptr<HashMapIter<K, V>>) -> Option<KVPair<
         %value:  V      := #values[%slot]
         %pair:   KVPair<K, V> = KVPair<K, V> { key: %key, value: %value }
         #self.slot = %slot + 1
-        %some: Option<KVPair<K, V>> = Option<KVPair<K, V>>::some(%pair)
-        return %some
+        %some: Option<KVPair<K, V>> = Option<KVPair<K, V>>.some(%pair)
+        return(%some)

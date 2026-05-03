@@ -15,13 +15,13 @@ struct BTreeSetIter<T>
     order: I64
     total: I64
 
-routine BTreeSetIter<T>::new(#set: Ptr<BTreeSet<T>>) -> BTreeSetIter<T>
+routine BTreeSetIter<T>.new(#set: Ptr<BTreeSet<T>>) -> BTreeSetIter<T>
     block entry():
         %total: I64 = #set.length()
         %iter: BTreeSetIter<T> = BTreeSetIter<T> { set: #set, order: 0, total: %total }
-        return %iter
+        return(%iter)
 
-routine BTreeSetIter<T>::next(#self: Ptr<BTreeSetIter<T>>) -> Option<T>
+routine BTreeSetIter<T>.next(#self: Ptr<BTreeSetIter<T>>) -> Option<T>
     block entry():
         %order: I64  := #self.order
         %total: I64  := #self.total
@@ -29,12 +29,12 @@ routine BTreeSetIter<T>::next(#self: Ptr<BTreeSetIter<T>>) -> Option<T>
         branch %done ? return_none() : return_some(%order)
 
     block return_none():
-        %none: Option<T> = Option<T>::none()
-        return %none
+        %none: Option<T> = Option<T>.none()
+        return(%none)
 
     block return_some(%order: I64):
         #set:   Ptr<BTreeSet<T>> := #self.set
         %value: T                = #set.get_order(%order)
         #self.order = %order + 1
-        %some: Option<T> = Option<T>::some(%value)
-        return %some
+        %some: Option<T> = Option<T>.some(%value)
+        return(%some)

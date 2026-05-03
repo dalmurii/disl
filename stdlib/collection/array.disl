@@ -12,13 +12,13 @@ struct Array<T, N>
 
 ; ── metadata ──────────────────────────────────────────────────────────────────
 
-routine Array<T, N>::length() -> I64
+routine Array<T, N>.length() -> I64
     block entry():
-        return N
+        return(N)
 
 ; ── element access ────────────────────────────────────────────────────────────
 
-routine Array<T, N>::get(#self: Ptr<Array<T, N>>, %index: I64) -> T
+routine Array<T, N>.get(#self: Ptr<Array<T, N>>, %index: I64) -> T
     block entry():
         %not_negative: Bool = sge<I64>(%index, 0)
         %before_end:   Bool = slt<I64>(%index, N)
@@ -28,9 +28,9 @@ routine Array<T, N>::get(#self: Ptr<Array<T, N>>, %index: I64) -> T
     block load(%index: I64):
         #base: Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#self)
         %value: T := #base[%index]
-        return %value
+        return(%value)
 
-routine Array<T, N>::set(#self: Ptr<Array<T, N>>, %index: I64, %value: T) -> Void
+routine Array<T, N>.set(#self: Ptr<Array<T, N>>, %index: I64, %value: T) -> Void
     block entry():
         %not_negative: Bool = sge<I64>(%index, 0)
         %before_end:   Bool = slt<I64>(%index, N)
@@ -40,26 +40,26 @@ routine Array<T, N>::set(#self: Ptr<Array<T, N>>, %index: I64, %value: T) -> Voi
     block store(%index: I64, %value: T):
         #base: Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#self)
         #base[%index] = %value
-        return
+        return()
 
 ; ── pointer to first element ──────────────────────────────────────────────────
 
-routine Array<T, N>::as_ptr(#self: Ptr<Array<T, N>>) -> Ptr<T>
+routine Array<T, N>.as_ptr(#self: Ptr<Array<T, N>>) -> Ptr<T>
     block entry():
         #base: Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#self)
-        return #base
+        return(#base)
  
 ; Disl stdlib collection: fixed array helpers
 ;
 ; These helpers operate on Array<T, N> fields inside larger structures. The
 ; range convention is half-open: [start, end).
-routine Array<T, N>::shift_right(#self: Ptr<Array<T, N>>, %start: I64, %end: I64) -> Void
+routine Array<T, N>.shift_right(#self: Ptr<Array<T, N>>, %start: I64, %end: I64) -> Void
     block entry():
         jump loop(%end)
 
     block loop(%i: I64):
         %done: Bool = sle(%i, %start)
-        branch %done ? return : move(%i)
+        branch %done ? return() : move(%i)
 
     block move(%i: I64):
         %from: I64 = %i - 1
@@ -67,14 +67,14 @@ routine Array<T, N>::shift_right(#self: Ptr<Array<T, N>>, %start: I64, %end: I64
         #self[%i] = %value
         jump loop(%from)
 
-routine Array<T, N>::shift_left(#self: Ptr<Array<T, N>>, %start: I64, %end: I64) -> Void
+routine Array<T, N>.shift_left(#self: Ptr<Array<T, N>>, %start: I64, %end: I64) -> Void
     block entry():
         jump loop(%start)
 
     block loop(%i: I64):
         %last: I64 = %end - 1
         %done: Bool = sge(%i, %last)
-        branch %done ? return : move(%i)
+        branch %done ? return() : move(%i)
 
     block move(%i: I64):
         %from: I64 = %i + 1
@@ -82,7 +82,7 @@ routine Array<T, N>::shift_left(#self: Ptr<Array<T, N>>, %start: I64, %end: I64)
         #self[%i] = %value
         jump loop(%from)
 
-routine Array<T, N>::copy(#self: Ptr<Array<T, N>>, %dst_start: I64, #src: Ptr<Array<T, N>>, %src_start: I64, %count: I64) -> Void
+routine Array<T, N>.copy(#self: Ptr<Array<T, N>>, %dst_start: I64, #src: Ptr<Array<T, N>>, %src_start: I64, %count: I64) -> Void
     block entry():
         jump loop(0)
 
@@ -98,4 +98,4 @@ routine Array<T, N>::copy(#self: Ptr<Array<T, N>>, %dst_start: I64, #src: Ptr<Ar
         jump loop(%i + 1)
 
     block finish():
-        return
+        return()

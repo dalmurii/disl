@@ -14,7 +14,7 @@ struct Deque<T>
     capacity: I64
     alloc: Ptr<Allocator>
 
-routine Deque<T>::new(#alloc: Ptr<Allocator>) -> Deque<T>
+routine Deque<T>.new(#alloc: Ptr<Allocator>) -> Deque<T>
     block entry():
         %deque: Deque<T> = Deque<T> {
             data: null,
@@ -23,20 +23,20 @@ routine Deque<T>::new(#alloc: Ptr<Allocator>) -> Deque<T>
             capacity: 0,
             alloc: #alloc
         }
-        return %deque
+        return(%deque)
 
-routine Deque<T>::length(#self: Ptr<Deque<T>>) -> I64
+routine Deque<T>.length(#self: Ptr<Deque<T>>) -> I64
     block entry():
         %length: I64 := #self.length
-        return %length
+        return(%length)
 
-routine Deque<T>::is_empty(#self: Ptr<Deque<T>>) -> Bool
+routine Deque<T>.is_empty(#self: Ptr<Deque<T>>) -> Bool
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
-        return %empty
+        return(%empty)
 
-routine Deque<T>::recenter(#self: Ptr<Deque<T>>, %new_capacity: I64) -> Void
+routine Deque<T>.recenter(#self: Ptr<Deque<T>>, %new_capacity: I64) -> Void
     block entry():
         %length: I64 := #self.length
         %slack: I64 = %new_capacity - %length
@@ -63,13 +63,13 @@ routine Deque<T>::recenter(#self: Ptr<Deque<T>>, %new_capacity: I64) -> Void
         #self.data = #new_data
         #self.start = %new_start
         #self.capacity = %new_capacity
-        return
+        return()
 
-routine Deque<T>::ensure_front(#self: Ptr<Deque<T>>) -> Void
+routine Deque<T>.ensure_front(#self: Ptr<Deque<T>>) -> Void
     block entry():
         %start: I64 := #self.start
         %has_front_space: Bool = sgt(%start, 0)
-        branch %has_front_space ? return : choose()
+        branch %has_front_space ? return() : choose()
 
     block choose():
         %capacity: I64 := #self.capacity
@@ -78,21 +78,21 @@ routine Deque<T>::ensure_front(#self: Ptr<Deque<T>>) -> Void
 
     block initial():
         #self.recenter(4)
-        return
+        return()
 
     block grow(%capacity: I64):
         %new_capacity: I64 = %capacity * 2
         #self.recenter(%new_capacity)
-        return
+        return()
 
-routine Deque<T>::ensure_back(#self: Ptr<Deque<T>>) -> Void
+routine Deque<T>.ensure_back(#self: Ptr<Deque<T>>) -> Void
     block entry():
         %start: I64 := #self.start
         %length: I64 := #self.length
         %capacity: I64 := #self.capacity
         %end: I64 = %start + %length
         %has_back_space: Bool = slt(%end, %capacity)
-        branch %has_back_space ? return : choose(%capacity)
+        branch %has_back_space ? return() : choose(%capacity)
 
     block choose(%capacity: I64):
         %empty: Bool = %capacity == 0
@@ -100,14 +100,14 @@ routine Deque<T>::ensure_back(#self: Ptr<Deque<T>>) -> Void
 
     block initial():
         #self.recenter(4)
-        return
+        return()
 
     block grow(%capacity: I64):
         %new_capacity: I64 = %capacity * 2
         #self.recenter(%new_capacity)
-        return
+        return()
 
-routine Deque<T>::push_back(#self: Ptr<Deque<T>>, %value: T) -> Void
+routine Deque<T>.push_back(#self: Ptr<Deque<T>>, %value: T) -> Void
     block entry():
         #self.ensure_back()
         #data: Ptr<T> := #self.data
@@ -116,14 +116,14 @@ routine Deque<T>::push_back(#self: Ptr<Deque<T>>, %value: T) -> Void
         %index: I64 = %start + %length
         #data[%index] = %value
         #self.length = %length + 1
-        return
+        return()
 
-routine Deque<T>::push(#self: Ptr<Deque<T>>, %value: T) -> Void
+routine Deque<T>.push(#self: Ptr<Deque<T>>, %value: T) -> Void
     block entry:
         #self.push_back(%value)
-        return
+        return()
 
-routine Deque<T>::push_front(#self: Ptr<Deque<T>>, %value: T) -> Void
+routine Deque<T>.push_front(#self: Ptr<Deque<T>>, %value: T) -> Void
     block entry:
         #self.ensure_front()
         #data: Ptr<T> := #self.data
@@ -133,9 +133,9 @@ routine Deque<T>::push_front(#self: Ptr<Deque<T>>, %value: T) -> Void
         #self.start = %new_start
         %length: I64 := #self.length
         #self.length = %length + 1
-        return
+        return()
 
-routine Deque<T>::pop_back(#self: Ptr<Deque<T>>) -> T
+routine Deque<T>.pop_back(#self: Ptr<Deque<T>>) -> T
     block entry:
         %length: I64 := #self.length
         %empty: Bool = %length == 0
@@ -148,14 +148,14 @@ routine Deque<T>::pop_back(#self: Ptr<Deque<T>>) -> T
         %index: I64 = %start + %new_length
         %value: T := #data[%index]
         #self.length = %new_length
-        return %value
+        return(%value)
 
-routine Deque<T>::pop(#self: Ptr<Deque<T>>) -> T
+routine Deque<T>.pop(#self: Ptr<Deque<T>>) -> T
     block entry:
         %value: T = #self.pop_back()
-        return %value
+        return(%value)
 
-routine Deque<T>::pop_front(#self: Ptr<Deque<T>>) -> T
+routine Deque<T>.pop_front(#self: Ptr<Deque<T>>) -> T
     block entry:
         %length: I64 := #self.length
         %empty: Bool = %length == 0
@@ -167,9 +167,9 @@ routine Deque<T>::pop_front(#self: Ptr<Deque<T>>) -> T
         %value: T := #data[%start]
         #self.start = %start + 1
         #self.length = %length - 1
-        return %value
+        return(%value)
 
-routine Deque<T>::get(#self: Ptr<Deque<T>>, %index: I64) -> T
+routine Deque<T>.get(#self: Ptr<Deque<T>>, %index: I64) -> T
     block entry:
         %length: I64 := #self.length
         %not_negative: Bool = sge(%index, 0)
@@ -182,9 +182,9 @@ routine Deque<T>::get(#self: Ptr<Deque<T>>, %index: I64) -> T
         %start: i64 := #self.start
         %physical: i64 = %start + %index
         %value: T := #data[%physical]
-        return %value
+        return(%value)
 
-routine Deque<T>::set(#self: Ptr<Deque<T>>, %index: i64, %value: T) -> Void
+routine Deque<T>.set(#self: Ptr<Deque<T>>, %index: i64, %value: T) -> Void
     block entry:
         %length: i64 := #self.length
         %not_negative: Bool = sge(%index, 0)
@@ -197,17 +197,17 @@ routine Deque<T>::set(#self: Ptr<Deque<T>>, %index: i64, %value: T) -> Void
         %start: i64 := #self.start
         %physical: i64 = %start + %index
         #data[%physical] = %value
-        return
+        return()
 
-routine Deque<T>::clear(#self: Ptr<Deque<T>>) -> Void
+routine Deque<T>.clear(#self: Ptr<Deque<T>>) -> Void
     block entry:
         %capacity: i64 := #self.capacity
         %start: i64 = sdiv(%capacity, 2)
         #self.start = %start
         #self.length = 0
-        return
+        return()
 
-routine Deque<T>::free(#self: Ptr<Deque<T>>) -> Void
+routine Deque<T>.free(#self: Ptr<Deque<T>>) -> Void
     block entry:
         #data: Ptr<T> := #self.data
         %empty: Bool = #data == null
@@ -223,4 +223,4 @@ routine Deque<T>::free(#self: Ptr<Deque<T>>) -> Void
         #self.start = 0
         #self.length = 0
         #self.capacity = 0
-        return
+        return()

@@ -14,7 +14,7 @@ struct HashSet<T>
     equals_fn: Callable<@callconv("c"), (T, T), Bool>
     alloc: Ptr<Allocator>
 
-routine HashSet<T>::new(
+routine HashSet<T>.new(
     %hash_fn: Callable<@callconv("c"), (T), I64>,
     %equals_fn: Callable<@callconv("c"), (T, T), Bool>,
     #alloc: Ptr<Allocator>
@@ -31,14 +31,14 @@ routine HashSet<T>::new(
             equals_fn: %equals_fn,
             alloc: #alloc
         }
-        return %set
+        return(%set)
 
-routine HashSet<T>::length(#self: Ptr<HashSet<T>>) -> I64
+routine HashSet<T>.length(#self: Ptr<HashSet<T>>) -> I64
     block entry():
         %length: I64 := #self.length
-        return %length
+        return(%length)
 
-routine HashSet<T>::slot(#self: Ptr<HashSet<T>>, %key: T, %hash: I64) -> I64
+routine HashSet<T>.slot(#self: Ptr<HashSet<T>>, %key: T, %hash: I64) -> I64
     block entry():
         %capacity: I64 := #self.capacity
         %mask: I64 = %capacity - 1
@@ -56,7 +56,7 @@ routine HashSet<T>::slot(#self: Ptr<HashSet<T>>, %key: T, %hash: I64) -> I64
     block empty_slot(%index: I64, %first_tombstone: I64):
         %has_tombstone: Bool = sge(%first_tombstone, 0)
         %slot: I64 = %has_tombstone ? %first_tombstone : %index
-        return %slot
+        return(%slot)
 
     block tombstone_slot(%index: I64, %first_tombstone: I64):
         %seen: Bool = sge(%first_tombstone, 0)
@@ -75,18 +75,18 @@ routine HashSet<T>::slot(#self: Ptr<HashSet<T>>, %key: T, %hash: I64) -> I64
         #keys: Ptr<T> := #self.keys
         %entry_key: T := #keys[%index]
         %equal: Bool = #self.equals_fn(%entry_key, %key)
-        branch %equal ? return %index : next(%index, %first_tombstone)
+        branch %equal ? return(%index): next(%index, %first_tombstone)
 
     block next(%index: I64, %first_tombstone: I64):
         %capacity: I64 := #self.capacity
         %next: I64 = (%index + 1) & (%capacity - 1)
         jump probe(%next, %first_tombstone)
 
-routine HashSet<T>::find(#self: Ptr<HashSet<T>>, %key: T) -> I64
+routine HashSet<T>.find(#self: Ptr<HashSet<T>>, %key: T) -> I64
     block entry():
         %capacity: I64 := #self.capacity
         %empty: Bool = %capacity == 0
-        branch %empty ? return -1 : hash()
+        branch %empty ? return(-1): hash()
 
     block hash():
         %hash: I64 = #self.hash_fn(%key)
@@ -94,15 +94,15 @@ routine HashSet<T>::find(#self: Ptr<HashSet<T>>, %key: T) -> I64
         #states: Ptr<I8> := #self.states
         %state: I8 := #states[%slot]
         %found: Bool = %state == 1
-        branch %found ? return %slot : return -1
+        branch %found ? return(%slot): return(-1)
 
-routine HashSet<T>::contains(#self: Ptr<HashSet<T>>, %key: T) -> Bool
+routine HashSet<T>.contains(#self: Ptr<HashSet<T>>, %key: T) -> Bool
     block entry():
         %slot: I64 = #self.find(%key)
         %found: Bool = sge(%slot, 0)
-        return %found
+        return(%found)
 
-routine HashSet<T>::rehash(#self: Ptr<HashSet<T>>, %new_capacity: I64) -> Void
+routine HashSet<T>.rehash(#self: Ptr<HashSet<T>>, %new_capacity: I64) -> Void
     block entry():
         #alloc: Ptr<Allocator> := #self.alloc
         #old_keys: Ptr<T> := #self.keys
@@ -152,15 +152,15 @@ routine HashSet<T>::rehash(#self: Ptr<HashSet<T>>, %new_capacity: I64) -> Void
 
     block release_old(#old_keys: Ptr<T>, #old_hashes: Ptr<i64>, #old_states: Ptr<I8>, #alloc: Ptr<Allocator>):
         %has_old: Bool = #old_states != null
-        branch %has_old ? free_old(#old_keys, #old_hashes, #old_states, #alloc) : return
+        branch %has_old ? free_old(#old_keys, #old_hashes, #old_states, #alloc) : return()
 
     block free_old(#old_keys: Ptr<T>, #old_hashes: Ptr<i64>, #old_states: Ptr<I8>, #alloc: Ptr<Allocator>):
         free<T>(#alloc, #old_keys)
         free<i64>(#alloc, #old_hashes)
         free<i8>(#alloc, #old_states)
-        return
+        return()
 
-routine HashSet<T>::ensure(#self: Ptr<HashSet<T>>) -> Void
+routine HashSet<T>.ensure(#self: Ptr<HashSet<T>>) -> Void
     block entry():
         %capacity: i64 := #self.capacity
         %empty: Bool = %capacity == 0
@@ -168,7 +168,7 @@ routine HashSet<T>::ensure(#self: Ptr<HashSet<T>>) -> Void
 
     block first():
         #self.rehash(8)
-        return
+        return()
 
     block check(%capacity: i64):
         %length: i64 := #self.length
@@ -176,21 +176,21 @@ routine HashSet<T>::ensure(#self: Ptr<HashSet<T>>) -> Void
         %used: i64 = %length + %tombstones
         %limit: i64 = sdiv(%capacity * 3, 4)
         %full: Bool = sge(%used + 1, %limit)
-        branch %full ? grow(%capacity) : return
+        branch %full ? grow(%capacity) : return()
 
     block grow(%capacity: i64):
         #self.rehash(%capacity * 2)
-        return
+        return()
 
 ; Insert without growing — used internally by rehash after new arrays are in place.
-routine HashSet<T>::add_direct(#self: Ptr<HashSet<T>>, %key: T) -> Bool
+routine HashSet<T>.add_direct(#self: Ptr<HashSet<T>>, %key: T) -> Bool
     block entry():
         %hash: i64 = #self.hash_fn(%key)
         %slot: i64 = #self.slot(%key, %hash)
         #states: Ptr<i8> := #self.states
         %state: i8 := #states[%slot]
         %exists: Bool = %state == 1
-        branch %exists ? return false : add(%slot, %key, %hash, %state)
+        branch %exists ? return(false): add(%slot, %key, %hash, %state)
 
     block add(%slot: i64, %key: T, %hash: i64, %state: i8):
         %was_tombstone: bool = %state == 2
@@ -210,19 +210,19 @@ routine HashSet<T>::add_direct(#self: Ptr<HashSet<T>>, %key: T) -> Bool
         #states[%slot] = 1
         %length: i64 := #self.length
         #self.length = %length + 1
-        return true
+        return(true)
 
-routine HashSet<T>::add(#self: Ptr<HashSet<T>>, %key: T) -> bool
+routine HashSet<T>.add(#self: Ptr<HashSet<T>>, %key: T) -> bool
     block entry:
         #self.ensure()
         %added: bool = #self.add_direct(%key)
-        return %added
+        return(%added)
 
-routine HashSet<T>::remove(#self: Ptr<HashSet<T>>, %key: T) -> bool
+routine HashSet<T>.remove(#self: Ptr<HashSet<T>>, %key: T) -> bool
     block entry:
         %slot: i64 = #self.find(%key)
         %found: bool = sge(%slot, 0)
-        branch %found ? remove(%slot) : return false
+        branch %found ? remove(%slot) : return(false)
 
     block remove(%slot: i64):
         #states: Ptr<i8> := #self.states
@@ -231,9 +231,9 @@ routine HashSet<T>::remove(#self: Ptr<HashSet<T>>, %key: T) -> bool
         %tombstones: i64 := #self.tombstones
         #self.length = %length - 1
         #self.tombstones = %tombstones + 1
-        return true
+        return(true)
 
-routine HashSet<T>::free(#self: Ptr<HashSet<T>>) -> Void
+routine HashSet<T>.free(#self: Ptr<HashSet<T>>) -> Void
     block entry:
         #states: Ptr<i8> := #self.states
         %empty: bool = #states == null
@@ -256,4 +256,4 @@ routine HashSet<T>::free(#self: Ptr<HashSet<T>>) -> Void
         #self.length = 0
         #self.tombstones = 0
         #self.capacity = 0
-        return
+        return()

@@ -10,7 +10,7 @@ struct PriorityQueue<T>
     compare_fn: Callable<@callconv("c"), (T, T), I32>
     alloc: Ptr<Allocator>
 
-routine PriorityQueue<T>::new(
+routine PriorityQueue<T>.new(
     %compare_fn: Callable<@callconv("c"), (T, T), I32>,
     #alloc: Ptr<Allocator>
 ) -> PriorityQueue<T>
@@ -22,24 +22,24 @@ routine PriorityQueue<T>::new(
             compare_fn: %compare_fn,
             alloc: #alloc
         }
-        return %queue
+        return(%queue)
 
-routine PriorityQueue<T>::length(#self: Ptr<PriorityQueue<T>>) -> I64
+routine PriorityQueue<T>.length(#self: Ptr<PriorityQueue<T>>) -> I64
     block entry():
         %length: I64 := #self.length
-        return %length
+        return(%length)
 
-routine PriorityQueue<T>::is_empty(#self: Ptr<PriorityQueue<T>>) -> Bool
+routine PriorityQueue<T>.is_empty(#self: Ptr<PriorityQueue<T>>) -> Bool
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
-        return %empty
+        return(%empty)
 
-routine PriorityQueue<T>::reserve(#self: Ptr<PriorityQueue<T>>, %capacity: I64) -> Void
+routine PriorityQueue<T>.reserve(#self: Ptr<PriorityQueue<T>>, %capacity: I64) -> Void
     block entry():
         %old_capacity: I64 := #self.capacity
         %enough: Bool = sge(%old_capacity, %capacity)
-        branch %enough ? return : grow(%capacity)
+        branch %enough ? return() : grow(%capacity)
 
     block grow(%capacity: I64):
         #alloc: Ptr<Allocator> := #self.alloc
@@ -51,13 +51,13 @@ routine PriorityQueue<T>::reserve(#self: Ptr<PriorityQueue<T>>, %capacity: I64) 
     block install(#new_data: Ptr<T>, %capacity: I64):
         #self.data = #new_data
         #self.capacity = %capacity
-        return
+        return()
 
-routine PriorityQueue<T>::ensure(#self: Ptr<PriorityQueue<T>>, %wanted: I64) -> Void
+routine PriorityQueue<T>.ensure(#self: Ptr<PriorityQueue<T>>, %wanted: I64) -> Void
     block entry():
         %capacity: I64 := #self.capacity
         %enough: bool = sge(%capacity, %wanted)
-        branch %enough ? return : choose(%capacity, %wanted)
+        branch %enough ? return() : choose(%capacity, %wanted)
 
     block choose(%capacity: I64, %wanted: I64):
         %empty: bool = %capacity == 0
@@ -68,7 +68,7 @@ routine PriorityQueue<T>::ensure(#self: Ptr<PriorityQueue<T>>, %wanted: I64) -> 
         %use_wanted: bool = sgt(%wanted, %base)
         %new_capacity: I64 = %use_wanted ? %wanted : %base
         #self.reserve(%new_capacity)
-        return
+        return()
 
     block double(%capacity: I64, %wanted: I64):
         %next: I64 = %capacity * 2
@@ -77,15 +77,15 @@ routine PriorityQueue<T>::ensure(#self: Ptr<PriorityQueue<T>>, %wanted: I64) -> 
 
     block reserve(%new_capacity: I64):
         #self.reserve(%new_capacity)
-        return
+        return()
 
-routine PriorityQueue<T>::less(#self: Ptr<PriorityQueue<T>>, %a: T, %b: T) -> bool
+routine PriorityQueue<T>.less(#self: Ptr<PriorityQueue<T>>, %a: T, %b: T) -> bool
     block entry():
         %cmp: I32 = #self.compare_fn(%a, %b)
         %less: bool = slt(%cmp, 0)
-        return %less
+        return(%less)
 
-routine PriorityQueue<T>::push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
+routine PriorityQueue<T>.push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
     block entry():
         %length: I64 := #self.length
         %wanted: I64 = %length + 1
@@ -97,7 +97,7 @@ routine PriorityQueue<T>::push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
 
     block sift_up(%index: I64):
         %at_root: bool = %index == 0
-        branch %at_root ? return : compare_parent(%index)
+        branch %at_root ? return() : compare_parent(%index)
 
     block compare_parent(%index: I64):
         %parent: I64 = sdiv(%index - 1, 2)
@@ -105,7 +105,7 @@ routine PriorityQueue<T>::push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
         %child_value: T := #data[%index]
         %parent_value: T := #data[%parent]
         %less: bool = #self.less(%child_value, %parent_value)
-        branch %less ? swap(%index, %parent, %child_value, %parent_value) : return
+        branch %less ? swap(%index, %parent, %child_value, %parent_value) : return()
 
     block swap(%index: I64, %parent: I64, %child_value: T, %parent_value: T):
         #data: Ptr<T> := #self.data
@@ -113,7 +113,7 @@ routine PriorityQueue<T>::push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
         #data[%index] = %parent_value
         jump sift_up(%parent)
 
-routine PriorityQueue<T>::peek(#self: Ptr<PriorityQueue<T>>) -> T
+routine PriorityQueue<T>.peek(#self: Ptr<PriorityQueue<T>>) -> T
     block entry():
         %length: I64 := #self.length
         %empty: bool = %length == 0
@@ -122,9 +122,9 @@ routine PriorityQueue<T>::peek(#self: Ptr<PriorityQueue<T>>) -> T
     block load():
         #data: Ptr<T> := #self.data
         %value: T := #data[0]
-        return %value
+        return(%value)
 
-routine PriorityQueue<T>::pop(#self: Ptr<PriorityQueue<T>>) -> T
+routine PriorityQueue<T>.pop(#self: Ptr<PriorityQueue<T>>) -> T
     block entry():
         %length: I64 := #self.length
         %empty: bool = %length == 0
@@ -136,7 +136,7 @@ routine PriorityQueue<T>::pop(#self: Ptr<PriorityQueue<T>>) -> T
         %new_length: I64 = %length - 1
         #self.length = %new_length
         %now_empty: bool = %new_length == 0
-        branch %now_empty ? return %result : move_last(%result, %new_length)
+        branch %now_empty ? return(%result): move_last(%result, %new_length)
 
     block move_last(%result: T, %new_length: I64):
         #data: Ptr<T> := #self.data
@@ -149,7 +149,7 @@ routine PriorityQueue<T>::pop(#self: Ptr<PriorityQueue<T>>) -> T
         %left: I64 = %index * 2 + 1
         %right: I64 = %left + 1
         %has_left: bool = slt(%left, %length)
-        branch %has_left ? choose_child(%index, %left, %right, %result) : return %result
+        branch %has_left ? choose_child(%index, %left, %right, %result) : return(%result)
 
     block choose_child(%index: I64, %left: I64, %right: I64, %result: T):
         %length: I64 := #self.length
@@ -169,7 +169,7 @@ routine PriorityQueue<T>::pop(#self: Ptr<PriorityQueue<T>>) -> T
         %index_value: T := #data[%index]
         %child_value: T := #data[%child]
         %child_less: bool = #self.less(%child_value, %index_value)
-        branch %child_less ? swap_down(%index, %child, %index_value, %child_value, %result) : return %result
+        branch %child_less ? swap_down(%index, %child, %index_value, %child_value, %result) : return(%result)
 
     block swap_down(%index: I64, %child: I64, %index_value: T, %child_value: T, %result: T):
         #data: Ptr<T> := #self.data
@@ -177,12 +177,12 @@ routine PriorityQueue<T>::pop(#self: Ptr<PriorityQueue<T>>) -> T
         #data[%child] = %index_value
         jump sift_down(%child, %result)
 
-routine PriorityQueue<T>::clear(#self: Ptr<PriorityQueue<T>>) -> Void
+routine PriorityQueue<T>.clear(#self: Ptr<PriorityQueue<T>>) -> Void
     block entry():
         #self.length = 0
-        return
+        return()
 
-routine PriorityQueue<T>::free(#self: Ptr<PriorityQueue<T>>) -> Void
+routine PriorityQueue<T>.free(#self: Ptr<PriorityQueue<T>>) -> Void
     block entry():
         #data: Ptr<T> := #self.data
         %empty: bool = #data == null
@@ -197,4 +197,4 @@ routine PriorityQueue<T>::free(#self: Ptr<PriorityQueue<T>>) -> Void
         #self.data = null
         #self.length = 0
         #self.capacity = 0
-        return
+        return()

@@ -5,10 +5,10 @@
 ; with one of these concepts.
 
 concept Equal<T, Ops>
-    routine Ops::equals(%a: T, %b: T) -> Bool
+    routine Ops.equals(%a: T, %b: T) -> Bool
 
 concept Hash<T, Ops>
-    routine Ops::hash(%value: T) -> I64
+    routine Ops.hash(%value: T) -> I64
 
 concept HashEqual<T, Ops>
     require Equal<T, Ops>
@@ -16,13 +16,13 @@ concept HashEqual<T, Ops>
 
 concept Compare<T, Ops>
     ; Return < 0 when a < b, 0 when a == b, and > 0 when a > b.
-    routine Ops::compare(%a: T, %b: T) -> I32
+    routine Ops.compare(%a: T, %b: T) -> I32
 
 concept Priority<T, Ops>
     ; Return true when a should be closer to the top than b.
-    routine Ops::less(%a: T, %b: T) -> Bool
+    routine Ops.less(%a: T, %b: T) -> Bool
 
 concept Iterator<T, Iter>
-    ; Advance and return the next element, or Option<T>::none() when exhausted.
+    ; Advance and return the next element, or Option<T>.none() when exhausted.
     ; next() mutates the iterator state, so #self is a pointer.
-    routine Iter::next(#self: Ptr<Iter>) -> Option<T>
+    routine Iter.next(#self: Ptr<Iter>) -> Option<T>

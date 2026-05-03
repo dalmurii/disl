@@ -23,50 +23,50 @@ struct Option<T>
     @aligned(alignof<T>())
     payload: Array<I8, sizeof<T>()>
 
-routine Option<T>::none() -> Option<T>
+routine Option<T>.none() -> Option<T>
     block entry():
         #buf: Ptr<Option<T>> = alloca<Option<T>>
         zero<Option<T>>(#buf, 1)
         %opt: Option<T> := #buf
-        return %opt
+        return(%opt)
 
-routine Option<T>::some(%value: T) -> Option<T>
+routine Option<T>.some(%value: T) -> Option<T>
     block entry():
         #buf: Ptr<Option<T>> = alloca<Option<T>>
-        #buf.tag = OptionTag::Some
+        #buf.tag = OptionTag.Some
         #payload: Ptr<Array<I8, sizeof<T>()>> = #buf.payload
         #typed: Ptr<T> = bitcast<Ptr<Array<I8, sizeof<T>()>>, Ptr<T>>(#payload)
         #typed = %value
         %opt: Option<T> := #buf
-        return %opt
+        return(%opt)
 
 ; Both predicates take the Option by value — only the tag field is read,
 ; so no pointer is needed and the caller avoids an alloca.
-routine Option<T>::is_some(%self: Option<T>) -> Bool
+routine Option<T>.is_some(%self: Option<T>) -> Bool
     block entry():
         %tag: OptionTag = %self.tag
-        %result: Bool = %tag == OptionTag::Some
-        return %result
+        %result: Bool = %tag == OptionTag.Some
+        return(%result)
 
-routine Option<T>::is_none(%self: Option<T>) -> Bool
+routine Option<T>.is_none(%self: Option<T>) -> Bool
     block entry():
         %tag: OptionTag = %self.tag
-        %result: Bool = %tag == OptionTag::None
-        return %result
+        %result: Bool = %tag == OptionTag.None
+        return(%result)
 
 ; unwrap takes a pointer so the payload GEP is cheap — no struct copy needed.
 ; Traps if tag is None.
-routine Option<T>::unwrap(#self: Ptr<Option<T>>) -> T
+routine Option<T>.unwrap(#self: Ptr<Option<T>>) -> T
     block entry():
         %tag: OptionTag := #self.tag
-        %is_some: Bool = %tag == OptionTag::Some
+        %is_some: Bool = %tag == OptionTag.Some
         branch %is_some ? load() : trap()
 
     block load():
         #payload: Ptr<Array<I8, sizeof<T>()>> = #self.payload
         #typed: Ptr<T> = bitcast<Ptr<Array<I8, sizeof<T>()>>, Ptr<T>>(#payload)
         %value: T := #typed
-        return %value
+        return(%value)
 
 ; ── KVPair ────────────────────────────────────────────────────────────────────
 

@@ -15,13 +15,13 @@ struct BTreeMapIter<K, V>
     order: I64
     total: I64
 
-routine BTreeMapIter<K, V>::new(#map: Ptr<BTreeMap<K, V>>) -> BTreeMapIter<K, V>
+routine BTreeMapIter<K, V>.new(#map: Ptr<BTreeMap<K, V>>) -> BTreeMapIter<K, V>
     block entry():
         %total: I64 = #map.length()
         %iter: BTreeMapIter<K, V> = BTreeMapIter<K, V> { map: #map, order: 0, total: %total }
-        return %iter
+        return(%iter)
 
-routine BTreeMapIter<K, V>::next(#self: Ptr<BTreeMapIter<K, V>>) -> Option<KVPair<K, V>>
+routine BTreeMapIter<K, V>.next(#self: Ptr<BTreeMapIter<K, V>>) -> Option<KVPair<K, V>>
     block entry():
         %order: I64  := #self.order
         %total: I64  := #self.total
@@ -29,8 +29,8 @@ routine BTreeMapIter<K, V>::next(#self: Ptr<BTreeMapIter<K, V>>) -> Option<KVPai
         branch %done ? return_none() : return_some(%order)
 
     block return_none():
-        %none: Option<KVPair<K, V>> = Option<KVPair<K, V>>::none()
-        return %none
+        %none: Option<KVPair<K, V>> = Option<KVPair<K, V>>.none()
+        return(%none)
 
     block return_some(%order: I64):
         #map:   Ptr<BTreeMap<K, V>> := #self.map
@@ -38,5 +38,5 @@ routine BTreeMapIter<K, V>::next(#self: Ptr<BTreeMapIter<K, V>>) -> Option<KVPai
         %value: V                   = #map.get_order(%order)
         %pair:  KVPair<K, V>        = KVPair<K, V> { key: %key, value: %value }
         #self.order = %order + 1
-        %some: Option<KVPair<K, V>> = Option<KVPair<K, V>>::some(%pair)
-        return %some
+        %some: Option<KVPair<K, V>> = Option<KVPair<K, V>>.some(%pair)
+        return(%some)

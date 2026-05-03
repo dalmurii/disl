@@ -7,48 +7,48 @@ struct I8
 
 ; ── constants ─────────────────────────────────────────────────────────────────
 
-const I8::MIN: I8 = -128
-const I8::MAX: I8 =  127
+const I8.MIN: I8 = -128
+const I8.MAX: I8 =  127
 
 ; ── bit operations ────────────────────────────────────────────────────────────
 
-routine I8::count_ones(%self: I8) -> I8
+routine I8.count_ones(%self: I8) -> I8
     block entry():
         %result: I8 = popcount<I8>(%self)
-        return %result
+        return(%result)
 
-routine I8::leading_zeros(%self: I8) -> I8
+routine I8.leading_zeros(%self: I8) -> I8
     block entry():
         %result: I8 = clz<I8>(%self, false)
-        return %result
+        return(%result)
 
-routine I8::trailing_zeros(%self: I8) -> I8
+routine I8.trailing_zeros(%self: I8) -> I8
     block entry():
         %result: I8 = ctz<I8>(%self, false)
-        return %result
+        return(%result)
 
 ; ── arithmetic ────────────────────────────────────────────────────────────────
 
-routine I8::abs(%self: I8) -> I8
+routine I8.abs(%self: I8) -> I8
     block entry():
         %is_neg: Bool = slt<I8>(%self, 0)
         %neg: I8 = 0 - %self
         %result: I8 = %is_neg ? %neg : %self
-        return %result
+        return(%result)
 
 ; ── widening conversions (sign-extending) ─────────────────────────────────────
 
-routine I8::to_i16(%self: I8) -> I16
+routine I8.to_i16(%self: I8) -> I16
     block entry():
         %result: I16 = sext<I8, I16>(%self)
-        return %result
+        return(%result)
 
-routine I8::to_i32(%self: I8) -> I32
+routine I8.to_i32(%self: I8) -> I32
     block entry():
         %result: I32 = sext<I8, I32>(%self)
-        return %result
+        return(%result)
 
-routine I8::to_i64(%self: I8) -> I64
+routine I8.to_i64(%self: I8) -> I64
     block entry():
         %result: I64 = sext<I8, I64>(%self)
-        return %result
+        return(%result)
