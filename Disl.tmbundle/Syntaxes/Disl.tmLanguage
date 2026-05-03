@@ -241,7 +241,7 @@
             <key>name</key>
             <string>keyword.control.disl</string>
             <key>match</key>
-            <string>\b(branch|jump|return|unreachable|select|branch_table)\b</string>
+            <string>\b(branch|jump|return|unreachable|select|switch)\b</string>
         </dict>
 
         <!-- declaration keywords (not already handled by decl patterns above) -->

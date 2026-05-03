@@ -70,7 +70,7 @@ routine Result::err(%code: I32) -> Result
 routine Result::print(#self: ptr<Result>) -> void
     block entry():
         %tag: ResultTag := #self.tag
-        branch_table %tag:
+        switch %tag:
             ResultTag::Ok -> print_ok()
             ResultTag::Err -> print_err()
             _ -> unreachable
