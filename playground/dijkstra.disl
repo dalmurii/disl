@@ -40,18 +40,18 @@ struct DijkstraEntry
 
 ; ── Priority-queue comparator ─────────────────────────────────────────────────
 
-; Lower distance = higher priority.  Passed as a Callable to PriorityQueue::new.
+; Lower distance = higher priority.  Passed as a Callable to PriorityQueue.new.
 @callconv("c")
 routine compare_entry(%a: DijkstraEntry, %b: DijkstraEntry) -> I32
     block entry():
         select:
-            slt(%a.dist, %b.dist) -> return -1
-            sgt(%a.dist, %b.dist) -> return  1
-            _                     -> return  0
+            slt(%a.dist, %b.dist) -> return(-1)
+            sgt(%a.dist, %b.dist) -> return(1)
+            _                     -> return(0)
 
 ; ── Graph ─────────────────────────────────────────────────────────────────────
 
-routine Graph::new(%num_nodes: I64, #alloc: Ptr<Allocator>) -> Graph
+routine Graph.new(%num_nodes: I64, #alloc: Ptr<Allocator>) -> Graph
     block entry():
         #adj: Ptr<Ptr<List<Edge>>> = alloc<Ptr<List<Edge>>>(#alloc, %num_nodes)
         %adj_null: Bool = #adj == null
@@ -67,24 +67,24 @@ routine Graph::new(%num_nodes: I64, #alloc: Ptr<Allocator>) -> Graph
         branch %list_null ? trap() : init_list(%i, #adj, #list)
 
     block init_list(%i: I64, #adj: Ptr<Ptr<List<Edge>>>, #list: Ptr<List<Edge>>):
-        %empty: List<Edge> = List<Edge>::new(#alloc)
+        %empty: List<Edge> = List<Edge>.new(#alloc)
         #list = %empty
         #adj[%i] = #list
         jump init_loop(%i + 1, #adj)
 
     block build(#adj: Ptr<Ptr<List<Edge>>>):
         %g: Graph = Graph { adj: #adj, num_nodes: %num_nodes }
-        return %g
+        return(%g)
 
-routine Graph::add_edge(#self: Ptr<Graph>, %from: I64, %to: I64, %weight: I64) -> Void
+routine Graph.add_edge(#self: Ptr<Graph>, %from: I64, %to: I64, %weight: I64) -> Void
     block entry():
         #adj:  Ptr<Ptr<List<Edge>>> := #self.adj
         #list: Ptr<List<Edge>>      := #adj[%from]
         %edge: Edge = Edge { to: %to, weight: %weight }
         #list.push(%edge)
-        return
+        return()
 
-routine Graph::free(#self: Ptr<Graph>, #alloc: Ptr<Allocator>) -> Void
+routine Graph.free(#self: Ptr<Graph>, #alloc: Ptr<Allocator>) -> Void
     block entry():
         %n:   I64                  := #self.num_nodes
         #adj: Ptr<Ptr<List<Edge>>> := #self.adj
@@ -102,7 +102,7 @@ routine Graph::free(#self: Ptr<Graph>, #alloc: Ptr<Allocator>) -> Void
 
     block free_arr(#adj: Ptr<Ptr<List<Edge>>>):
         free<Ptr<List<Edge>>>(#alloc, #adj)
-        return
+        return()
 
 ; ── Dijkstra ─────────────────────────────────────────────────────────────────
 ;
@@ -118,7 +118,7 @@ routine dijkstra(
 ) -> Void
     block entry():
         %n:      I64 := #graph.num_nodes
-        %pq_val: PriorityQueue<DijkstraEntry> = PriorityQueue<DijkstraEntry>::new(compare_entry, #alloc)
+        %pq_val: PriorityQueue<DijkstraEntry> = PriorityQueue<DijkstraEntry>.new(compare_entry, #alloc)
         #pq:     Ptr<PriorityQueue<DijkstraEntry>> = alloca<PriorityQueue<DijkstraEntry>>([%pq_val])
         jump fill_inf(0, %n, #pq)
 
@@ -185,7 +185,7 @@ routine dijkstra(
 
     block done(#pq: Ptr<PriorityQueue<DijkstraEntry>>):
         #pq.free()
-        return
+        return()
 
 ; ── main ─────────────────────────────────────────────────────────────────────
 ;
@@ -213,7 +213,7 @@ routine main() -> I32
         %alloc_val: Allocator = make_heap_allocator()
         #alloc: Ptr<Allocator> = alloca<Allocator>([%alloc_val])
 
-        %g: Graph = Graph::new(6, #alloc)
+        %g: Graph = Graph.new(6, #alloc)
         #graph: Ptr<Graph> = alloca<Graph>([%g])
 
         #graph.add_edge(0, 1,  7)
@@ -244,4 +244,4 @@ routine main() -> I32
     block cleanup(#dist: Ptr<I64>, #graph: Ptr<Graph>, #alloc: Ptr<Allocator>):
         #graph.free(#alloc)
         free<I64>(#alloc, #dist)
-        return 0
+        return(0)
