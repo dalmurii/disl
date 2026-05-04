@@ -12,7 +12,7 @@ const NODE_CHILDREN: I64 = NODE_VALUES + 1
 const NODE_MIN: I64 = sdiv(NODE_VALUES + 1, 2)
 
 struct BTreeListNode<T>
-    require T: typename
+require T: typename
     leaf: Bool
     length: I64
     subtree_count: I64
@@ -20,13 +20,13 @@ struct BTreeListNode<T>
     children: Array<Ptr<BTreeListNode<T>>, NODE_CHILDREN>
 
 struct BTreeList<T>
-    require T: typename
+require T: typename
     root: Ptr<BTreeListNode<T>>
     length: I64
     alloc: Ptr<Allocator>
 
 routine BTreeList<T>.new(#alloc: Ptr<Allocator>) -> BTreeList<T>
-    require T: typename
+require T: typename
     block entry():
         %list: BTreeList<T> = BTreeList<T> {
             root: null,
@@ -36,13 +36,13 @@ routine BTreeList<T>.new(#alloc: Ptr<Allocator>) -> BTreeList<T>
         return(%list)
 
 routine BTreeList<T>.length(#self: Ptr<BTreeList<T>>) -> I64
-    require T: typename
+require T: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
 routine BTreeListNode<T>.new(%leaf: Bool, #alloc: Ptr<Allocator>) -> Ptr<BTreeListNode<T>>
-    require T: typename
+require T: typename
     block entry():
         #node: Ptr<BTreeListNode<T>> = alloc<BTreeListNode<T>>(#alloc, 1)
         %failed: Bool = #node == null
@@ -55,7 +55,7 @@ routine BTreeListNode<T>.new(%leaf: Bool, #alloc: Ptr<Allocator>) -> Ptr<BTreeLi
         return(#node)
 
 routine BTreeListNode<T>.count(#self: Ptr<BTreeListNode<T>>) -> I64
-    require T: typename
+require T: typename
     block entry():
         %empty: Bool = #self == null
         branch %empty ? return(0): count(#self)
@@ -65,7 +65,7 @@ routine BTreeListNode<T>.count(#self: Ptr<BTreeListNode<T>>) -> I64
         return(%count)
 
 routine BTreeListNode<T>.recount(#self: Ptr<BTreeListNode<T>>) -> Void
-    require T: typename
+require T: typename
     block entry():
         %leaf: Bool := #self.leaf
         %length: I64 := #self.length
@@ -92,7 +92,7 @@ routine BTreeListNode<T>.recount(#self: Ptr<BTreeListNode<T>>) -> Void
         return()
 
 routine BTreeList<T>.get(#self: Ptr<BTreeList<T>>, %order: I64) -> T
-    require T: typename
+require T: typename
     block entry():
         %not_negative: Bool = sge(%order, 0)
         %length: I64 := #self.length
@@ -122,7 +122,7 @@ routine BTreeList<T>.get(#self: Ptr<BTreeList<T>>, %order: I64) -> T
         branch %in_child ? select_node(#child, %order) : scan(#node, %order - %child_count, %i + 1)
 
 routine BTreeList<T>.set(#self: Ptr<BTreeList<T>>, %order: I64, %value: T) -> Void
-    require T: typename
+require T: typename
     block entry():
         %not_negative: Bool = sge(%order, 0)
         %length: I64 := #self.length
@@ -152,14 +152,14 @@ routine BTreeList<T>.set(#self: Ptr<BTreeList<T>>, %order: I64, %value: T) -> Vo
         branch %in_child ? set_node(#child, %order, %value) : scan(#node, %order - %child_count, %value, %i + 1)
 
 routine BTreeList<T>.push(#self: Ptr<BTreeList<T>>, %value: T) -> Void
-    require T: typename
+require T: typename
     block entry():
         %length: I64 := #self.length
         #self.insert(%length, %value)
         return()
 
 routine BTreeListNode<T>.split_child(#self: Ptr<BTreeListNode<T>>, %index: I64, #alloc: Ptr<Allocator>) -> Void
-    require T: typename
+require T: typename
     block entry():
         #left: Ptr<BTreeListNode<T>> := #self.children[%index]
         %leaf: Bool := #left.leaf
@@ -215,7 +215,7 @@ routine BTreeListNode<T>.split_child(#self: Ptr<BTreeListNode<T>>, %index: I64, 
 ; "append at the end of that child", so `remaining == count` keeps us in
 ; the current child rather than overflowing into a non-existent next one.
 routine BTreeListNode<T>.find_child(#self: Ptr<BTreeListNode<T>>, %order: I64, #out_local: Ptr<I64>) -> I64
-    require T: typename
+require T: typename
     block entry():
         jump loop(0, %order)
 
@@ -234,7 +234,7 @@ routine BTreeListNode<T>.find_child(#self: Ptr<BTreeListNode<T>>, %order: I64, #
 ; boundaries the element belongs to the next sibling, not the trailing
 ; position of this one.
 routine BTreeListNode<T>.find_child_strict(#self: Ptr<BTreeListNode<T>>, %order: I64, #out_local: Ptr<I64>) -> I64
-    require T: typename
+require T: typename
     block entry():
         jump loop(0, %order)
 
@@ -249,7 +249,7 @@ routine BTreeListNode<T>.find_child_strict(#self: Ptr<BTreeListNode<T>>, %order:
         return(%i)
 
 routine BTreeListNode<T>.insert_nonfull(#self: Ptr<BTreeListNode<T>>, %order: I64, %value: T, #alloc: Ptr<Allocator>) -> Void
-    require T: typename
+require T: typename
     block entry():
         %leaf: Bool := #self.leaf
         branch %leaf ? insert_leaf(%order, %value) : insert_internal(%order, %value)
@@ -294,7 +294,7 @@ routine BTreeListNode<T>.insert_nonfull(#self: Ptr<BTreeListNode<T>>, %order: I6
         return()
 
 routine BTreeList<T>.insert(#self: Ptr<BTreeList<T>>, %order: I64, %value: T) -> Void
-    require T: typename
+require T: typename
     block entry():
         %not_negative: Bool = sge(%order, 0)
         %length: I64 := #self.length
@@ -342,7 +342,7 @@ routine BTreeList<T>.insert(#self: Ptr<BTreeList<T>>, %order: I64, %value: T) ->
 ; any deletion descent.
 
 routine BTreeListNode<T>.borrow_from_left(#self: Ptr<BTreeListNode<T>>, %i: I64) -> Void
-    require T: typename
+require T: typename
     block entry():
         #left: Ptr<BTreeListNode<T>> := #self.children[%i - 1]
         #child: Ptr<BTreeListNode<T>> := #self.children[%i]
@@ -372,7 +372,7 @@ routine BTreeListNode<T>.borrow_from_left(#self: Ptr<BTreeListNode<T>>, %i: I64)
         return()
 
 routine BTreeListNode<T>.borrow_from_right(#self: Ptr<BTreeListNode<T>>, %i: I64) -> Void
-    require T: typename
+require T: typename
     block entry():
         #child: Ptr<BTreeListNode<T>> := #self.children[%i]
         #right: Ptr<BTreeListNode<T>> := #self.children[%i + 1]
@@ -402,7 +402,7 @@ routine BTreeListNode<T>.borrow_from_right(#self: Ptr<BTreeListNode<T>>, %i: I64
         return()
 
 routine BTreeListNode<T>.merge_children(#self: Ptr<BTreeListNode<T>>, %i: I64, #alloc: Ptr<Allocator>) -> Void
-    require T: typename
+require T: typename
     block entry():
         #left: Ptr<BTreeListNode<T>> := #self.children[%i]
         #right: Ptr<BTreeListNode<T>> := #self.children[%i + 1]
@@ -435,7 +435,7 @@ routine BTreeListNode<T>.merge_children(#self: Ptr<BTreeListNode<T>>, %i: I64, #
 ; into (or out of) the descent target, so we cannot factor out a generic
 ; ensure_min the way the keyed B-tree variants do.
 routine BTreeListNode<T>.remove(#self: Ptr<BTreeListNode<T>>, %order: I64, #alloc: Ptr<Allocator>) -> T
-    require T: typename
+require T: typename
     block entry():
         %leaf: Bool := #self.leaf
         branch %leaf ? remove_leaf(%order) : remove_internal(%order)
@@ -528,7 +528,7 @@ routine BTreeListNode<T>.remove(#self: Ptr<BTreeListNode<T>>, %order: I64, #allo
         jump descend(%slot, %local_order)
 
 routine BTreeList<T>.remove(#self: Ptr<BTreeList<T>>, %order: I64) -> T
-    require T: typename
+require T: typename
     block entry():
         %not_negative: Bool = sge(%order, 0)
         %length: I64 := #self.length
@@ -570,7 +570,7 @@ routine BTreeList<T>.remove(#self: Ptr<BTreeList<T>>, %order: I64) -> T
 
 ; Internal nodes use `length` as the child count (indices 0..length-1).
 routine BTreeListNode<T>.free_recursive(#self: Ptr<BTreeListNode<T>>, #alloc: Ptr<Allocator>) -> Void
-    require T: typename
+require T: typename
     block entry():
         %leaf: Bool := #self.leaf
         branch %leaf ? free_self() : free_children()
@@ -593,7 +593,7 @@ routine BTreeListNode<T>.free_recursive(#self: Ptr<BTreeListNode<T>>, #alloc: Pt
         return()
 
 routine BTreeList<T>.free(#self: Ptr<BTreeList<T>>) -> Void
-    require T: typename
+require T: typename
     block entry():
         #root: Ptr<BTreeListNode<T>> := #self.root
         %empty: Bool = #root == null

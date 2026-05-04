@@ -8,7 +8,7 @@
 ; centered buffer.
 
 struct Deque<T>
-    require T: typename
+require T: typename
     data: Ptr<T>
     start: I64
     length: I64
@@ -16,7 +16,7 @@ struct Deque<T>
     alloc: Ptr<Allocator>
 
 routine Deque<T>.new(#alloc: Ptr<Allocator>) -> Deque<T>
-    require T: typename
+require T: typename
     block entry():
         %deque: Deque<T> = Deque<T> {
             data: null,
@@ -28,20 +28,20 @@ routine Deque<T>.new(#alloc: Ptr<Allocator>) -> Deque<T>
         return(%deque)
 
 routine Deque<T>.length(#self: Ptr<Deque<T>>) -> I64
-    require T: typename
+require T: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
 routine Deque<T>.is_empty(#self: Ptr<Deque<T>>) -> Bool
-    require T: typename
+require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
         return(%empty)
 
 routine Deque<T>.recenter(#self: Ptr<Deque<T>>, %new_capacity: I64) -> Void
-    require T: typename
+require T: typename
     block entry():
         %length: I64 := #self.length
         %slack: I64 = %new_capacity - %length
@@ -71,7 +71,7 @@ routine Deque<T>.recenter(#self: Ptr<Deque<T>>, %new_capacity: I64) -> Void
         return()
 
 routine Deque<T>.ensure_front(#self: Ptr<Deque<T>>) -> Void
-    require T: typename
+require T: typename
     block entry():
         %start: I64 := #self.start
         %has_front_space: Bool = sgt(%start, 0)
@@ -92,7 +92,7 @@ routine Deque<T>.ensure_front(#self: Ptr<Deque<T>>) -> Void
         return()
 
 routine Deque<T>.ensure_back(#self: Ptr<Deque<T>>) -> Void
-    require T: typename
+require T: typename
     block entry():
         %start: I64 := #self.start
         %length: I64 := #self.length
@@ -115,7 +115,7 @@ routine Deque<T>.ensure_back(#self: Ptr<Deque<T>>) -> Void
         return()
 
 routine Deque<T>.push_back(#self: Ptr<Deque<T>>, %value: T) -> Void
-    require T: typename
+require T: typename
     block entry():
         #self.ensure_back()
         #data: Ptr<T> := #self.data
@@ -127,13 +127,13 @@ routine Deque<T>.push_back(#self: Ptr<Deque<T>>, %value: T) -> Void
         return()
 
 routine Deque<T>.push(#self: Ptr<Deque<T>>, %value: T) -> Void
-    require T: typename
+require T: typename
     block entry:
         #self.push_back(%value)
         return()
 
 routine Deque<T>.push_front(#self: Ptr<Deque<T>>, %value: T) -> Void
-    require T: typename
+require T: typename
     block entry:
         #self.ensure_front()
         #data: Ptr<T> := #self.data
@@ -146,7 +146,7 @@ routine Deque<T>.push_front(#self: Ptr<Deque<T>>, %value: T) -> Void
         return()
 
 routine Deque<T>.pop_back(#self: Ptr<Deque<T>>) -> T
-    require T: typename
+require T: typename
     block entry:
         %length: I64 := #self.length
         %empty: Bool = %length == 0
@@ -162,13 +162,13 @@ routine Deque<T>.pop_back(#self: Ptr<Deque<T>>) -> T
         return(%value)
 
 routine Deque<T>.pop(#self: Ptr<Deque<T>>) -> T
-    require T: typename
+require T: typename
     block entry:
         %value: T = #self.pop_back()
         return(%value)
 
 routine Deque<T>.pop_front(#self: Ptr<Deque<T>>) -> T
-    require T: typename
+require T: typename
     block entry:
         %length: I64 := #self.length
         %empty: Bool = %length == 0
@@ -183,7 +183,7 @@ routine Deque<T>.pop_front(#self: Ptr<Deque<T>>) -> T
         return(%value)
 
 routine Deque<T>.get(#self: Ptr<Deque<T>>, %index: I64) -> T
-    require T: typename
+require T: typename
     block entry:
         %length: I64 := #self.length
         %not_negative: Bool = sge(%index, 0)
@@ -199,7 +199,7 @@ routine Deque<T>.get(#self: Ptr<Deque<T>>, %index: I64) -> T
         return(%value)
 
 routine Deque<T>.set(#self: Ptr<Deque<T>>, %index: I64, %value: T) -> Void
-    require T: typename
+require T: typename
     block entry:
         %length: I64 := #self.length
         %not_negative: Bool = sge(%index, 0)
@@ -215,7 +215,7 @@ routine Deque<T>.set(#self: Ptr<Deque<T>>, %index: I64, %value: T) -> Void
         return()
 
 routine Deque<T>.clear(#self: Ptr<Deque<T>>) -> Void
-    require T: typename
+require T: typename
     block entry:
         %capacity: I64 := #self.capacity
         %start: I64 = sdiv(%capacity, 2)
@@ -224,7 +224,7 @@ routine Deque<T>.clear(#self: Ptr<Deque<T>>) -> Void
         return()
 
 routine Deque<T>.free(#self: Ptr<Deque<T>>) -> Void
-    require T: typename
+require T: typename
     block entry:
         #data: Ptr<T> := #self.data
         %empty: Bool = #data == null

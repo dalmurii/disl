@@ -4,7 +4,7 @@
 ; than b. The allocator is stored in the struct.
 
 struct PriorityQueue<T>
-    require T: typename
+require T: typename
     data: Ptr<T>
     length: I64
     capacity: I64
@@ -15,7 +15,7 @@ routine PriorityQueue<T>.new(
     %compare_fn: Callable<@callconv("c"), (T, T), I32>,
     #alloc: Ptr<Allocator>
 ) -> PriorityQueue<T>
-    require T: typename
+require T: typename
     block entry():
         %queue: PriorityQueue<T> = PriorityQueue<T> {
             data: null,
@@ -27,20 +27,20 @@ routine PriorityQueue<T>.new(
         return(%queue)
 
 routine PriorityQueue<T>.length(#self: Ptr<PriorityQueue<T>>) -> I64
-    require T: typename
+require T: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
 routine PriorityQueue<T>.is_empty(#self: Ptr<PriorityQueue<T>>) -> Bool
-    require T: typename
+require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
         return(%empty)
 
 routine PriorityQueue<T>.reserve(#self: Ptr<PriorityQueue<T>>, %capacity: I64) -> Void
-    require T: typename
+require T: typename
     block entry():
         %old_capacity: I64 := #self.capacity
         %enough: Bool = sge(%old_capacity, %capacity)
@@ -59,7 +59,7 @@ routine PriorityQueue<T>.reserve(#self: Ptr<PriorityQueue<T>>, %capacity: I64) -
         return()
 
 routine PriorityQueue<T>.ensure(#self: Ptr<PriorityQueue<T>>, %wanted: I64) -> Void
-    require T: typename
+require T: typename
     block entry():
         %capacity: I64 := #self.capacity
         %enough: Bool = sge(%capacity, %wanted)
@@ -86,14 +86,14 @@ routine PriorityQueue<T>.ensure(#self: Ptr<PriorityQueue<T>>, %wanted: I64) -> V
         return()
 
 routine PriorityQueue<T>.less(#self: Ptr<PriorityQueue<T>>, %a: T, %b: T) -> Bool
-    require T: typename
+require T: typename
     block entry():
         %cmp: I32 = #self.compare_fn(%a, %b)
         %less: Bool = slt(%cmp, 0)
         return(%less)
 
 routine PriorityQueue<T>.push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
-    require T: typename
+require T: typename
     block entry():
         %length: I64 := #self.length
         %wanted: I64 = %length + 1
@@ -122,7 +122,7 @@ routine PriorityQueue<T>.push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
         jump sift_up(%parent)
 
 routine PriorityQueue<T>.peek(#self: Ptr<PriorityQueue<T>>) -> T
-    require T: typename
+require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
@@ -134,7 +134,7 @@ routine PriorityQueue<T>.peek(#self: Ptr<PriorityQueue<T>>) -> T
         return(%value)
 
 routine PriorityQueue<T>.pop(#self: Ptr<PriorityQueue<T>>) -> T
-    require T: typename
+require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length == 0
@@ -188,13 +188,13 @@ routine PriorityQueue<T>.pop(#self: Ptr<PriorityQueue<T>>) -> T
         jump sift_down(%child, %result)
 
 routine PriorityQueue<T>.clear(#self: Ptr<PriorityQueue<T>>) -> Void
-    require T: typename
+require T: typename
     block entry():
         #self.length = 0
         return()
 
 routine PriorityQueue<T>.free(#self: Ptr<PriorityQueue<T>>) -> Void
-    require T: typename
+require T: typename
     block entry():
         #data: Ptr<T> := #self.data
         %empty: Bool = #data == null

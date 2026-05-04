@@ -4,7 +4,7 @@
 ; states/hashes arrays before touching keys. The allocator is stored in the struct.
 
 struct HashSet<T>
-    require T: typename
+require T: typename
     keys: Ptr<T>
     hashes: Ptr<I64>
     states: Ptr<I8>
@@ -20,7 +20,7 @@ routine HashSet<T>.new(
     %equals_fn: Callable<@callconv("c"), (T, T), Bool>,
     #alloc: Ptr<Allocator>
 ) -> HashSet<T>
-    require T: typename
+require T: typename
     block entry():
         %set: HashSet<T> = HashSet<T> {
             keys: null,
@@ -36,13 +36,13 @@ routine HashSet<T>.new(
         return(%set)
 
 routine HashSet<T>.length(#self: Ptr<HashSet<T>>) -> I64
-    require T: typename
+require T: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
 routine HashSet<T>.slot(#self: Ptr<HashSet<T>>, %key: T, %hash: I64) -> I64
-    require T: typename
+require T: typename
     block entry():
         %capacity: I64 := #self.capacity
         %mask: I64 = %capacity - 1
@@ -87,7 +87,7 @@ routine HashSet<T>.slot(#self: Ptr<HashSet<T>>, %key: T, %hash: I64) -> I64
         jump probe(%next, %first_tombstone)
 
 routine HashSet<T>.find(#self: Ptr<HashSet<T>>, %key: T) -> I64
-    require T: typename
+require T: typename
     block entry():
         %capacity: I64 := #self.capacity
         %empty: Bool = %capacity == 0
@@ -102,14 +102,14 @@ routine HashSet<T>.find(#self: Ptr<HashSet<T>>, %key: T) -> I64
         branch %found ? return(%slot): return(-1)
 
 routine HashSet<T>.contains(#self: Ptr<HashSet<T>>, %key: T) -> Bool
-    require T: typename
+require T: typename
     block entry():
         %slot: I64 = #self.find(%key)
         %found: Bool = sge(%slot, 0)
         return(%found)
 
 routine HashSet<T>.rehash(#self: Ptr<HashSet<T>>, %new_capacity: I64) -> Void
-    require T: typename
+require T: typename
     block entry():
         #alloc: Ptr<Allocator> := #self.alloc
         #old_keys: Ptr<T> := #self.keys
@@ -168,7 +168,7 @@ routine HashSet<T>.rehash(#self: Ptr<HashSet<T>>, %new_capacity: I64) -> Void
         return()
 
 routine HashSet<T>.ensure(#self: Ptr<HashSet<T>>) -> Void
-    require T: typename
+require T: typename
     block entry():
         %capacity: I64 := #self.capacity
         %empty: Bool = %capacity == 0
@@ -192,7 +192,7 @@ routine HashSet<T>.ensure(#self: Ptr<HashSet<T>>) -> Void
 
 ; Insert without growing — used internally by rehash after new arrays are in place.
 routine HashSet<T>.add_direct(#self: Ptr<HashSet<T>>, %key: T) -> Bool
-    require T: typename
+require T: typename
     block entry():
         %hash: I64 = #self.hash_fn(%key)
         %slot: I64 = #self.slot(%key, %hash)
@@ -222,14 +222,14 @@ routine HashSet<T>.add_direct(#self: Ptr<HashSet<T>>, %key: T) -> Bool
         return(true)
 
 routine HashSet<T>.add(#self: Ptr<HashSet<T>>, %key: T) -> Bool
-    require T: typename
+require T: typename
     block entry:
         #self.ensure()
         %added: Bool = #self.add_direct(%key)
         return(%added)
 
 routine HashSet<T>.remove(#self: Ptr<HashSet<T>>, %key: T) -> Bool
-    require T: typename
+require T: typename
     block entry:
         %slot: I64 = #self.find(%key)
         %found: Bool = sge(%slot, 0)
@@ -245,7 +245,7 @@ routine HashSet<T>.remove(#self: Ptr<HashSet<T>>, %key: T) -> Bool
         return(true)
 
 routine HashSet<T>.free(#self: Ptr<HashSet<T>>) -> Void
-    require T: typename
+require T: typename
     block entry:
         #states: Ptr<i8> := #self.states
         %empty: Bool = #states == null

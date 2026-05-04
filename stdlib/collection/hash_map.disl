@@ -10,8 +10,7 @@
 ;   2 = tombstone
 
 struct HashMap<K, V>
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     keys: Ptr<K>
     values: Ptr<V>
     hashes: Ptr<I64>
@@ -28,8 +27,7 @@ routine HashMap<K, V>.new(
     %equals_fn: Callable<@callconv("c"), (K, K), Bool>,
     #alloc: Ptr<Allocator>
 ) -> HashMap<K, V>
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %map: HashMap<K, V> = HashMap<K, V> {
             keys: null,
@@ -46,15 +44,13 @@ routine HashMap<K, V>.new(
         return(%map)
 
 routine HashMap<K, V>.length(#self: Ptr<HashMap<K, V>>) -> I64
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
 routine HashMap<K, V>.slot(#self: Ptr<HashMap<K, V>>, %key: K, %hash: I64) -> I64
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %capacity: I64 := #self.capacity
         %mask: I64 = %capacity - 1
@@ -99,8 +95,7 @@ routine HashMap<K, V>.slot(#self: Ptr<HashMap<K, V>>, %key: K, %hash: I64) -> I6
         jump probe(%next, %first_tombstone)
 
 routine HashMap<K, V>.find(#self: Ptr<HashMap<K, V>>, %key: K) -> I64
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %capacity: I64 := #self.capacity
         %empty: Bool = %capacity == 0
@@ -115,16 +110,14 @@ routine HashMap<K, V>.find(#self: Ptr<HashMap<K, V>>, %key: K) -> I64
         branch %found ? return(%slot): return(-1)
 
 routine HashMap<K, V>.contains(#self: Ptr<HashMap<K, V>>, %key: K) -> Bool
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %slot: I64 = #self.find(%key)
         %found: Bool = sge(%slot, 0)
         return(%found)
 
 routine HashMap<K, V>.rehash(#self: Ptr<HashMap<K, V>>, %new_capacity: I64) -> Void
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         #alloc: Ptr<Allocator> := #self.alloc
         #old_keys: Ptr<K> := #self.keys
@@ -190,8 +183,7 @@ routine HashMap<K, V>.rehash(#self: Ptr<HashMap<K, V>>, %new_capacity: I64) -> V
         return()
 
 routine HashMap<K, V>.ensure(#self: Ptr<HashMap<K, V>>) -> Void
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %capacity: I64 := #self.capacity
         %empty: Bool = %capacity == 0
@@ -215,8 +207,7 @@ routine HashMap<K, V>.ensure(#self: Ptr<HashMap<K, V>>) -> Void
 
 ; Insert without growing — used internally by rehash after new arrays are in place.
 routine HashMap<K, V>.put_direct(#self: Ptr<HashMap<K, V>>, %key: K, %value: V) -> Void
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %hash: I64 = #self.hash_fn(%key)
         %slot: I64 = #self.slot(%key, %hash)
@@ -253,16 +244,14 @@ routine HashMap<K, V>.put_direct(#self: Ptr<HashMap<K, V>>, %key: K, %value: V) 
         return()
 
 routine HashMap<K, V>.put(#self: Ptr<HashMap<K, V>>, %key: K, %value: V) -> Void
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         #self.ensure()
         #self.put_direct(%key, %value)
         return()
 
 routine HashMap<K, V>.get(#self: Ptr<HashMap<K, V>>, %key: K) -> V
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %slot: I64 = #self.find(%key)
         %found: Bool = sge(%slot, 0)
@@ -274,8 +263,7 @@ routine HashMap<K, V>.get(#self: Ptr<HashMap<K, V>>, %key: K) -> V
         return(%value)
 
 routine HashMap<K, V>.remove(#self: Ptr<HashMap<K, V>>, %key: K) -> Bool
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %slot: I64 = #self.find(%key)
         %found: Bool = sge(%slot, 0)
@@ -291,8 +279,7 @@ routine HashMap<K, V>.remove(#self: Ptr<HashMap<K, V>>, %key: K) -> Bool
         return(true)
 
 routine HashMap<K, V>.free(#self: Ptr<HashMap<K, V>>) -> Void
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         #states: Ptr<i8> := #self.states
         %empty: Bool = #states == null

@@ -5,12 +5,12 @@
 
 @llvm("ptr")
 struct Ptr<T>
-    require T: typename
+require T: typename
 
 ; ── predicates ────────────────────────────────────────────────────────────────
 
 routine Ptr<T>.is_null(#self: Ptr<T>) -> Bool
-    require T: typename
+require T: typename
     block entry():
         %result: Bool = #self == null
         return(%result)
@@ -20,7 +20,7 @@ routine Ptr<T>.is_null(#self: Ptr<T>) -> Bool
 ; Returns a pointer offset by %index elements of type T.
 ; Equivalent to a GEP in LLVM IR — no bounds checking.
 routine Ptr<T>.offset(#self: Ptr<T>, %index: I64) -> Ptr<T>
-    require T: typename
+require T: typename
     block entry():
         #result: Ptr<T> = #self[%index]
         return(#result)
@@ -30,7 +30,7 @@ routine Ptr<T>.offset(#self: Ptr<T>, %index: I64) -> Ptr<T>
 ; Reinterprets this pointer as a pointer to a different type.
 ; No-op at the IR level — only changes the static type.
 routine Ptr<T>.cast<U>(#self: Ptr<T>) -> Ptr<U>
-    require T: typename
+require T: typename
     block entry():
         #result: Ptr<U> = bitcast<Ptr<T>, Ptr<U>>(#self)
         return(#result)

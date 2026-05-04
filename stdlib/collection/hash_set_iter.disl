@@ -9,18 +9,18 @@
 ; Satisfies concept Iterator<T, HashSetIter<T>>.
 
 struct HashSetIter<T>
-    require T: typename
+require T: typename
     set:  Ptr<HashSet<T>>
     slot: I64
 
 routine HashSetIter<T>.new(#set: Ptr<HashSet<T>>) -> HashSetIter<T>
-    require T: typename
+require T: typename
     block entry():
         %iter: HashSetIter<T> = HashSetIter<T> { set: #set, slot: 0 }
         return(%iter)
 
 routine HashSetIter<T>.next(#self: Ptr<HashSetIter<T>>) -> Option<T>
-    require T: typename
+require T: typename
     block entry():
         #set:     Ptr<HashSet<T>> := #self.set
         %capacity: I64            := #set.capacity

@@ -10,21 +10,18 @@
 ; Satisfies concept Iterator<KVPair<K, V>, HashMapIter<K, V>>.
 
 struct HashMapIter<K, V>
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     map:  Ptr<HashMap<K, V>>
     slot: I64
 
 routine HashMapIter<K, V>.new(#map: Ptr<HashMap<K, V>>) -> HashMapIter<K, V>
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %iter: HashMapIter<K, V> = HashMapIter<K, V> { map: #map, slot: 0 }
         return(%iter)
 
 routine HashMapIter<K, V>.next(#self: Ptr<HashMapIter<K, V>>) -> Option<KVPair<K, V>>
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         #map:      Ptr<HashMap<K, V>> := #self.map
         %capacity: I64                := #map.capacity

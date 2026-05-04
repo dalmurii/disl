@@ -9,20 +9,20 @@
 ; Satisfies concept Iterator<T, BTreeListIter<T>>.
 
 struct BTreeListIter<T>
-    require T: typename
+require T: typename
     list:  Ptr<BTreeList<T>>
     order: I64
     total: I64
 
 routine BTreeListIter<T>.new(#list: Ptr<BTreeList<T>>) -> BTreeListIter<T>
-    require T: typename
+require T: typename
     block entry():
         %total: I64 = #list.length()
         %iter: BTreeListIter<T> = BTreeListIter<T> { list: #list, order: 0, total: %total }
         return(%iter)
 
 routine BTreeListIter<T>.next(#self: Ptr<BTreeListIter<T>>) -> Option<T>
-    require T: typename
+require T: typename
     block entry():
         %order: I64  := #self.order
         %total: I64  := #self.total

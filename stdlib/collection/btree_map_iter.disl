@@ -11,23 +11,20 @@
 ; Satisfies concept Iterator<KVPair<K, V>, BTreeMapIter<K, V>>.
 
 struct BTreeMapIter<K, V>
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     map:   Ptr<BTreeMap<K, V>>
     order: I64
     total: I64
 
 routine BTreeMapIter<K, V>.new(#map: Ptr<BTreeMap<K, V>>) -> BTreeMapIter<K, V>
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %total: I64 = #map.length()
         %iter: BTreeMapIter<K, V> = BTreeMapIter<K, V> { map: #map, order: 0, total: %total }
         return(%iter)
 
 routine BTreeMapIter<K, V>.next(#self: Ptr<BTreeMapIter<K, V>>) -> Option<KVPair<K, V>>
-    require K: typename
-    require V: typename
+require K: typename, V: typename
     block entry():
         %order: I64  := #self.order
         %total: I64  := #self.total

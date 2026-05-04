@@ -6,18 +6,18 @@
 ; Satisfies concept Iterator<T, ListIter<T>>.
 
 struct ListIter<T>
-    require T: typename
+require T: typename
     list:  Ptr<List<T>>
     index: I64
 
 routine ListIter<T>.new(#list: Ptr<List<T>>) -> ListIter<T>
-    require T: typename
+require T: typename
     block entry():
         %iter: ListIter<T> = ListIter<T> { list: #list, index: 0 }
         return(%iter)
 
 routine ListIter<T>.next(#self: Ptr<ListIter<T>>) -> Option<T>
-    require T: typename
+require T: typename
     block entry():
         #list:  Ptr<List<T>> := #self.list
         %len:   I64          = #list.length()

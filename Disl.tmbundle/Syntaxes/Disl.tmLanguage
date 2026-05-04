@@ -250,7 +250,7 @@
             <key>name</key>
             <string>keyword.other.declaration.disl</string>
             <key>match</key>
-            <string>\b(routine|block|struct|enum|concept|const|alloca)\b</string>
+            <string>\b(routine|block|struct|enum|concept|const|alloca|self)\b</string>
         </dict>
 
         <!-- remaining keywords -->
@@ -262,13 +262,13 @@
             <string>\b(require|typename|true|false|null)\b</string>
         </dict>
 
-        <!-- built-in primitive types and Self -->
+        <!-- built-in primitive types -->
         <key>builtin-types</key>
         <dict>
             <key>name</key>
             <string>support.type.primitive.disl</string>
             <key>match</key>
-            <string>\b(I8|I16|I32|I64|F32|F64|Bool|Void|IAddr|Ptr|Array|Self)\b</string>
+            <string>\b(I8|I16|I32|I64|F32|F64|Bool|Void|IAddr|Ptr|Array)\b</string>
         </dict>
 
         <!-- %ssa_value -->

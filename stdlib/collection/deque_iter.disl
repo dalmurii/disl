@@ -7,18 +7,18 @@
 ; Satisfies concept Iterator<T, DequeIter<T>>.
 
 struct DequeIter<T>
-    require T: typename
+require T: typename
     deque: Ptr<Deque<T>>
     index: I64
 
 routine DequeIter<T>.new(#deque: Ptr<Deque<T>>) -> DequeIter<T>
-    require T: typename
+require T: typename
     block entry():
         %iter: DequeIter<T> = DequeIter<T> { deque: #deque, index: 0 }
         return(%iter)
 
 routine DequeIter<T>.next(#self: Ptr<DequeIter<T>>) -> Option<T>
-    require T: typename
+require T: typename
     block entry():
         #deque: Ptr<Deque<T>> := #self.deque
         %len:   I64           = #deque.length()
