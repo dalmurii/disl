@@ -59,7 +59,8 @@ routine String.slice(%self: String, %start: I64, %end: I64) -> String
         %valid_start: Bool = sge<I64>(%start, 0)
         %valid_end:   Bool = sle<I64>(%end, %self.length)
         %valid_order: Bool = sle<I64>(%start, %end)
-        %valid: Bool = (%valid_start & %valid_end) & %valid_order
+        %valid_se:    Bool = %valid_start & %valid_end
+        %valid:       Bool = %valid_se & %valid_order
         branch %valid ? make(%start, %end) : trap()
 
     block make(%start: I64, %end: I64):

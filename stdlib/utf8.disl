@@ -82,7 +82,8 @@ routine utf8_decode(#bytes: Ptr<I8>, %pos: I64, %len: I64) -> Utf8Decoded
         %hi:  I32 = (%b0u & 15) * 4096      ; << 12
         %mid: I32 = (%b1u & 63) * 64        ; << 6
         %lo:  I32 = %b2u & 63
-        %cp:  I32 = (%hi | %mid) | %lo
+        %hm:  I32 = %hi | %mid
+        %cp:  I32 = %hm | %lo
         %after: I64 = %n2 + 1
         %result: Utf8Decoded = Utf8Decoded { codepoint: %cp, next_pos: %after }
         return(%result)
@@ -108,10 +109,11 @@ routine utf8_decode(#bytes: Ptr<I8>, %pos: I64, %len: I64) -> Utf8Decoded
         %v1: I32 = %b1u & 192
         %v2: I32 = %b2u & 192
         %v3: I32 = %b3u & 192
-        %ok1: Bool = %v1 == 128
-        %ok2: Bool = %v2 == 128
-        %ok3: Bool = %v3 == 128
-        %valid: Bool = (%ok1 & %ok2) & %ok3
+        %ok1:     Bool = %v1 == 128
+        %ok2:     Bool = %v2 == 128
+        %ok3:     Bool = %v3 == 128
+        %valid12: Bool = %ok1 & %ok2
+        %valid:   Bool = %valid12 & %ok3
         branch %valid ? done_four(%b0u, %b1u, %b2u, %b3u, %n3) : error(%next)
 
     block done_four(%b0u: I32, %b1u: I32, %b2u: I32, %b3u: I32, %n3: I64):
@@ -119,7 +121,9 @@ routine utf8_decode(#bytes: Ptr<I8>, %pos: I64, %len: I64) -> Utf8Decoded
         %p1: I32 = (%b1u & 63) * 4096       ; << 12
         %p2: I32 = (%b2u & 63) * 64         ; << 6
         %p3: I32 = %b3u & 63
-        %cp: I32 = ((%p0 | %p1) | %p2) | %p3
+        %p01: I32 = %p0 | %p1
+        %p012: I32 = %p01 | %p2
+        %cp:   I32 = %p012 | %p3
         %after: I64 = %n3 + 1
         %result: Utf8Decoded = Utf8Decoded { codepoint: %cp, next_pos: %after }
         return(%result)
