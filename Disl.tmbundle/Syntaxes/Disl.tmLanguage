@@ -207,7 +207,7 @@
             </dict>
         </dict>
 
-        <!-- concept Equal<T, Ops> -->
+        <!-- concept Equal<T> -->
         <key>concept-decl</key>
         <dict>
             <key>match</key>
