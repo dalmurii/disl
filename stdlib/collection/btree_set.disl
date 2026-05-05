@@ -17,6 +17,7 @@ require T: typename
     children: Array<Ptr<BTreeSetNode<T>>, NODE_CHILDREN>
 
 struct BTreeSet<T>
+conform Equal<BTreeSet<T>>
 require T: typename, Compare<T>
     root: Ptr<BTreeSetNode<T>>
     length: I64
@@ -106,6 +107,28 @@ require T: typename
         %cmp: I32 = T.compare(%key, %node_key)
         %before_or_equal: Bool = sle(%cmp, 0)
         branch %before_or_equal ? return(%i): loop(%i + 1)
+
+; BTreeSets are sorted, so structural in-order comparison gives set equality
+; without an extra contains() lookup per element.
+routine BTreeSet<T>.equals(#a: Ptr<BTreeSet<T>>, #b: Ptr<BTreeSet<T>>) -> Bool
+require T: typename, Compare<T>
+    block entry():
+        %la: I64 := #a.length
+        %lb: I64 := #b.length
+        %same_len: Bool = %la == %lb
+        branch %same_len ? loop(0, %la) : return(false)
+
+    block loop(%i: I64, %len: I64):
+        %done: Bool = sge(%i, %len)
+        branch %done ? return(true) : step(%i, %len)
+
+    block step(%i: I64, %len: I64):
+        %x: T = #a.get_order(%i)
+        %y: T = #b.get_order(%i)
+        %cmp: I32 = T.compare(%x, %y)
+        %eq: Bool = %cmp == 0
+        %i_next: I64 = %i + 1
+        branch %eq ? loop(%i_next, %len) : return(false)
 
 routine BTreeSet<T>.contains(#self: Ptr<BTreeSet<T>>, %key: T) -> Bool
 require T: typename

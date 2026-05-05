@@ -12,6 +12,8 @@
 ; ── Option ────────────────────────────────────────────────────────────────────
 
 struct Option<T>
+conform Equal<Option<T>> require T: typename, Equal<T>
+conform Hash<Option<T>>  require T: typename, Hash<T>
 require T: typename
     tag: Bool
     value: T
@@ -58,10 +60,75 @@ require T: typename
         %value: T := #self.value
         return(%value)
 
+; ── Option: equality, hashing ─────────────────────────────────────────────────
+
+routine Option<T>.equals(%a: Option<T>, %b: Option<T>) -> Bool
+require T: typename, Equal<T>
+    block entry():
+        %ta: Bool = %a.tag
+        %tb: Bool = %b.tag
+        %tags_eq: Bool = %ta == %tb
+        branch %tags_eq ? maybe_compare(%a, %b, %ta) : return(false)
+
+    block maybe_compare(%a: Option<T>, %b: Option<T>, %tag: Bool):
+        branch %tag ? compare_values(%a, %b) : return(true)
+
+    block compare_values(%a: Option<T>, %b: Option<T>):
+        %va: T = %a.value
+        %vb: T = %b.value
+        %eq: Bool = T.equals(%va, %vb)
+        return(%eq)
+
+routine Option<T>.hash(%self: Option<T>) -> I64
+require T: typename, Hash<T>
+    block entry():
+        %tag: Bool = %self.tag
+        branch %tag ? hash_some(%self) : hash_none()
+
+    ; Distinct, hardcoded hash for None so it does not collide with Some(0)
+    ; or anything else; pulled from xxh64(empty, seed=0).
+    block hash_none():
+        %h: I64 = xxh64_hash_i64(0, 0)
+        return(%h)
+
+    ; Combine a "1" tag with the inner value's hash so Some(0) and None
+    ; live in different buckets.
+    block hash_some(%self: Option<T>):
+        %v: T = %self.value
+        %hv: I64 = T.hash(%v)
+        %h: I64 = xxh64_combine2(1, %hv, 0)
+        return(%h)
+
 ; ── KVPair ────────────────────────────────────────────────────────────────────
 
 ; Yielded by HashMap and BTreeMap iterators.
 struct KVPair<K, V>
+conform Equal<KVPair<K, V>> require K: typename, V: typename, Equal<K>, Equal<V>
+conform Hash<KVPair<K, V>>  require K: typename, Hash<K>, V: typename, Hash<V>
 require K: typename, V: typename
     key:   K
     value: V
+
+routine KVPair<K, V>.equals(%a: KVPair<K, V>, %b: KVPair<K, V>) -> Bool
+require K: typename, V: typename, Equal<K>, Equal<V>
+    block entry():
+        %ka: K = %a.key
+        %kb: K = %b.key
+        %k_eq: Bool = K.equals(%ka, %kb)
+        branch %k_eq ? compare_values(%a, %b) : return(false)
+
+    block compare_values(%a: KVPair<K, V>, %b: KVPair<K, V>):
+        %va: V = %a.value
+        %vb: V = %b.value
+        %v_eq: Bool = V.equals(%va, %vb)
+        return(%v_eq)
+
+routine KVPair<K, V>.hash(%self: KVPair<K, V>) -> I64
+require K: typename, V: typename, Hash<K>, Hash<V>
+    block entry():
+        %k: K = %self.key
+        %v: V = %self.value
+        %hk: I64 = K.hash(%k)
+        %hv: I64 = V.hash(%v)
+        %h: I64 = xxh64_combine2(%hk, %hv, 0)
+        return(%h)

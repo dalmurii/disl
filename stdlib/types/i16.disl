@@ -4,6 +4,7 @@
 
 @llvm("i16")
 struct I16
+conform Equal<I16>, Compare<I16>, Hash<I16>
 
 ; ── constants ─────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,159 @@ routine I16.abs(%self: I16) -> I16
         %neg: I16 = 0 - %self
         %result: I16 = %is_neg ? %neg : %self
         return(%result)
+
+routine I16.min(%self: I16, %other: I16) -> I16
+    block entry():
+        %less: Bool = slt<I16>(%self, %other)
+        %result: I16 = %less ? %self : %other
+        return(%result)
+
+routine I16.max(%self: I16, %other: I16) -> I16
+    block entry():
+        %more: Bool = sgt<I16>(%self, %other)
+        %result: I16 = %more ? %self : %other
+        return(%result)
+
+; ── bit shifts ────────────────────────────────────────────────────────────────
+
+routine I16.shl(%self: I16, %n: I16) -> I16
+    block entry():
+        %r: I16 = shl<I16>(%self, %n)
+        return(%r)
+
+routine I16.lshr(%self: I16, %n: I16) -> I16
+    block entry():
+        %r: I16 = lshr<I16>(%self, %n)
+        return(%r)
+
+routine I16.ashr(%self: I16, %n: I16) -> I16
+    block entry():
+        %r: I16 = ashr<I16>(%self, %n)
+        return(%r)
+
+routine I16.rotl(%self: I16, %n: I16) -> I16
+    block entry():
+        %left: I16 = shl<I16>(%self, %n)
+        %comp: I16 = 16 - %n
+        %right: I16 = lshr<I16>(%self, %comp)
+        %r: I16 = %left | %right
+        return(%r)
+
+routine I16.rotr(%self: I16, %n: I16) -> I16
+    block entry():
+        %right: I16 = lshr<I16>(%self, %n)
+        %comp: I16 = 16 - %n
+        %left: I16 = shl<I16>(%self, %comp)
+        %r: I16 = %left | %right
+        return(%r)
+
+; ── generic conversions ───────────────────────────────────────────────────────
+
+routine I16.sext<To>(%self: I16) -> To
+require To: typename
+    block entry():
+        %r: To = sext<I16, To>(%self)
+        return(%r)
+
+routine I16.zext<To>(%self: I16) -> To
+require To: typename
+    block entry():
+        %r: To = zext<I16, To>(%self)
+        return(%r)
+
+routine I16.sitofp<To>(%self: I16) -> To
+require To: typename
+    block entry():
+        %r: To = sitofp<I16, To>(%self)
+        return(%r)
+
+; ── signed comparisons ────────────────────────────────────────────────────────
+
+routine I16.slt(%self: I16, %other: I16) -> Bool
+    block entry():
+        %r: Bool = slt<I16>(%self, %other)
+        return(%r)
+
+routine I16.sle(%self: I16, %other: I16) -> Bool
+    block entry():
+        %r: Bool = sle<I16>(%self, %other)
+        return(%r)
+
+routine I16.sgt(%self: I16, %other: I16) -> Bool
+    block entry():
+        %r: Bool = sgt<I16>(%self, %other)
+        return(%r)
+
+routine I16.sge(%self: I16, %other: I16) -> Bool
+    block entry():
+        %r: Bool = sge<I16>(%self, %other)
+        return(%r)
+
+; ── unsigned comparisons ──────────────────────────────────────────────────────
+
+routine I16.ult(%self: I16, %other: I16) -> Bool
+    block entry():
+        %r: Bool = ult<I16>(%self, %other)
+        return(%r)
+
+routine I16.ule(%self: I16, %other: I16) -> Bool
+    block entry():
+        %r: Bool = ule<I16>(%self, %other)
+        return(%r)
+
+routine I16.ugt(%self: I16, %other: I16) -> Bool
+    block entry():
+        %r: Bool = ugt<I16>(%self, %other)
+        return(%r)
+
+routine I16.uge(%self: I16, %other: I16) -> Bool
+    block entry():
+        %r: Bool = uge<I16>(%self, %other)
+        return(%r)
+
+; ── integer division and remainder ────────────────────────────────────────────
+
+routine I16.sdiv(%self: I16, %other: I16) -> I16
+    block entry():
+        %r: I16 = sdiv<I16>(%self, %other)
+        return(%r)
+
+routine I16.udiv(%self: I16, %other: I16) -> I16
+    block entry():
+        %r: I16 = udiv<I16>(%self, %other)
+        return(%r)
+
+routine I16.srem(%self: I16, %other: I16) -> I16
+    block entry():
+        %r: I16 = srem<I16>(%self, %other)
+        return(%r)
+
+routine I16.urem(%self: I16, %other: I16) -> I16
+    block entry():
+        %r: I16 = urem<I16>(%self, %other)
+        return(%r)
+
+; ── equality, ordering, hashing ───────────────────────────────────────────────
+
+routine I16.equals(%self: I16, %other: I16) -> Bool
+    block entry():
+        %r: Bool = %self == %other
+        return(%r)
+
+routine I16.compare(%self: I16, %other: I16) -> I32
+    block entry():
+        %lt: Bool = slt<I16>(%self, %other)
+        branch %lt ? return(-1) : maybe_gt(%self, %other)
+
+    block maybe_gt(%self: I16, %other: I16):
+        %gt: Bool = sgt<I16>(%self, %other)
+        branch %gt ? return(1) : return(0)
+
+routine I16.hash(%self: I16) -> I64
+    block entry():
+        %v: I64 = %self.zext<I64>()
+        %h: I64 = xxh64_hash_i64(%v, 0)
+        return(%h)
 
 ; ── narrowing conversions ─────────────────────────────────────────────────────
 

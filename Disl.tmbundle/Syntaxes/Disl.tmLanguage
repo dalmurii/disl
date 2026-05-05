@@ -259,7 +259,7 @@
             <key>name</key>
             <string>keyword.other.disl</string>
             <key>match</key>
-            <string>\b(require|typename|true|false|null)\b</string>
+            <string>\b(require|typename|true|false|null|conform)\b</string>
         </dict>
 
         <!-- built-in primitive types -->
@@ -268,7 +268,8 @@
             <key>name</key>
             <string>support.type.primitive.disl</string>
             <key>match</key>
-            <string>\b(I8|I16|I32|I64|F32|F64|Bool|Void|IAddr|Ptr|Array)\b</string>
+            <string>\b(I8|I16|I32|I64|F32|F64|Bool|Void|CAddr|CChar|CWChar|CShort|CInt|CLong|CLongLong|Ptr|Array)
+            \b</string>
         </dict>
 
         <!-- %ssa_value -->

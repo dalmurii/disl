@@ -7,6 +7,7 @@
 ; Satisfies concept Iterator<T, DequeIter<T>>.
 
 struct DequeIter<T>
+conform Iterator<T, DequeIter<T>>
 require T: typename
     deque: Ptr<Deque<T>>
     index: I64

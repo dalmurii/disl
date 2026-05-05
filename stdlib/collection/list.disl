@@ -4,7 +4,8 @@
 ; to individual operations.
 
 struct List<T>
-require T: typename
+conform Equal<List<T>>
+require T: typename, Equal<T>
     data: Ptr<T>
     length: I64
     capacity: I64
@@ -138,6 +139,30 @@ require T: typename
     block entry():
         #self.length = 0
         return()
+
+routine List<T>.equals(%a: List<T>, %b: List<T>) -> Bool
+require T: typename, Equal<T>
+    block entry():
+        %la: I64 = %a.length
+        %lb: I64 = %b.length
+        %same_len: Bool = %la == %lb
+        branch %same_len ? scan(%a, %b, %la) : return(false)
+
+    block scan(%a: List<T>, %b: List<T>, %len: I64):
+        #pa: Ptr<T> = %a.data
+        #pb: Ptr<T> = %b.data
+        jump loop(0, %len, #pa, #pb)
+
+    block loop(%i: I64, %len: I64, #pa: Ptr<T>, #pb: Ptr<T>):
+        %done: Bool = sge(%i, %len)
+        branch %done ? return(true) : step(%i, %len, #pa, #pb)
+
+    block step(%i: I64, %len: I64, #pa: Ptr<T>, #pb: Ptr<T>):
+        %x: T := #pa[%i]
+        %y: T := #pb[%i]
+        %eq: Bool = %x.equals(%y)
+        %i_next: I64 = %i + 1
+        branch %eq ? loop(%i_next, %len, #pa, #pb) : return(false)
 
 routine List<T>.free(#self: Ptr<List<T>>) -> Void
 require T: typename

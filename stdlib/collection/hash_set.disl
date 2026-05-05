@@ -4,6 +4,7 @@
 ; states/hashes arrays before touching keys. The allocator is stored in the struct.
 
 struct HashSet<T>
+conform Equal<HashSet<T>>
 require T: typename, HashEqual<T>
     keys: Ptr<T>
     hashes: Ptr<I64>
@@ -99,6 +100,38 @@ require T: typename
         %slot: I64 = #self.find(%key)
         %found: Bool = sge(%slot, 0)
         return(%found)
+
+; Two HashSets are equal when they hold the same elements, regardless of
+; insertion order or internal slot layout. With matching length, "every
+; element of A is in B" is sufficient.
+routine HashSet<T>.equals(#a: Ptr<HashSet<T>>, #b: Ptr<HashSet<T>>) -> Bool
+require T: typename, HashEqual<T>
+    block entry():
+        %la: I64 := #a.length
+        %lb: I64 := #b.length
+        %same_len: Bool = %la == %lb
+        branch %same_len ? scan(%la) : return(false)
+
+    block scan(%len: I64):
+        %cap: I64 := #a.capacity
+        jump loop(0, %cap)
+
+    block loop(%i: I64, %cap: I64):
+        %done: Bool = sge(%i, %cap)
+        branch %done ? return(true) : check(%i, %cap)
+
+    block check(%i: I64, %cap: I64):
+        #states: Ptr<I8> := #a.states
+        %state: I8 := #states[%i]
+        %occupied: Bool = %state == 1
+        %i_next: I64 = %i + 1
+        branch %occupied ? probe(%i, %i_next, %cap) : loop(%i_next, %cap)
+
+    block probe(%i: I64, %i_next: I64, %cap: I64):
+        #keys: Ptr<T> := #a.keys
+        %key: T := #keys[%i]
+        %has: Bool = #b.contains(%key)
+        branch %has ? loop(%i_next, %cap) : return(false)
 
 routine HashSet<T>.rehash(#self: Ptr<HashSet<T>>, %new_capacity: I64) -> Void
 require T: typename

@@ -9,6 +9,7 @@
 ; Satisfies concept Iterator<T, BTreeListIter<T>>.
 
 struct BTreeListIter<T>
+conform Iterator<T, BTreeListIter<T>>
 require T: typename
     list:  Ptr<BTreeList<T>>
     order: I64

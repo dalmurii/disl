@@ -20,7 +20,8 @@ require T: typename
     children: Array<Ptr<BTreeListNode<T>>, NODE_CHILDREN>
 
 struct BTreeList<T>
-require T: typename
+conform Equal<BTreeList<T>>
+require T: typename, Equal<T>
     root: Ptr<BTreeListNode<T>>
     length: I64
     alloc: Ptr<Allocator>
@@ -90,6 +91,25 @@ require T: typename
     block finish(%sum: I64):
         #self.subtree_count = %sum
         return()
+
+routine BTreeList<T>.equals(#a: Ptr<BTreeList<T>>, #b: Ptr<BTreeList<T>>) -> Bool
+require T: typename, Equal<T>
+    block entry():
+        %la: I64 := #a.length
+        %lb: I64 := #b.length
+        %same_len: Bool = %la == %lb
+        branch %same_len ? loop(0, %la) : return(false)
+
+    block loop(%i: I64, %len: I64):
+        %done: Bool = sge(%i, %len)
+        branch %done ? return(true) : step(%i, %len)
+
+    block step(%i: I64, %len: I64):
+        %x: T = #a.get(%i)
+        %y: T = #b.get(%i)
+        %eq: Bool = T.equals(%x, %y)
+        %i_next: I64 = %i + 1
+        branch %eq ? loop(%i_next, %len) : return(false)
 
 routine BTreeList<T>.get(#self: Ptr<BTreeList<T>>, %order: I64) -> T
 require T: typename

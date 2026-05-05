@@ -18,7 +18,8 @@ require K: typename, V: typename
     children: Array<Ptr<BTreeMapNode<K, V>>, NODE_CHILDREN>
 
 struct BTreeMap<K, V>
-require K: typename, V: typename, Compare<K>
+conform Equal<BTreeMap<K, V>>
+require K: typename, V: typename, Compare<K>, Equal<V>
     root: Ptr<BTreeMapNode<K, V>>
     length: I64
     alloc: Ptr<Allocator>
@@ -138,6 +139,34 @@ require K: typename, V: typename
     block load(#node: Ptr<BTreeMapNode<K, V>>, %i: I64):
         %value: V := #node.values[%i]
         return(%value)
+
+; BTreeMaps are sorted by key, so structural in-order comparison of both
+; keys and values gives map equality.
+routine BTreeMap<K, V>.equals(#a: Ptr<BTreeMap<K, V>>, #b: Ptr<BTreeMap<K, V>>) -> Bool
+require K: typename, V: typename, Compare<K>, Equal<V>
+    block entry():
+        %la: I64 := #a.length
+        %lb: I64 := #b.length
+        %same_len: Bool = %la == %lb
+        branch %same_len ? loop(0, %la) : return(false)
+
+    block loop(%i: I64, %len: I64):
+        %done: Bool = sge(%i, %len)
+        branch %done ? return(true) : step(%i, %len)
+
+    block step(%i: I64, %len: I64):
+        %ka: K = #a.key_order(%i)
+        %kb: K = #b.key_order(%i)
+        %cmp: I32 = K.compare(%ka, %kb)
+        %k_eq: Bool = %cmp == 0
+        branch %k_eq ? compare_value(%i, %len) : return(false)
+
+    block compare_value(%i: I64, %len: I64):
+        %va: V = #a.get_order(%i)
+        %vb: V = #b.get_order(%i)
+        %v_eq: Bool = V.equals(%va, %vb)
+        %i_next: I64 = %i + 1
+        branch %v_eq ? loop(%i_next, %len) : return(false)
 
 routine BTreeMap<K, V>.contains(#self: Ptr<BTreeMap<K, V>>, %key: K) -> Bool
 require K: typename, V: typename

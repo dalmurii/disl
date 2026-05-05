@@ -4,6 +4,7 @@
 
 @llvm("float")
 struct F32
+conform Equal<F32>, Compare<F32>, Hash<F32>
 
 ; ── constants ─────────────────────────────────────────────────────────────────
 
@@ -33,7 +34,83 @@ routine F32.max(%self: F32, %other: F32) -> F32
         %result: F32 = %self_more ? %self : %other
         return(%result)
 
-; ── widening conversion ───────────────────────────────────────────────────────
+; ── comparisons ───────────────────────────────────────────────────────────────
+
+routine F32.feq(%self: F32, %other: F32) -> Bool
+    block entry():
+        %r: Bool = feq<F32>(%self, %other)
+        return(%r)
+
+routine F32.fne(%self: F32, %other: F32) -> Bool
+    block entry():
+        %r: Bool = fne<F32>(%self, %other)
+        return(%r)
+
+routine F32.flt(%self: F32, %other: F32) -> Bool
+    block entry():
+        %r: Bool = flt<F32>(%self, %other)
+        return(%r)
+
+routine F32.fle(%self: F32, %other: F32) -> Bool
+    block entry():
+        %r: Bool = fle<F32>(%self, %other)
+        return(%r)
+
+routine F32.fgt(%self: F32, %other: F32) -> Bool
+    block entry():
+        %r: Bool = fgt<F32>(%self, %other)
+        return(%r)
+
+routine F32.fge(%self: F32, %other: F32) -> Bool
+    block entry():
+        %r: Bool = fge<F32>(%self, %other)
+        return(%r)
+
+; ── division ──────────────────────────────────────────────────────────────────
+
+routine F32.fdiv(%self: F32, %other: F32) -> F32
+    block entry():
+        %r: F32 = fdiv<F32>(%self, %other)
+        return(%r)
+
+; ── equality, ordering, hashing ───────────────────────────────────────────────
+
+routine F32.equals(%self: F32, %other: F32) -> Bool
+    block entry():
+        %r: Bool = feq<F32>(%self, %other)
+        return(%r)
+
+routine F32.compare(%self: F32, %other: F32) -> I32
+    block entry():
+        %lt: Bool = flt<F32>(%self, %other)
+        branch %lt ? return(-1) : maybe_gt(%self, %other)
+
+    block maybe_gt(%self: F32, %other: F32):
+        %gt: Bool = fgt<F32>(%self, %other)
+        branch %gt ? return(1) : return(0)
+
+routine F32.hash(%self: F32) -> I64
+    block entry():
+        %bits: I32 = bitcast<F32, I32>(%self)
+        %v: I64 = %bits.zext<I64>()
+        %h: I64 = xxh64_hash_i64(%v, 0)
+        return(%h)
+
+; ── generic conversions ───────────────────────────────────────────────────────
+
+routine F32.fpext<To>(%self: F32) -> To
+require To: typename
+    block entry():
+        %r: To = fpext<F32, To>(%self)
+        return(%r)
+
+routine F32.fptosi<To>(%self: F32) -> To
+require To: typename
+    block entry():
+        %r: To = fptosi<F32, To>(%self)
+        return(%r)
+
+; ── named widening conversion ─────────────────────────────────────────────────
 
 routine F32.to_f64(%self: F32) -> F64
     block entry():

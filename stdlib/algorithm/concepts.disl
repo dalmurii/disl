@@ -5,24 +5,29 @@
 ; with one of these concepts.
 
 concept Equal<T>
+require T: typename
     routine T.equals(%a: T, %b: T) -> Bool
 
 concept Hash<T>
+require T: typename
     routine T.hash(%value: T) -> I64
 
 concept HashEqual<T>
-    require Equal<T>
-    require Hash<T>
+conform Equal<T>, Hash<T>
+require T: typename
 
 concept Compare<T>
+require T: typename
     ; Return < 0 when a < b, 0 when a == b, and > 0 when a > b.
     routine T.compare(%a: T, %b: T) -> I32
 
 concept Priority<T>
+require T: typename
     ; Return true when a should be closer to the top than b.
     routine T.less(%a: T, %b: T) -> Bool
 
 concept Iterator<T, Iter>
+require T: typename
     ; Advance and return the next element, or Option<T>.none() when exhausted.
     ; next() mutates the iterator state, so #self is a pointer.
     routine Iter.next(#self: Ptr<Iter>) -> Option<T>

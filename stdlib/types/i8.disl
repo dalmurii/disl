@@ -4,6 +4,7 @@
 
 @llvm("i8")
 struct I8
+conform Equal<I8>, Compare<I8>, Hash<I8>
 
 ; ── constants ─────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,159 @@ routine I8.abs(%self: I8) -> I8
         %neg: I8 = 0 - %self
         %result: I8 = %is_neg ? %neg : %self
         return(%result)
+
+routine I8.min(%self: I8, %other: I8) -> I8
+    block entry():
+        %less: Bool = slt<I8>(%self, %other)
+        %result: I8 = %less ? %self : %other
+        return(%result)
+
+routine I8.max(%self: I8, %other: I8) -> I8
+    block entry():
+        %more: Bool = sgt<I8>(%self, %other)
+        %result: I8 = %more ? %self : %other
+        return(%result)
+
+; ── bit shifts ────────────────────────────────────────────────────────────────
+
+routine I8.shl(%self: I8, %n: I8) -> I8
+    block entry():
+        %r: I8 = shl<I8>(%self, %n)
+        return(%r)
+
+routine I8.lshr(%self: I8, %n: I8) -> I8
+    block entry():
+        %r: I8 = lshr<I8>(%self, %n)
+        return(%r)
+
+routine I8.ashr(%self: I8, %n: I8) -> I8
+    block entry():
+        %r: I8 = ashr<I8>(%self, %n)
+        return(%r)
+
+routine I8.rotl(%self: I8, %n: I8) -> I8
+    block entry():
+        %left: I8 = shl<I8>(%self, %n)
+        %comp: I8 = 8 - %n
+        %right: I8 = lshr<I8>(%self, %comp)
+        %r: I8 = %left | %right
+        return(%r)
+
+routine I8.rotr(%self: I8, %n: I8) -> I8
+    block entry():
+        %right: I8 = lshr<I8>(%self, %n)
+        %comp: I8 = 8 - %n
+        %left: I8 = shl<I8>(%self, %comp)
+        %r: I8 = %left | %right
+        return(%r)
+
+; ── generic conversions ───────────────────────────────────────────────────────
+
+routine I8.sext<To>(%self: I8) -> To
+require To: typename
+    block entry():
+        %r: To = sext<I8, To>(%self)
+        return(%r)
+
+routine I8.zext<To>(%self: I8) -> To
+require To: typename
+    block entry():
+        %r: To = zext<I8, To>(%self)
+        return(%r)
+
+routine I8.sitofp<To>(%self: I8) -> To
+require To: typename
+    block entry():
+        %r: To = sitofp<I8, To>(%self)
+        return(%r)
+
+; ── signed comparisons ────────────────────────────────────────────────────────
+
+routine I8.slt(%self: I8, %other: I8) -> Bool
+    block entry():
+        %r: Bool = slt<I8>(%self, %other)
+        return(%r)
+
+routine I8.sle(%self: I8, %other: I8) -> Bool
+    block entry():
+        %r: Bool = sle<I8>(%self, %other)
+        return(%r)
+
+routine I8.sgt(%self: I8, %other: I8) -> Bool
+    block entry():
+        %r: Bool = sgt<I8>(%self, %other)
+        return(%r)
+
+routine I8.sge(%self: I8, %other: I8) -> Bool
+    block entry():
+        %r: Bool = sge<I8>(%self, %other)
+        return(%r)
+
+; ── unsigned comparisons ──────────────────────────────────────────────────────
+
+routine I8.ult(%self: I8, %other: I8) -> Bool
+    block entry():
+        %r: Bool = ult<I8>(%self, %other)
+        return(%r)
+
+routine I8.ule(%self: I8, %other: I8) -> Bool
+    block entry():
+        %r: Bool = ule<I8>(%self, %other)
+        return(%r)
+
+routine I8.ugt(%self: I8, %other: I8) -> Bool
+    block entry():
+        %r: Bool = ugt<I8>(%self, %other)
+        return(%r)
+
+routine I8.uge(%self: I8, %other: I8) -> Bool
+    block entry():
+        %r: Bool = uge<I8>(%self, %other)
+        return(%r)
+
+; ── integer division and remainder ────────────────────────────────────────────
+
+routine I8.sdiv(%self: I8, %other: I8) -> I8
+    block entry():
+        %r: I8 = sdiv<I8>(%self, %other)
+        return(%r)
+
+routine I8.udiv(%self: I8, %other: I8) -> I8
+    block entry():
+        %r: I8 = udiv<I8>(%self, %other)
+        return(%r)
+
+routine I8.srem(%self: I8, %other: I8) -> I8
+    block entry():
+        %r: I8 = srem<I8>(%self, %other)
+        return(%r)
+
+routine I8.urem(%self: I8, %other: I8) -> I8
+    block entry():
+        %r: I8 = urem<I8>(%self, %other)
+        return(%r)
+
+; ── equality, ordering, hashing ───────────────────────────────────────────────
+
+routine I8.equals(%self: I8, %other: I8) -> Bool
+    block entry():
+        %r: Bool = %self == %other
+        return(%r)
+
+routine I8.compare(%self: I8, %other: I8) -> I32
+    block entry():
+        %lt: Bool = slt<I8>(%self, %other)
+        branch %lt ? return(-1) : maybe_gt(%self, %other)
+
+    block maybe_gt(%self: I8, %other: I8):
+        %gt: Bool = sgt<I8>(%self, %other)
+        branch %gt ? return(1) : return(0)
+
+routine I8.hash(%self: I8) -> I64
+    block entry():
+        %v: I64 = %self.zext<I64>()
+        %h: I64 = xxh64_hash_i64(%v, 0)
+        return(%h)
 
 ; ── widening conversions (sign-extending) ─────────────────────────────────────
 

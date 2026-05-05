@@ -7,6 +7,7 @@
 ; Satisfies concept Iterator<T, ArrayIter<T, N>>.
 
 struct ArrayIter<T, N>
+conform Iterator<T, ArrayIter<T, N>>
 require T: typename, N: I64
     data:   Ptr<T>   ; bitcast of the original Ptr<Array<T, N>>
     index:  I64

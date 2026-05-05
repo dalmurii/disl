@@ -10,6 +10,7 @@
 ; Satisfies concept Iterator<KVPair<K, V>, HashMapIter<K, V>>.
 
 struct HashMapIter<K, V>
+conform Iterator<KVPair<K, V>, HashMapIter<K, V>>
 require K: typename, V: typename
     map:  Ptr<HashMap<K, V>>
     slot: I64

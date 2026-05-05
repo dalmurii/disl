@@ -8,7 +8,8 @@
 ; centered buffer.
 
 struct Deque<T>
-require T: typename
+conform Equal<Deque<T>>
+require T: typename, Equal<T>
     data: Ptr<T>
     start: I64
     length: I64
@@ -197,6 +198,34 @@ require T: typename
         %physical: I64 = %start + %index
         %value: T := #data[%physical]
         return(%value)
+
+routine Deque<T>.equals(#a: Ptr<Deque<T>>, #b: Ptr<Deque<T>>) -> Bool
+require T: typename, Equal<T>
+    block entry():
+        %la: I64 := #a.length
+        %lb: I64 := #b.length
+        %same_len: Bool = %la == %lb
+        branch %same_len ? scan(%la) : return(false)
+
+    block scan(%len: I64):
+        %sa: I64 := #a.start
+        %sb: I64 := #b.start
+        #pa: Ptr<T> := #a.data
+        #pb: Ptr<T> := #b.data
+        jump loop(0, %len, %sa, %sb, #pa, #pb)
+
+    block loop(%i: I64, %len: I64, %sa: I64, %sb: I64, #pa: Ptr<T>, #pb: Ptr<T>):
+        %done: Bool = sge(%i, %len)
+        branch %done ? return(true) : step(%i, %len, %sa, %sb, #pa, #pb)
+
+    block step(%i: I64, %len: I64, %sa: I64, %sb: I64, #pa: Ptr<T>, #pb: Ptr<T>):
+        %ia: I64 = %sa + %i
+        %ib: I64 = %sb + %i
+        %x: T := #pa[%ia]
+        %y: T := #pb[%ib]
+        %eq: Bool = T.equals(%x, %y)
+        %i_next: I64 = %i + 1
+        branch %eq ? loop(%i_next, %len, %sa, %sb, #pa, #pb) : return(false)
 
 routine Deque<T>.set(#self: Ptr<Deque<T>>, %index: I64, %value: T) -> Void
 require T: typename

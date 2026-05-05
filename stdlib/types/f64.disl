@@ -4,6 +4,7 @@
 
 @llvm("double")
 struct F64
+conform Equal<F64>, Compare<F64>, Hash<F64>
 
 ; ── constants ─────────────────────────────────────────────────────────────────
 
@@ -33,7 +34,82 @@ routine F64.max(%self: F64, %other: F64) -> F64
         %result: F64 = %self_more ? %self : %other
         return(%result)
 
-; ── narrowing conversion ──────────────────────────────────────────────────────
+; ── comparisons ───────────────────────────────────────────────────────────────
+
+routine F64.feq(%self: F64, %other: F64) -> Bool
+    block entry():
+        %r: Bool = feq<F64>(%self, %other)
+        return(%r)
+
+routine F64.fne(%self: F64, %other: F64) -> Bool
+    block entry():
+        %r: Bool = fne<F64>(%self, %other)
+        return(%r)
+
+routine F64.flt(%self: F64, %other: F64) -> Bool
+    block entry():
+        %r: Bool = flt<F64>(%self, %other)
+        return(%r)
+
+routine F64.fle(%self: F64, %other: F64) -> Bool
+    block entry():
+        %r: Bool = fle<F64>(%self, %other)
+        return(%r)
+
+routine F64.fgt(%self: F64, %other: F64) -> Bool
+    block entry():
+        %r: Bool = fgt<F64>(%self, %other)
+        return(%r)
+
+routine F64.fge(%self: F64, %other: F64) -> Bool
+    block entry():
+        %r: Bool = fge<F64>(%self, %other)
+        return(%r)
+
+; ── division ──────────────────────────────────────────────────────────────────
+
+routine F64.fdiv(%self: F64, %other: F64) -> F64
+    block entry():
+        %r: F64 = fdiv<F64>(%self, %other)
+        return(%r)
+
+; ── equality, ordering, hashing ───────────────────────────────────────────────
+
+routine F64.equals(%self: F64, %other: F64) -> Bool
+    block entry():
+        %r: Bool = feq<F64>(%self, %other)
+        return(%r)
+
+routine F64.compare(%self: F64, %other: F64) -> I32
+    block entry():
+        %lt: Bool = flt<F64>(%self, %other)
+        branch %lt ? return(-1) : maybe_gt(%self, %other)
+
+    block maybe_gt(%self: F64, %other: F64):
+        %gt: Bool = fgt<F64>(%self, %other)
+        branch %gt ? return(1) : return(0)
+
+routine F64.hash(%self: F64) -> I64
+    block entry():
+        %bits: I64 = bitcast<F64, I64>(%self)
+        %h: I64 = xxh64_hash_i64(%bits, 0)
+        return(%h)
+
+; ── generic conversions ───────────────────────────────────────────────────────
+
+routine F64.fptrunc<To>(%self: F64) -> To
+require To: typename
+    block entry():
+        %r: To = fptrunc<F64, To>(%self)
+        return(%r)
+
+routine F64.fptosi<To>(%self: F64) -> To
+require To: typename
+    block entry():
+        %r: To = fptosi<F64, To>(%self)
+        return(%r)
+
+; ── named narrowing conversion ────────────────────────────────────────────────
 
 routine F64.to_f32(%self: F64) -> F32
     block entry():

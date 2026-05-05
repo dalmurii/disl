@@ -6,6 +6,7 @@
 ; Satisfies concept Iterator<T, ListIter<T>>.
 
 struct ListIter<T>
+conform Iterator<T, ListIter<T>>
 require T: typename
     list:  Ptr<List<T>>
     index: I64

@@ -10,7 +10,8 @@
 ;   2 = tombstone
 
 struct HashMap<K, V>
-require K: typename, V: typename, HashEqual<K>
+conform Equal<HashMap<K, V>>
+require K: typename, V: typename, HashEqual<K>, Equal<V>
     keys: Ptr<K>
     values: Ptr<V>
     hashes: Ptr<I64>
@@ -107,6 +108,47 @@ require K: typename, V: typename
         %slot: I64 = #self.find(%key)
         %found: Bool = sge(%slot, 0)
         return(%found)
+
+; Two HashMaps are equal when they hold the same key→value pairs, regardless
+; of insertion order or internal slot layout. With matching length, "every
+; key in A is in B and maps to an equal value" is sufficient.
+routine HashMap<K, V>.equals(#a: Ptr<HashMap<K, V>>, #b: Ptr<HashMap<K, V>>) -> Bool
+require K: typename, V: typename, HashEqual<K>, Equal<V>
+    block entry():
+        %la: I64 := #a.length
+        %lb: I64 := #b.length
+        %same_len: Bool = %la == %lb
+        branch %same_len ? scan(%la) : return(false)
+
+    block scan(%len: I64):
+        %cap: I64 := #a.capacity
+        jump loop(0, %cap)
+
+    block loop(%i: I64, %cap: I64):
+        %done: Bool = sge(%i, %cap)
+        branch %done ? return(true) : check(%i, %cap)
+
+    block check(%i: I64, %cap: I64):
+        #states: Ptr<I8> := #a.states
+        %state: I8 := #states[%i]
+        %occupied: Bool = %state == 1
+        %i_next: I64 = %i + 1
+        branch %occupied ? probe(%i, %i_next, %cap) : loop(%i_next, %cap)
+
+    block probe(%i: I64, %i_next: I64, %cap: I64):
+        #keys: Ptr<K> := #a.keys
+        %key: K := #keys[%i]
+        %slot_b: I64 = #b.find(%key)
+        %found: Bool = sge(%slot_b, 0)
+        branch %found ? compare_value(%i, %i_next, %cap, %slot_b) : return(false)
+
+    block compare_value(%i: I64, %i_next: I64, %cap: I64, %slot_b: I64):
+        #values_a: Ptr<V> := #a.values
+        #values_b: Ptr<V> := #b.values
+        %va: V := #values_a[%i]
+        %vb: V := #values_b[%slot_b]
+        %eq: Bool = V.equals(%va, %vb)
+        branch %eq ? loop(%i_next, %cap) : return(false)
 
 routine HashMap<K, V>.rehash(#self: Ptr<HashMap<K, V>>, %new_capacity: I64) -> Void
 require K: typename, V: typename

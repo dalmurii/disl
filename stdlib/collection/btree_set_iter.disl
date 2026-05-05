@@ -11,6 +11,7 @@
 ; Satisfies concept Iterator<T, BTreeSetIter<T>>.
 
 struct BTreeSetIter<T>
+conform Iterator<T, BTreeSetIter<T>>
 require T: typename
     set:   Ptr<BTreeSet<T>>
     order: I64

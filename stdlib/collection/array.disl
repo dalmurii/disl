@@ -9,7 +9,8 @@
 
 @llvm("array")
 struct Array<T, N>
-require T: typename, N: I64
+conform Equal<Array<T, N>>
+require T: typename, N: I64, Equal<T>
 
 ; ── metadata ──────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,26 @@ require T: typename, N: I64
         #base[%index] = %value
         return()
 
+; ── equality ──────────────────────────────────────────────────────────────────
+
+routine Array<T, N>.equals(#a: Ptr<Array<T, N>>, #b: Ptr<Array<T, N>>) -> Bool
+require T: typename, N: I64, Equal<T>
+    block entry():
+        #pa: Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#a)
+        #pb: Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#b)
+        jump loop(0, #pa, #pb)
+
+    block loop(%i: I64, #pa: Ptr<T>, #pb: Ptr<T>):
+        %done: Bool = sge(%i, N)
+        branch %done ? return(true) : step(%i, #pa, #pb)
+
+    block step(%i: I64, #pa: Ptr<T>, #pb: Ptr<T>):
+        %x: T := #pa[%i]
+        %y: T := #pb[%i]
+        %eq: Bool = T.equals(%x, %y)
+        %i_next: I64 = %i + 1
+        branch %eq ? loop(%i_next, #pa, #pb) : return(false)
+
 ; ── pointer to first element ──────────────────────────────────────────────────
 
 routine Array<T, N>.as_ptr(#self: Ptr<Array<T, N>>) -> Ptr<T>
@@ -53,7 +74,7 @@ require T: typename, N: I64
     block entry():
         #base: Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#self)
         return(#base)
- 
+
 ; Disl stdlib collection: fixed array helpers
 ;
 ; These helpers operate on Array<T, N> fields inside larger structures. The
