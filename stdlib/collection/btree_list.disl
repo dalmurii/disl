@@ -107,7 +107,7 @@ require T: typename, Equal<T>
     block step(%i: I64, %len: I64):
         %x: T = #a.get(%i)
         %y: T = #b.get(%i)
-        %eq: Bool = T.equals(%x, %y)
+        %eq: Bool = %x.equals(%y)
         %i_next: I64 = %i + 1
         branch %eq ? loop(%i_next, %len) : return(false)
 

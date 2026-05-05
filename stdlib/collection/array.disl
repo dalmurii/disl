@@ -63,7 +63,7 @@ require T: typename, N: I64, Equal<T>
     block step(%i: I64, #pa: Ptr<T>, #pb: Ptr<T>):
         %x: T := #pa[%i]
         %y: T := #pb[%i]
-        %eq: Bool = T.equals(%x, %y)
+        %eq: Bool = %x.equals(%y)
         %i_next: I64 = %i + 1
         branch %eq ? loop(%i_next, #pa, #pb) : return(false)
 

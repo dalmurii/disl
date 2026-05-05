@@ -76,7 +76,7 @@ require T: typename, Equal<T>
     block compare_values(%a: Option<T>, %b: Option<T>):
         %va: T = %a.value
         %vb: T = %b.value
-        %eq: Bool = T.equals(%va, %vb)
+        %eq: Bool = %va.equals(%vb)
         return(%eq)
 
 routine Option<T>.hash(%self: Option<T>) -> I64

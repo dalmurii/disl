@@ -223,7 +223,7 @@ require T: typename, Equal<T>
         %ib: I64 = %sb + %i
         %x: T := #pa[%ia]
         %y: T := #pb[%ib]
-        %eq: Bool = T.equals(%x, %y)
+        %eq: Bool = %x.equals(%y)
         %i_next: I64 = %i + 1
         branch %eq ? loop(%i_next, %len, %sa, %sb, #pa, #pb) : return(false)
 

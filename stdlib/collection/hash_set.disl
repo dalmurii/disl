@@ -71,7 +71,7 @@ require T: typename
     block maybe_equal(%index: I64, %first_tombstone: I64):
         #keys: Ptr<T> := #self.keys
         %entry_key: T := #keys[%index]
-        %equal: Bool = T.equals(%entry_key, %key)
+        %equal: Bool = %entry_key.equals(%key)
         branch %equal ? return(%index): next(%index, %first_tombstone)
 
     block next(%index: I64, %first_tombstone: I64):
