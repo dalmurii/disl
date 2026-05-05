@@ -10,7 +10,7 @@
 ;   2 = tombstone
 
 struct HashMap<K, V>
-require K: typename, V: typename
+require K: typename, V: typename, HashEqual<K>
     keys: Ptr<K>
     values: Ptr<V>
     hashes: Ptr<I64>
@@ -18,16 +18,10 @@ require K: typename, V: typename
     length: I64
     tombstones: I64
     capacity: I64
-    hash_fn: Callable<@callconv("c"), (K), I64>
-    equals_fn: Callable<@callconv("c"), (K, K), Bool>
     alloc: Ptr<Allocator>
 
-routine HashMap<K, V>.new(
-    %hash_fn: Callable<@callconv("c"), (K), I64>,
-    %equals_fn: Callable<@callconv("c"), (K, K), Bool>,
-    #alloc: Ptr<Allocator>
-) -> HashMap<K, V>
-require K: typename, V: typename
+routine HashMap<K, V>.new(#alloc: Ptr<Allocator>) -> HashMap<K, V>
+require K: typename, V: typename, HashEqual<K>
     block entry():
         %map: HashMap<K, V> = HashMap<K, V> {
             keys: null,
@@ -37,8 +31,6 @@ require K: typename, V: typename
             length: 0,
             tombstones: 0,
             capacity: 0,
-            hash_fn: %hash_fn,
-            equals_fn: %equals_fn,
             alloc: #alloc
         }
         return(%map)
@@ -86,7 +78,7 @@ require K: typename, V: typename
     block maybe_equal(%index: I64, %first_tombstone: I64):
         #keys: Ptr<K> := #self.keys
         %entry_key: K := #keys[%index]
-        %equal: Bool = #self.equals_fn(%entry_key, %key)
+        %equal: Bool = K.equals(%entry_key, %key)
         branch %equal ? return(%index): next(%index, %first_tombstone)
 
     block next(%index: I64, %first_tombstone: I64):
@@ -102,7 +94,7 @@ require K: typename, V: typename
         branch %empty ? return(-1): hash()
 
     block hash():
-        %hash: I64 = #self.hash_fn(%key)
+        %hash: I64 = K.hash(%key)
         %slot: I64 = #self.slot(%key, %hash)
         #states: Ptr<I8> := #self.states
         %state: I8 := #states[%slot]
@@ -209,7 +201,7 @@ require K: typename, V: typename
 routine HashMap<K, V>.put_direct(#self: Ptr<HashMap<K, V>>, %key: K, %value: V) -> Void
 require K: typename, V: typename
     block entry():
-        %hash: I64 = #self.hash_fn(%key)
+        %hash: I64 = K.hash(%key)
         %slot: I64 = #self.slot(%key, %hash)
         #states: Ptr<i8> := #self.states
         %state: i8 := #states[%slot]

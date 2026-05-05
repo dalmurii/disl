@@ -4,23 +4,23 @@
 ; vtable by themselves; a generic routine names an Ops type and constrains it
 ; with one of these concepts.
 
-concept Equal<T, Ops>
-    routine Ops.equals(%a: T, %b: T) -> Bool
+concept Equal<T>
+    routine T.equals(%a: T, %b: T) -> Bool
 
-concept Hash<T, Ops>
-    routine Ops.hash(%value: T) -> I64
+concept Hash<T>
+    routine T.hash(%value: T) -> I64
 
-concept HashEqual<T, Ops>
-    require Equal<T, Ops>
-    require Hash<T, Ops>
+concept HashEqual<T>
+    require Equal<T>
+    require Hash<T>
 
-concept Compare<T, Ops>
+concept Compare<T>
     ; Return < 0 when a < b, 0 when a == b, and > 0 when a > b.
-    routine Ops.compare(%a: T, %b: T) -> I32
+    routine T.compare(%a: T, %b: T) -> I32
 
-concept Priority<T, Ops>
+concept Priority<T>
     ; Return true when a should be closer to the top than b.
-    routine Ops.less(%a: T, %b: T) -> Bool
+    routine T.less(%a: T, %b: T) -> Bool
 
 concept Iterator<T, Iter>
     ; Advance and return the next element, or Option<T>.none() when exhausted.

@@ -1,2 +1,30 @@
-﻿/.idea/
-/disl.wiki/
+# IDE
+.idea/
+*.user
+*.suo
+
+# Build output
+bin/
+obj/
+out/
+
+# NuGet
+*.nupkg
+packages/
+project.lock.json
+project.assets.json
+
+# Rider / ReSharper
+_ReSharper*/
+*.DotSettings.user
+
+# Visual Studio
+.vs/
+*.vsidx
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Submodules / external
+disl.wiki/

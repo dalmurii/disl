@@ -11,27 +11,27 @@
 ; The bit routines below hide the heap-index arithmetic. They are compact on
 ; purpose, but callers use names that describe the tree operation.
 
-concept Monoid<T, Ops>
-    routine Ops.identity() -> T
-    routine Ops.combine(%left: T, %right: T) -> T
+concept Monoid<T>
+    routine T.identity() -> T
+    routine T.combine(%left: T, %right: T) -> T
 
-concept Group<T, Ops>
-    require Monoid<T, Ops>
-    routine Ops.inverse(%value: T) -> T
+concept Group<T>
+    require Monoid<T>
+    routine T.inverse(%value: T) -> T
 
-concept LazySegmentOps<T, L, Ops>
+concept LazySegmentOps<T, L>
     ; Aggregate two child values.
-    routine Ops.combine(%left: T, %right: T) -> T
+    routine T.combine(%left: T, %right: T) -> T
 
     ; Apply one lazy tag to an aggregate value over a segment of length.
-    routine Ops.apply(%value: T, %lazy: L, %length: I64) -> T
+    routine T.apply(%value: T, %lazy: L, %length: I64) -> T
 
     ; Compose tags so the returned tag represents newer after older.
-    routine Ops.compose(%newer: L, %older: L) -> L
+    routine L.compose(%newer: L, %older: L) -> L
 
-    routine Ops.identity_value() -> T
-    routine Ops.identity_lazy() -> L
-    routine Ops.is_identity_lazy(%lazy: L) -> Bool
+    routine T.identity_value() -> T
+    routine L.identity_lazy() -> L
+    routine L.is_identity_lazy(%lazy: L) -> Bool
 
 struct LazySegmentTree<T, L, Ops>
     data: Ptr<T>

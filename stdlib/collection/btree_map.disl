@@ -18,22 +18,17 @@ require K: typename, V: typename
     children: Array<Ptr<BTreeMapNode<K, V>>, NODE_CHILDREN>
 
 struct BTreeMap<K, V>
-require K: typename, V: typename
+require K: typename, V: typename, Compare<K>
     root: Ptr<BTreeMapNode<K, V>>
     length: I64
-    compare_fn: Callable<@callconv("c"), (K, K), I32>
     alloc: Ptr<Allocator>
 
-routine BTreeMap<K, V>.new(
-    %compare_fn: Callable<@callconv("c"), (K, K), I32>,
-    #alloc: Ptr<Allocator>
-) -> BTreeMap<K, V>
-require K: typename, V: typename
+routine BTreeMap<K, V>.new(#alloc: Ptr<Allocator>) -> BTreeMap<K, V>
+require K: typename, V: typename, Compare<K>
     block entry():
         %map: BTreeMap<K, V> = BTreeMap<K, V> {
             root: null,
             length: 0,
-            compare_fn: %compare_fn,
             alloc: #alloc
         }
         return(%map)
@@ -109,7 +104,7 @@ require K: typename, V: typename
 
     block compare(%i: I64):
         %node_key: K := #node.keys[%i]
-        %cmp: I32 = #self.compare_fn(%key, %node_key)
+        %cmp: I32 = K.compare(%key, %node_key)
         %before_or_equal: Bool = sle(%cmp, 0)
         branch %before_or_equal ? return(%i) : loop(%i + 1)
 
@@ -128,7 +123,7 @@ require K: typename, V: typename
 
     block maybe_match(#node: Ptr<BTreeMapNode<K, V>>, %i: I64, %key: K):
         %node_key: K := #node.keys[%i]
-        %cmp: I32 = #self.compare_fn(%key, %node_key)
+        %cmp: I32 = K.compare(%key, %node_key)
         %equal: Bool = %cmp == 0
         branch %equal ? load(#node, %i) : descend_or_missing(#node, %i, %key)
 
@@ -159,7 +154,7 @@ require K: typename, V: typename
 
     block maybe_match(#node: Ptr<BTreeMapNode<K, V>>, %i: I64, %key: K):
         %node_key: K := #node.keys[%i]
-        %cmp: I32 = #self.compare_fn(%key, %node_key)
+        %cmp: I32 = K.compare(%key, %node_key)
         %equal: Bool = %cmp == 0
         branch %equal ? return(true) : descend_or_missing(#node, %i, %key)
 
@@ -358,7 +353,7 @@ require K: typename, V: typename
     block split_then_insert(%slot: I64, #child: Ptr<BTreeMapNode<K, V>>):
         #self.split_child(%slot, #alloc)
         %pivot: K := #self.keys[%slot]
-        %cmp: I32 = #map.compare_fn(%key, %pivot)
+        %cmp: I32 = K.compare(%key, %pivot)
         %go_right: Bool = sgt(%cmp, 0)
         %next_slot: I64 = %go_right ? %slot + 1 : %slot
         #next_child: Ptr<BTreeMapNode<K, V>> := #self.children[%next_slot]
@@ -420,7 +415,7 @@ require K: typename, V: typename
 
     block maybe_match(%slot: I64):
         %node_key: K := #self.keys[%slot]
-        %cmp: I32 = #map.compare_fn(%key, %node_key)
+        %cmp: I32 = K.compare(%key, %node_key)
         %equal: Bool = %cmp == 0
         branch %equal ? replace(%slot) : descend_or_missing(%slot)
 
@@ -664,7 +659,7 @@ require K: typename, V: typename
 
     block maybe_match(%slot: I64):
         %node_key: K := #self.keys[%slot]
-        %cmp: I32 = #map.compare_fn(%key, %node_key)
+        %cmp: I32 = K.compare(%key, %node_key)
         %equal: Bool = %cmp == 0
         branch %equal ? remove_here(%slot) : descend_or_missing(%slot)
 

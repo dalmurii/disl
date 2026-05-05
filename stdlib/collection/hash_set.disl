@@ -4,23 +4,17 @@
 ; states/hashes arrays before touching keys. The allocator is stored in the struct.
 
 struct HashSet<T>
-require T: typename
+require T: typename, HashEqual<T>
     keys: Ptr<T>
     hashes: Ptr<I64>
     states: Ptr<I8>
     length: I64
     tombstones: I64
     capacity: I64
-    hash_fn: Callable<@callconv("c"), (T), I64>
-    equals_fn: Callable<@callconv("c"), (T, T), Bool>
     alloc: Ptr<Allocator>
 
-routine HashSet<T>.new(
-    %hash_fn: Callable<@callconv("c"), (T), I64>,
-    %equals_fn: Callable<@callconv("c"), (T, T), Bool>,
-    #alloc: Ptr<Allocator>
-) -> HashSet<T>
-require T: typename
+routine HashSet<T>.new(#alloc: Ptr<Allocator>) -> HashSet<T>
+require T: typename, HashEqual<T>
     block entry():
         %set: HashSet<T> = HashSet<T> {
             keys: null,
@@ -29,8 +23,6 @@ require T: typename
             length: 0,
             tombstones: 0,
             capacity: 0,
-            hash_fn: %hash_fn,
-            equals_fn: %equals_fn,
             alloc: #alloc
         }
         return(%set)
@@ -78,7 +70,7 @@ require T: typename
     block maybe_equal(%index: I64, %first_tombstone: I64):
         #keys: Ptr<T> := #self.keys
         %entry_key: T := #keys[%index]
-        %equal: Bool = #self.equals_fn(%entry_key, %key)
+        %equal: Bool = T.equals(%entry_key, %key)
         branch %equal ? return(%index): next(%index, %first_tombstone)
 
     block next(%index: I64, %first_tombstone: I64):
@@ -94,7 +86,7 @@ require T: typename
         branch %empty ? return(-1): hash()
 
     block hash():
-        %hash: I64 = #self.hash_fn(%key)
+        %hash: I64 = T.hash(%key)
         %slot: I64 = #self.slot(%key, %hash)
         #states: Ptr<I8> := #self.states
         %state: I8 := #states[%slot]
@@ -194,7 +186,7 @@ require T: typename
 routine HashSet<T>.add_direct(#self: Ptr<HashSet<T>>, %key: T) -> Bool
 require T: typename
     block entry():
-        %hash: I64 = #self.hash_fn(%key)
+        %hash: I64 = T.hash(%key)
         %slot: I64 = #self.slot(%key, %hash)
         #states: Ptr<i8> := #self.states
         %state: i8 := #states[%slot]

@@ -9,7 +9,7 @@
 ; Control flow highlights:
 ;   block-parameter loops for dist initialisation, edge relaxation, printing
 ;   inline branch terminator to drop stale priority-queue entries
-;   select cascade for the three-way comparator
+;   Priority<DijkstraEntry> concept for the min-heap ordering
 
 ; ── C FFI ─────────────────────────────────────────────────────────────────────
 
@@ -38,16 +38,13 @@ struct DijkstraEntry
     dist: I64
     node: I64
 
-; ── Priority-queue comparator ─────────────────────────────────────────────────
+; ── Priority<DijkstraEntry> ───────────────────────────────────────────────────
 
-; Lower distance = higher priority.  Passed as a Callable to PriorityQueue.new.
-@callconv("c")
-routine compare_entry(%a: DijkstraEntry, %b: DijkstraEntry) -> I32
+; Lower distance = higher priority.
+routine DijkstraEntry.less(%a: DijkstraEntry, %b: DijkstraEntry) -> Bool
     block entry():
-        select:
-            slt(%a.dist, %b.dist) -> return(-1)
-            sgt(%a.dist, %b.dist) -> return(1)
-            _                     -> return(0)
+        %result: Bool = slt(%a.dist, %b.dist)
+        return(%result)
 
 ; ── Graph ─────────────────────────────────────────────────────────────────────
 
@@ -118,7 +115,7 @@ routine dijkstra(
 ) -> Void
     block entry():
         %n:      I64 := #graph.num_nodes
-        %pq_val: PriorityQueue<DijkstraEntry> = PriorityQueue<DijkstraEntry>.new(compare_entry, #alloc)
+        %pq_val: PriorityQueue<DijkstraEntry> = PriorityQueue<DijkstraEntry>.new(#alloc)
         #pq:     Ptr<PriorityQueue<DijkstraEntry>> = alloca<PriorityQueue<DijkstraEntry>>([%pq_val])
         jump fill_inf(0, %n, #pq)
 

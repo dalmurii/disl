@@ -4,24 +4,19 @@
 ; than b. The allocator is stored in the struct.
 
 struct PriorityQueue<T>
-require T: typename
+require T: typename, Priority<T>
     data: Ptr<T>
     length: I64
     capacity: I64
-    compare_fn: Callable<@callconv("c"), (T, T), I32>
     alloc: Ptr<Allocator>
 
-routine PriorityQueue<T>.new(
-    %compare_fn: Callable<@callconv("c"), (T, T), I32>,
-    #alloc: Ptr<Allocator>
-) -> PriorityQueue<T>
-require T: typename
+routine PriorityQueue<T>.new(#alloc: Ptr<Allocator>) -> PriorityQueue<T>
+require T: typename, Priority<T>
     block entry():
         %queue: PriorityQueue<T> = PriorityQueue<T> {
             data: null,
             length: 0,
             capacity: 0,
-            compare_fn: %compare_fn,
             alloc: #alloc
         }
         return(%queue)
@@ -86,11 +81,10 @@ require T: typename
         return()
 
 routine PriorityQueue<T>.less(#self: Ptr<PriorityQueue<T>>, %a: T, %b: T) -> Bool
-require T: typename
+require T: typename, Priority<T>
     block entry():
-        %cmp: I32 = #self.compare_fn(%a, %b)
-        %less: Bool = slt(%cmp, 0)
-        return(%less)
+        %result: Bool = T.less(%a, %b)
+        return(%result)
 
 routine PriorityQueue<T>.push(#self: Ptr<PriorityQueue<T>>, %value: T) -> Void
 require T: typename

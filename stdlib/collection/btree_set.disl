@@ -17,22 +17,17 @@ require T: typename
     children: Array<Ptr<BTreeSetNode<T>>, NODE_CHILDREN>
 
 struct BTreeSet<T>
-require T: typename
+require T: typename, Compare<T>
     root: Ptr<BTreeSetNode<T>>
     length: I64
-    compare_fn: Callable<@callconv("c"), (T, T), I32>
     alloc: Ptr<Allocator>
 
-routine BTreeSet<T>.new(
-    %compare_fn: Callable<@callconv("c"), (T, T), I32>,
-    #alloc: Ptr<Allocator>
-) -> BTreeSet<T>
-require T: typename
+routine BTreeSet<T>.new(#alloc: Ptr<Allocator>) -> BTreeSet<T>
+require T: typename, Compare<T>
     block entry():
         %set: BTreeSet<T> = BTreeSet<T> {
             root: null,
             length: 0,
-            compare_fn: %compare_fn,
             alloc: #alloc
         }
         return(%set)
@@ -108,7 +103,7 @@ require T: typename
 
     block compare(%i: I64):
         %node_key: T := #node.keys[%i]
-        %cmp: I32 = #self.compare_fn(%key, %node_key)
+        %cmp: I32 = T.compare(%key, %node_key)
         %before_or_equal: Bool = sle(%cmp, 0)
         branch %before_or_equal ? return(%i): loop(%i + 1)
 
@@ -127,7 +122,7 @@ require T: typename
 
     block maybe_match(#node: Ptr<BTreeSetNode<T>>, %i: I64, %key: T):
         %node_key: T := #node.keys[%i]
-        %cmp: I32 = #self.compare_fn(%key, %node_key)
+        %cmp: I32 = T.compare(%key, %node_key)
         %equal: Bool = %cmp == 0
         branch %equal ? return(true): descend_or_missing(#node, %i, %key)
 
@@ -268,7 +263,7 @@ require T: typename
     block split_then_insert(%slot: I64, #child: Ptr<BTreeSetNode<T>>):
         #self.split_child(%slot, #alloc)
         %pivot: T := #self.keys[%slot]
-        %cmp: I32 = #set.compare_fn(%key, %pivot)
+        %cmp: I32 = T.compare(%key, %pivot)
         %go_right: Bool = sgt(%cmp, 0)
         %next_slot: I64 = %go_right ? %slot + 1 : %slot
         #next_child: Ptr<BTreeSetNode<T>> := #self.children[%next_slot]
@@ -526,7 +521,7 @@ require T: typename
 
     block maybe_match(%slot: I64):
         %node_key: T := #self.keys[%slot]
-        %cmp: I32 = #set.compare_fn(%key, %node_key)
+        %cmp: I32 = T.compare(%key, %node_key)
         %equal: Bool = %cmp == 0
         branch %equal ? remove_here(%slot) : descend_or_missing(%slot)
 
