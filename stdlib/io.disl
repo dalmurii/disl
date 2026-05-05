@@ -2,9 +2,12 @@
 ;
 ; Thin wrappers over POSIX write(2) for stdout (fd 1) and stderr (fd 2).
 ; print_int converts an I64 to decimal using a stack buffer — no allocation.
+;
+; C-alias types (CInt, CSize) appear only on the c_write extern; user-facing
+; routines take I64 lengths and convert at the FFI boundary.
 
 @[external("c"), callconv("c"), symbol("write")]
-routine c_write(%fd: I32, #buf: Ptr<I8>, %count: I64) -> I64
+routine c_write(%fd: CInt, #buf: Ptr<I8>, %count: CSize) -> CSize
 
 ; ============================================================
 ; Basic output
@@ -12,32 +15,36 @@ routine c_write(%fd: I32, #buf: Ptr<I8>, %count: I64) -> I64
 
 routine print(#str: Ptr<I8>, %len: I64) -> Void
     block entry():
-        c_write(1, #str, %len)
+        %len_c: CSize = i64_to_csize(%len)
+        c_write(1, #str, %len_c)
         return()
 
 routine println(#str: Ptr<I8>, %len: I64) -> Void
     block entry():
-        c_write(1, #str, %len)
+        %len_c: CSize = i64_to_csize(%len)
+        c_write(1, #str, %len_c)
         #newline: Ptr<I8> = alloca<I8>
         #newline = 10                          ; '\n'
-        c_write(1, #newline, 1)
+        c_write(1, #newline, i64_to_csize(1))
         return()
 
 routine print_slice(%slice: StringSlice) -> Void
     block entry():
-        #data: Ptr<I8> = %slice.data
-        %len:  I64     = %slice.length
-        c_write(1, #data, %len)
+        #data:  Ptr<I8> = %slice.data
+        %len:   I64     = %slice.length
+        %len_c: CSize   = i64_to_csize(%len)
+        c_write(1, #data, %len_c)
         return()
 
 routine println_slice(%slice: StringSlice) -> Void
     block entry():
-        #data: Ptr<I8> = %slice.data
-        %len:  I64     = %slice.length
-        c_write(1, #data, %len)
+        #data:  Ptr<I8> = %slice.data
+        %len:   I64     = %slice.length
+        %len_c: CSize   = i64_to_csize(%len)
+        c_write(1, #data, %len_c)
         #newline: Ptr<I8> = alloca<I8>
         #newline = 10                          ; '\n'
-        c_write(1, #newline, 1)
+        c_write(1, #newline, i64_to_csize(1))
         return()
 
 ; ============================================================
@@ -55,7 +62,7 @@ routine print_int(%n: I64) -> Void
     block write_zero():
         #buf: Ptr<I8> = alloca<I8>
         #buf = 48                              ; '0'
-        c_write(1, #buf, 1)
+        c_write(1, #buf, i64_to_csize(1))
         return()
 
     block check_neg(%n: I64):
@@ -68,8 +75,8 @@ routine print_int(%n: I64) -> Void
 
     block fill_digits(%neg: I64, %n: I64):
         ; 20-byte buffer: indices 0..19, filled right-to-left from index 19
-        #buf: Ptr<Array<I8, 20>> = alloca<Array<I8, 20>>
-        #bytes: Ptr<I8> = bitcast<Ptr<Array<I8, 20>>, Ptr<I8>>(#buf)
+        #buf:   Ptr<Array<I8, 20>> = alloca<Array<I8, 20>>
+        #bytes: Ptr<I8>            = bitcast<Ptr<Array<I8, 20>>, Ptr<I8>>(#buf)
         jump digit_loop(19, %n, #bytes, %neg)
 
     block digit_loop(%pos: I64, %n: I64, #bytes: Ptr<I8>, %neg: I64):
@@ -94,7 +101,8 @@ routine print_int(%n: I64) -> Void
         jump write(%prev, #bytes)
 
     block write(%pos: I64, #bytes: Ptr<I8>):
-        %len: I64 = 19 - %pos
+        %len:   I64     = 19 - %pos
+        %len_c: CSize   = i64_to_csize(%len)
         #start: Ptr<I8> = #bytes[%pos]
-        c_write(1, #start, %len)
+        c_write(1, #start, %len_c)
         return()
