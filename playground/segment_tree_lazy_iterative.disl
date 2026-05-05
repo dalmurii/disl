@@ -12,7 +12,7 @@
 ; purpose, but callers use names that describe the tree operation.
 
 concept Monoid<T>
-    routine identity<T>() -> T
+    routine T.identity() -> T
     routine T.combine(%self: T, %right: T) -> T
 
 concept Group<T>
@@ -29,8 +29,8 @@ concept LazySegmentOps<T, L>
     ; Compose tags so the returned tag represents newer after older.
     routine L.compose(%self: L, %older: L) -> L
 
-    routine identity_value<T>() -> T
-    routine identity_lazy<L>() -> L
+    routine T.identity() -> T
+    routine L.identity() -> L
     routine L.is_identity_lazy(%self: L) -> Bool
 
 struct LazySegmentTree<T, L>
@@ -127,7 +127,7 @@ routine LazySegmentTree<T, L>.new(%length: I64, #alloc: Ptr<Allocator>) -> LazyS
         branch %done ? init_lazy(0, #data, #lazy, %length, %size, %height) : data_one(%i, #data, #lazy, %length, %size, %height, %data_count)
 
     block data_one(%i: I64, #data: Ptr<T>, #lazy: Ptr<L>, %length: I64, %size: I64, %height: I64, %data_count: I64):
-        %identity: T = identity_value<T>()
+        %identity: T = T.identity()
         #data[%i] = %identity
         %i_next: I64 = %i.add(1)
         jump data_loop(%i_next, #data, #lazy, %length, %size, %height, %data_count)
@@ -137,7 +137,7 @@ routine LazySegmentTree<T, L>.new(%length: I64, #alloc: Ptr<Allocator>) -> LazyS
         branch %done ? finish(#data, #lazy, %length, %size, %height) : lazy_one(%i, #data, #lazy, %length, %size, %height)
 
     block lazy_one(%i: I64, #data: Ptr<T>, #lazy: Ptr<L>, %length: I64, %size: I64, %height: I64):
-        %identity: L = identity_lazy<L>()
+        %identity: L = L.identity()
         #lazy[%i] = %identity
         %i_next: I64 = %i.add(1)
         jump init_lazy(%i_next, #data, #lazy, %length, %size, %height)
@@ -181,7 +181,7 @@ routine LazySegmentTree<T, L>.build_from(#self: Ptr<LazySegmentTree<T, L>>, #val
 
     block reset_one(%i: I64):
         #lazy: Ptr<L> := #self.lazy
-        %identity: L = identity_lazy<L>()
+        %identity: L = L.identity()
         #lazy[%i] = %identity
         %i_next: I64 = %i.add(1)
         jump reset_lazy(%i_next)
@@ -242,7 +242,7 @@ routine LazySegmentTree<T, L>.push_node(#self: Ptr<LazySegmentTree<T, L>>, %node
         #self.apply_node(%left, %tag, %child_width)
         #self.apply_node(%right, %tag, %child_width)
         #lazy: Ptr<L> := #self.lazy
-        %identity: L = identity_lazy<L>()
+        %identity: L = L.identity()
         #lazy[%node] = %identity
         return()
 
@@ -424,7 +424,7 @@ routine LazySegmentTree<T, L>.range_query(#self: Ptr<LazySegmentTree<T, L>>, %le
         branch %empty ? empty() : prepare(%left, %right)
 
     block empty():
-        %identity: T = identity_value<T>()
+        %identity: T = T.identity()
         return(%identity)
 
     block prepare(%left: I64, %right: I64):
@@ -433,8 +433,8 @@ routine LazySegmentTree<T, L>.range_query(#self: Ptr<LazySegmentTree<T, L>>, %le
         %r: I64 = #self.leaf(%right_m1)
         #self.push_path(%l)
         #self.push_path(%r)
-        %left_acc: T = identity_value<T>()
-        %right_acc: T = identity_value<T>()
+        %left_acc: T = T.identity()
+        %right_acc: T = T.identity()
         %r_next: I64 = %r.add(1)
         jump loop(%l, %r_next, %left_acc, %right_acc)
 
