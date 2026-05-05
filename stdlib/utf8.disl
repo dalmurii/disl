@@ -172,7 +172,7 @@ routine utf8_encode(%cp: I32, #out: Ptr<I8>) -> I64
 
     block check_four(%cp: I32):
         %in_four: Bool = ult(%cp, 1114112)    ; < 0x110000
-        branch %in_four ? enc_four(%cp) : invalid()
+        branch %in_four ? enc_four(%cp) : return(0)
 
     block enc_four(%cp: I32):
         %b0: I32 = sdiv(%cp, 262144) | 240   ; 0xF0
@@ -184,6 +184,3 @@ routine utf8_encode(%cp: I32, #out: Ptr<I8>) -> I64
         #out[2] = trunc<I32, I8>(%b2)
         #out[3] = trunc<I32, I8>(%b3)
         return(4)
-
-    block invalid():
-        return(0)

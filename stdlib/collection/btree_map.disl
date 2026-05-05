@@ -728,11 +728,11 @@ require K: typename, V: typename
     block entry:
         #root: Ptr<BTreeMapNode<K, V>> := #self.root
         %empty: Bool = #root == null
-        branch %empty ? missing() : remove_root(#root)
+        branch %empty ? return(false) : remove_root(#root)
 
     block remove_root(#root: Ptr<BTreeMapNode<K, V>>):
         %removed: Bool = #root.remove(#self, %key)
-        branch %removed ? after_remove(#root) : missing()
+        branch %removed ? after_remove(#root) : return(false)
 
     block after_remove(#root: Ptr<BTreeMapNode<K, V>>):
         %length: I64 := #self.length
@@ -757,9 +757,6 @@ require K: typename, V: typename
         free<BTreeMapNode<K, V>>(#alloc, #root)
         #self.root = #new_root
         return(true)
-
-    block missing():
-        return(false)
 
 ; Internal nodes store `length` separator keys and `length + 1` children.
 routine BTreeMapNode<K, V>.free_recursive(#self: Ptr<BTreeMapNode<K, V>>, #alloc: Ptr<Allocator>) -> Void

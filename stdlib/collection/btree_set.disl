@@ -584,11 +584,11 @@ require T: typename
     block entry:
         #root: Ptr<BTreeSetNode<T>> := #self.root
         %empty: Bool = #root == null
-        branch %empty ? missing() : remove_root(#root)
+        branch %empty ? return(false) : remove_root(#root)
 
     block remove_root(#root: Ptr<BTreeSetNode<T>>):
         %removed: Bool = #root.remove(#self, %key)
-        branch %removed ? after_remove(#root) : missing()
+        branch %removed ? after_remove(#root) : return(false)
 
     block after_remove(#root: Ptr<BTreeSetNode<T>>):
         %length: I64 := #self.length
@@ -613,9 +613,6 @@ require T: typename
         free<BTreeSetNode<T>>(#alloc, #root)
         #self.root = #new_root
         return(true)
-
-    block missing():
-        return(false)
 
 ; Internal nodes store `length` separator keys and `length + 1` children.
 routine BTreeSetNode<T>.free_recursive(#self: Ptr<BTreeSetNode<T>>, #alloc: Ptr<Allocator>) -> Void

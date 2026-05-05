@@ -96,7 +96,7 @@ require T: typename, N: I64
 
     block loop(%i: I64):
         %done: Bool = sge(%i, %count)
-        branch %done ? finish() : copy_one(%i)
+        branch %done ? return() : copy_one(%i)
 
     block copy_one(%i: I64):
         %src_index: I64 = %src_start + %i
@@ -104,6 +104,3 @@ require T: typename, N: I64
         %value: T := #src[%src_index]
         #self[%dst_index] = %value
         jump loop(%i + 1)
-
-    block finish():
-        return()
