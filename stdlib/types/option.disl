@@ -33,16 +33,16 @@ require T: typename
         %opt: Option<T> := #buf
         return(%opt)
 
-routine Option<T>.is_some(%self: Option<T>) -> Bool
+routine Option<T>.is_some(#self: Ptr<Option<T>>) -> Bool
 require T: typename
     block entry():
-        %tag: Bool = %self.tag
+        %tag: Bool := #self.tag
         return(%tag)
 
-routine Option<T>.is_none(%self: Option<T>) -> Bool
+routine Option<T>.is_none(#self: Ptr<Option<T>>) -> Bool
 require T: typename
     block entry():
-        %tag: Bool = %self.tag
+        %tag: Bool := #self.tag
         %result: Bool = %tag == false
         return(%result)
 

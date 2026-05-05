@@ -32,42 +32,46 @@ routine String.from_ptr(#data: Ptr<I8>, %length: I64) -> String
 
 ; ── predicates ────────────────────────────────────────────────────────────────
 
-routine String.is_empty(%self: String) -> Bool
+routine String.is_empty(#self: Ptr<String>) -> Bool
     block entry():
-        %result: Bool = %self.length == 0
+        %length: I64 := #self.length
+        %result: Bool = %length == 0
         return(%result)
 
 ; ── element access ────────────────────────────────────────────────────────────
 
-routine String.byte_at(%self: String, %index: I64) -> I8
+routine String.byte_at(#self: Ptr<String>, %index: I64) -> I8
     block entry():
+        %length: I64 := #self.length
         %not_negative: Bool = sge<I64>(%index, 0)
-        %before_end:   Bool = slt<I64>(%index, %self.length)
+        %before_end:   Bool = slt<I64>(%index, %length)
         %in_bounds:    Bool = %not_negative & %before_end
         branch %in_bounds ? load(%index) : trap()
 
     block load(%index: I64):
-        #data: Ptr<I8> = %self.data
+        #data: Ptr<I8> := #self.data
         %byte: I8 := #data[%index]
         return(%byte)
 
 ; ── slicing ───────────────────────────────────────────────────────────────────
 
 ; Returns a sub-view [start, end).  Traps if range is out of bounds.
-routine String.slice(%self: String, %start: I64, %end: I64) -> String
+routine String.slice(#self: Ptr<String>, %start: I64, %end: I64) -> String
     block entry():
+        %length: I64 := #self.length
         %valid_start: Bool = sge<I64>(%start, 0)
-        %valid_end:   Bool = sle<I64>(%end, %self.length)
+        %valid_end:   Bool = sle<I64>(%end, %length)
         %valid_order: Bool = sle<I64>(%start, %end)
         %valid_se:    Bool = %valid_start & %valid_end
         %valid:       Bool = %valid_se & %valid_order
         branch %valid ? make(%start, %end) : trap()
 
     block make(%start: I64, %end: I64):
-        #base: Ptr<I8> = %self.data
+        #base: Ptr<I8> := #self.data
         #from: Ptr<I8> = #base[%start]
-        %length: I64   = %end - %start
-        %result: String = String { data: #from, length: %length }
+        %length: I64 := #self.length
+        %slice_len: I64 = %end - %start
+        %result: String = String { data: #from, length: %slice_len }
         return(%result)
 
 ; ── heap-allocating operations ────────────────────────────────────────────────
@@ -100,12 +104,14 @@ routine String.concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> String
 
 ; ── iterators ─────────────────────────────────────────────────────────────────
 
-routine String.bytes(%self: String) -> StringBytesIter
+routine String.bytes(#self: Ptr<String>) -> StringBytesIter
     block entry():
-        %iter: StringBytesIter = StringBytesIter { str: %self, index: 0 }
+        %str: String := #self
+        %iter: StringBytesIter = StringBytesIter { str: %str, index: 0 }
         return(%iter)
 
-routine String.chars(%self: String) -> StringCharsIter
+routine String.chars(#self: Ptr<String>) -> StringCharsIter
     block entry():
-        %iter: StringCharsIter = StringCharsIter { str: %self, index: 0 }
+        %str: String := #self
+        %iter: StringCharsIter = StringCharsIter { str: %str, index: 0 }
         return(%iter)
