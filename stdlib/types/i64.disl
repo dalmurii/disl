@@ -127,14 +127,6 @@ routine I64.bitnot(%self: I64) -> I64
         %r: I64 = bnot<I64>(%self)
         return(%r)
 
-; ── generic conversions ───────────────────────────────────────────────────────
-
-routine I64.sitofp<To>(%self: I64) -> To
-require To: typename
-    block entry():
-        %r: To = sitofp<I64, To>(%self)
-        return(%r)
-
 ; ── signed comparisons ────────────────────────────────────────────────────────
 
 routine I64.slt(%self: I64, %other: I64) -> Bool

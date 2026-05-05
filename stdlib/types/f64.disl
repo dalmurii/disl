@@ -51,32 +51,22 @@ routine F64.mul(%self: F64, %other: F64) -> F64
 
 ; ── comparisons ───────────────────────────────────────────────────────────────
 
-routine F64.feq(%self: F64, %other: F64) -> Bool
-    block entry():
-        %r: Bool = feq<F64>(%self, %other)
-        return(%r)
-
-routine F64.fne(%self: F64, %other: F64) -> Bool
-    block entry():
-        %r: Bool = fne<F64>(%self, %other)
-        return(%r)
-
-routine F64.flt(%self: F64, %other: F64) -> Bool
+routine F64.lt(%self: F64, %other: F64) -> Bool
     block entry():
         %r: Bool = flt<F64>(%self, %other)
         return(%r)
 
-routine F64.fle(%self: F64, %other: F64) -> Bool
+routine F64.le(%self: F64, %other: F64) -> Bool
     block entry():
         %r: Bool = fle<F64>(%self, %other)
         return(%r)
 
-routine F64.fgt(%self: F64, %other: F64) -> Bool
+routine F64.gt(%self: F64, %other: F64) -> Bool
     block entry():
         %r: Bool = fgt<F64>(%self, %other)
         return(%r)
 
-routine F64.fge(%self: F64, %other: F64) -> Bool
+routine F64.ge(%self: F64, %other: F64) -> Bool
     block entry():
         %r: Bool = fge<F64>(%self, %other)
         return(%r)

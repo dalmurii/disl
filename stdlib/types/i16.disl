@@ -127,26 +127,6 @@ routine I16.bitnot(%self: I16) -> I16
         %r: I16 = bnot<I16>(%self)
         return(%r)
 
-; ── generic conversions ───────────────────────────────────────────────────────
-
-routine I16.sext<To>(%self: I16) -> To
-require To: typename
-    block entry():
-        %r: To = sext<I16, To>(%self)
-        return(%r)
-
-routine I16.zext<To>(%self: I16) -> To
-require To: typename
-    block entry():
-        %r: To = zext<I16, To>(%self)
-        return(%r)
-
-routine I16.sitofp<To>(%self: I16) -> To
-require To: typename
-    block entry():
-        %r: To = sitofp<I16, To>(%self)
-        return(%r)
-
 ; ── signed comparisons ────────────────────────────────────────────────────────
 
 routine I16.slt(%self: I16, %other: I16) -> Bool
@@ -257,4 +237,14 @@ routine I16.to_i32(%self: I16) -> I32
 routine I16.to_i64(%self: I16) -> I64
     block entry():
         %result: I64 = sext<I16, I64>(%self)
+        return(%result)
+
+routine I16.to_u32(%self: I16) -> I32
+    block entry():
+        %result: I32 = zext<I16, I32>(%self)
+        return(%result)
+
+routine I16.to_u64(%self: I16) -> I64
+    block entry():
+        %result: I64 = zext<I16, I64>(%self)
         return(%result)

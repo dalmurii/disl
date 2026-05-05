@@ -51,32 +51,22 @@ routine F32.mul(%self: F32, %other: F32) -> F32
 
 ; ── comparisons ───────────────────────────────────────────────────────────────
 
-routine F32.feq(%self: F32, %other: F32) -> Bool
-    block entry():
-        %r: Bool = feq<F32>(%self, %other)
-        return(%r)
-
-routine F32.fne(%self: F32, %other: F32) -> Bool
-    block entry():
-        %r: Bool = fne<F32>(%self, %other)
-        return(%r)
-
-routine F32.flt(%self: F32, %other: F32) -> Bool
+routine F32.lt(%self: F32, %other: F32) -> Bool
     block entry():
         %r: Bool = flt<F32>(%self, %other)
         return(%r)
 
-routine F32.fle(%self: F32, %other: F32) -> Bool
+routine F32.le(%self: F32, %other: F32) -> Bool
     block entry():
         %r: Bool = fle<F32>(%self, %other)
         return(%r)
 
-routine F32.fgt(%self: F32, %other: F32) -> Bool
+routine F32.gt(%self: F32, %other: F32) -> Bool
     block entry():
         %r: Bool = fgt<F32>(%self, %other)
         return(%r)
 
-routine F32.fge(%self: F32, %other: F32) -> Bool
+routine F32.ge(%self: F32, %other: F32) -> Bool
     block entry():
         %r: Bool = fge<F32>(%self, %other)
         return(%r)
@@ -115,20 +105,6 @@ routine F32.hash(%self: F32) -> I64
         %v: I64 = %bits.zext<I64>()
         %h: I64 = xxh64_hash_i64(%v, 0)
         return(%h)
-
-; ── generic conversions ───────────────────────────────────────────────────────
-
-routine F32.fpext<To>(%self: F32) -> To
-require To: typename
-    block entry():
-        %r: To = fpext<F32, To>(%self)
-        return(%r)
-
-routine F32.fptosi<To>(%self: F32) -> To
-require To: typename
-    block entry():
-        %r: To = fptosi<F32, To>(%self)
-        return(%r)
 
 ; ── named widening conversion ─────────────────────────────────────────────────
 
