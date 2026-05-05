@@ -39,7 +39,7 @@ routine List<T>.reserve(#self: Ptr<List<T>>, %capacity: I64) -> Void
 require T: typename
     block entry():
         %old_capacity: I64 := #self.capacity
-        %enough: Bool = sge(%old_capacity, %capacity)
+        %enough: Bool = %old_capacity.sge(%capacity)
         branch %enough ? return() : grow(%capacity)
 
     block grow(%capacity: I64):
@@ -58,7 +58,7 @@ routine List<T>.ensure_capacity(#self: Ptr<List<T>>, %wanted: I64) -> Void
 require T: typename
     block entry():
         %capacity: I64 := #self.capacity
-        %enough: Bool = sge(%capacity, %wanted)
+        %enough: Bool = %capacity.sge(%wanted)
         branch %enough ? return() : choose(%capacity, %wanted)
 
     block choose(%capacity: I64, %wanted: I64):
@@ -67,14 +67,14 @@ require T: typename
 
     block initial(%wanted: I64):
         %base: I64 = 4
-        %use_wanted: Bool = sgt(%wanted, %base)
+        %use_wanted: Bool = %wanted.sgt(%base)
         %new_capacity: I64 = %use_wanted ? %wanted : %base
         #self.reserve(%new_capacity)
         return()
 
     block double(%capacity: I64, %wanted: I64):
         %next: I64 = %capacity * 2
-        %enough: Bool = sge(%next, %wanted)
+        %enough: Bool = %next.sge(%wanted)
         branch %enough ? reserve(%next) : double(%next, %wanted)
 
     block reserve(%new_capacity: I64):
@@ -110,8 +110,8 @@ routine List<T>.get(#self: Ptr<List<T>>, %index: I64) -> T
 require T: typename
     block entry():
         %length: I64 := #self.length
-        %not_negative: Bool = sge(%index, 0)
-        %before_end: Bool = slt(%index, %length)
+        %not_negative: Bool = %index.sge(0)
+        %before_end: Bool = %index.slt(%length)
         %in_bounds: Bool = %not_negative & %before_end
         branch %in_bounds ? load(%index) : trap()
 
@@ -124,8 +124,8 @@ routine List<T>.set(#self: Ptr<List<T>>, %index: I64, %value: T) -> Void
 require T: typename
     block entry():
         %length: I64 := #self.length
-        %not_negative: Bool = sge(%index, 0)
-        %before_end: Bool = slt(%index, %length)
+        %not_negative: Bool = %index.sge(0)
+        %before_end: Bool = %index.slt(%length)
         %in_bounds: Bool = %not_negative & %before_end
         branch %in_bounds ? store(%index, %value) : trap()
 
@@ -154,7 +154,7 @@ require T: typename, Equal<T>
         jump loop(0, %len, #pa, #pb)
 
     block loop(%i: I64, %len: I64, #pa: Ptr<T>, #pb: Ptr<T>):
-        %done: Bool = sge(%i, %len)
+        %done: Bool = %i.sge(%len)
         branch %done ? return(true) : step(%i, %len, #pa, #pb)
 
     block step(%i: I64, %len: I64, #pa: Ptr<T>, #pb: Ptr<T>):
