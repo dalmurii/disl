@@ -37,22 +37,38 @@ routine I64.swap_bytes(%self: I64) -> I64
 
 routine I64.abs(%self: I64) -> I64
     block entry():
-        %is_neg: Bool = slt<I64>(%self, 0)
-        %neg: I64 = 0 - %self
+        %is_neg: Bool = %self.slt(0)
+        %zero: I64 = 0
+        %neg: I64 = %zero.sub(%self)
         %result: I64 = %is_neg ? %neg : %self
         return(%result)
 
 routine I64.min(%self: I64, %other: I64) -> I64
     block entry():
-        %less: Bool = slt<I64>(%self, %other)
+        %less: Bool = %self.slt(%other)
         %result: I64 = %less ? %self : %other
         return(%result)
 
 routine I64.max(%self: I64, %other: I64) -> I64
     block entry():
-        %more: Bool = sgt<I64>(%self, %other)
+        %more: Bool = %self.sgt(%other)
         %result: I64 = %more ? %self : %other
         return(%result)
+
+routine I64.add(%self: I64, %other: I64) -> I64
+    block entry():
+        %r: I64 = add<I64>(%self, %other)
+        return(%r)
+
+routine I64.sub(%self: I64, %other: I64) -> I64
+    block entry():
+        %r: I64 = sub<I64>(%self, %other)
+        return(%r)
+
+routine I64.mul(%self: I64, %other: I64) -> I64
+    block entry():
+        %r: I64 = mul<I64>(%self, %other)
+        return(%r)
 
 ; ── bit shifts ────────────────────────────────────────────────────────────────
 
@@ -74,17 +90,41 @@ routine I64.ashr(%self: I64, %n: I64) -> I64
 routine I64.rotl(%self: I64, %n: I64) -> I64
     block entry():
         %left: I64 = shl<I64>(%self, %n)
-        %comp: I64 = 64 - %n
+        %width: I64 = 64
+        %comp: I64 = %width.sub(%n)
         %right: I64 = lshr<I64>(%self, %comp)
-        %r: I64 = %left | %right
+        %r: I64 = %left.bitor(%right)
         return(%r)
 
 routine I64.rotr(%self: I64, %n: I64) -> I64
     block entry():
         %right: I64 = lshr<I64>(%self, %n)
-        %comp: I64 = 64 - %n
+        %width: I64 = 64
+        %comp: I64 = %width.sub(%n)
         %left: I64 = shl<I64>(%self, %comp)
-        %r: I64 = %left | %right
+        %r: I64 = %left.bitor(%right)
+        return(%r)
+
+; ── bitwise operations ────────────────────────────────────────────────────────
+
+routine I64.bitand(%self: I64, %other: I64) -> I64
+    block entry():
+        %r: I64 = band<I64>(%self, %other)
+        return(%r)
+
+routine I64.bitor(%self: I64, %other: I64) -> I64
+    block entry():
+        %r: I64 = bor<I64>(%self, %other)
+        return(%r)
+
+routine I64.bitxor(%self: I64, %other: I64) -> I64
+    block entry():
+        %r: I64 = bxor<I64>(%self, %other)
+        return(%r)
+
+routine I64.bitnot(%self: I64) -> I64
+    block entry():
+        %r: I64 = bnot<I64>(%self)
         return(%r)
 
 ; ── generic conversions ───────────────────────────────────────────────────────
@@ -163,18 +203,23 @@ routine I64.urem(%self: I64, %other: I64) -> I64
 
 ; ── equality, ordering, hashing ───────────────────────────────────────────────
 
-routine I64.equals(%self: I64, %other: I64) -> Bool
+routine I64.eq(%self: I64, %other: I64) -> Bool
     block entry():
-        %r: Bool = %self == %other
+        %r: Bool = ieq<I64>(%self, %other)
+        return(%r)
+
+routine I64.ne(%self: I64, %other: I64) -> Bool
+    block entry():
+        %r: Bool = ine<I64>(%self, %other)
         return(%r)
 
 routine I64.compare(%self: I64, %other: I64) -> I32
     block entry():
-        %lt: Bool = slt<I64>(%self, %other)
+        %lt: Bool = %self.slt(%other)
         branch %lt ? return(-1) : maybe_gt(%self, %other)
 
     block maybe_gt(%self: I64, %other: I64):
-        %gt: Bool = sgt<I64>(%self, %other)
+        %gt: Bool = %self.sgt(%other)
         branch %gt ? return(1) : return(0)
 
 routine I64.hash(%self: I64) -> I64

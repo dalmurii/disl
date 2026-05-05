@@ -118,7 +118,8 @@ routine make_heap_allocator() -> Allocator
 routine alloc<T>(#alloc: Ptr<Allocator>, %count: I64) -> Ptr<T>
 require T: typename
     block entry:
-        %size:   I64    = sizeof<T> * %count
+        %elem_size: I64 = sizeof<T>
+        %size:   I64    = %elem_size.mul(%count)
         %size_c: CSize  = i64_to_csize(%size)
         #raw:    Ptr    = #alloc.alloc_fn(#alloc.state, %size_c)
         #typed:  Ptr<T> = bitcast<Ptr, Ptr<T>>(#raw)
@@ -127,7 +128,8 @@ require T: typename
 routine realloc<T>(#alloc: Ptr<Allocator>, #Ptr: Ptr<T>, %new_count: I64) -> Ptr<T>
 require T: typename
     block entry:
-        %size:    I64    = sizeof<T> * %new_count
+        %elem_size: I64  = sizeof<T>
+        %size:    I64    = %elem_size.mul(%new_count)
         %size_c:  CSize  = i64_to_csize(%size)
         #raw_old: Ptr    = bitcast<Ptr<T>, Ptr>(#Ptr)
         #raw:     Ptr    = #alloc.realloc_fn(#alloc.state, #raw_old, %size_c)
@@ -144,7 +146,8 @@ require T: typename
 routine zero<T>(#Ptr: Ptr<T>, %count: I64) -> Void
 require T: typename
     block entry:
-        %size:   I64   = sizeof<T> * %count
+        %elem_size: I64 = sizeof<T>
+        %size:   I64   = %elem_size.mul(%count)
         %size_c: CSize = i64_to_csize(%size)
         #raw:    Ptr   = bitcast<Ptr<T>, Ptr>(#Ptr)
         c_memset(#raw, 0, %size_c)
@@ -153,7 +156,8 @@ require T: typename
 routine copy<T>(#dst: Ptr<T>, #src: Ptr<T>, %count: I64) -> Void
 require T: typename
     block entry:
-        %size:    I64   = sizeof<T> * %count
+        %elem_size: I64 = sizeof<T>
+        %size:    I64   = %elem_size.mul(%count)
         %size_c:  CSize = i64_to_csize(%size)
         #raw_dst: Ptr   = bitcast<Ptr<T>, Ptr>(#dst)
         #raw_src: Ptr   = bitcast<Ptr<T>, Ptr>(#src)

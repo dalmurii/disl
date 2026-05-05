@@ -29,7 +29,7 @@ require K: typename, V: typename
     block entry():
         %order: I64  := #self.order
         %total: I64  := #self.total
-        %done:  Bool = sge(%order, %total)
+        %done:  Bool = %order.sge(%total)
         branch %done ? return_none() : return_some(%order)
 
     block return_none():
@@ -41,6 +41,7 @@ require K: typename, V: typename
         %key:   K                   = #map.key_order(%order)
         %value: V                   = #map.get_order(%order)
         %pair:  KVPair<K, V>        = KVPair<K, V> { key: %key, value: %value }
-        #self.order = %order + 1
+        %order_next: I64 = %order.add(1)
+        #self.order = %order_next
         %some: Option<KVPair<K, V>> = Option<KVPair<K, V>>.some(%pair)
         return(%some)

@@ -24,9 +24,9 @@ require T: typename, N: I64
 routine Array<T, N>.get(#self: Ptr<Array<T, N>>, %index: I64) -> T
 require T: typename, N: I64
     block entry():
-        %not_negative: Bool = sge<I64>(%index, 0)
-        %before_end:   Bool = slt<I64>(%index, N)
-        %in_bounds:    Bool = %not_negative & %before_end
+        %not_negative: Bool = %index.sge(0)
+        %before_end:   Bool = %index.slt(N)
+        %in_bounds:    Bool = %not_negative.bitand(%before_end)
         branch %in_bounds ? load(%index) : trap()
 
     block load(%index: I64):
@@ -37,9 +37,9 @@ require T: typename, N: I64
 routine Array<T, N>.set(#self: Ptr<Array<T, N>>, %index: I64, %value: T) -> Void
 require T: typename, N: I64
     block entry():
-        %not_negative: Bool = sge<I64>(%index, 0)
-        %before_end:   Bool = slt<I64>(%index, N)
-        %in_bounds:    Bool = %not_negative & %before_end
+        %not_negative: Bool = %index.sge(0)
+        %before_end:   Bool = %index.slt(N)
+        %in_bounds:    Bool = %not_negative.bitand(%before_end)
         branch %in_bounds ? store(%index, %value) : trap()
 
     block store(%index: I64, %value: T):
@@ -49,7 +49,7 @@ require T: typename, N: I64
 
 ; ── equality ──────────────────────────────────────────────────────────────────
 
-routine Array<T, N>.equals(#a: Ptr<Array<T, N>>, #b: Ptr<Array<T, N>>) -> Bool
+routine Array<T, N>.eq(#a: Ptr<Array<T, N>>, #b: Ptr<Array<T, N>>) -> Bool
 require T: typename, N: I64, Equal<T>
     block entry():
         #pa: Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#a)
@@ -57,14 +57,14 @@ require T: typename, N: I64, Equal<T>
         jump loop(0, #pa, #pb)
 
     block loop(%i: I64, #pa: Ptr<T>, #pb: Ptr<T>):
-        %done: Bool = sge(%i, N)
+        %done: Bool = %i.sge(N)
         branch %done ? return(true) : step(%i, #pa, #pb)
 
     block step(%i: I64, #pa: Ptr<T>, #pb: Ptr<T>):
         %x: T := #pa[%i]
         %y: T := #pb[%i]
-        %eq: Bool = %x.equals(%y)
-        %i_next: I64 = %i + 1
+        %eq: Bool = %x.eq(%y)
+        %i_next: I64 = %i.add(1)
         branch %eq ? loop(%i_next, #pa, #pb) : return(false)
 
 ; ── pointer to first element ──────────────────────────────────────────────────
@@ -85,11 +85,11 @@ require T: typename, N: I64
         jump loop(%end)
 
     block loop(%i: I64):
-        %done: Bool = sle(%i, %start)
+        %done: Bool = %i.sle(%start)
         branch %done ? return() : move(%i)
 
     block move(%i: I64):
-        %from: I64 = %i - 1
+        %from: I64 = %i.sub(1)
         %value: T := #self[%from]
         #self[%i] = %value
         jump loop(%from)
@@ -100,12 +100,12 @@ require T: typename, N: I64
         jump loop(%start)
 
     block loop(%i: I64):
-        %last: I64 = %end - 1
-        %done: Bool = sge(%i, %last)
+        %last: I64 = %end.sub(1)
+        %done: Bool = %i.sge(%last)
         branch %done ? return() : move(%i)
 
     block move(%i: I64):
-        %from: I64 = %i + 1
+        %from: I64 = %i.add(1)
         %value: T := #self[%from]
         #self[%i] = %value
         jump loop(%from)
@@ -116,12 +116,13 @@ require T: typename, N: I64
         jump loop(0)
 
     block loop(%i: I64):
-        %done: Bool = sge(%i, %count)
+        %done: Bool = %i.sge(%count)
         branch %done ? return() : copy_one(%i)
 
     block copy_one(%i: I64):
-        %src_index: I64 = %src_start + %i
-        %dst_index: I64 = %dst_start + %i
+        %src_index: I64 = %src_start.add(%i)
+        %dst_index: I64 = %dst_start.add(%i)
         %value: T := #src[%src_index]
         #self[%dst_index] = %value
-        jump loop(%i + 1)
+        %i_next: I64 = %i.add(1)
+        jump loop(%i_next)

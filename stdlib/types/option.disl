@@ -45,7 +45,8 @@ routine Option<T>.is_none(#self: Ptr<Option<T>>) -> Bool
 require T: typename
     block entry():
         %tag: Bool := #self.tag
-        %result: Bool = %tag == false
+        %false_val: Bool = false
+        %result: Bool = %tag.eq(%false_val)
         return(%result)
 
 ; unwrap takes a pointer so the value GEP is cheap — no struct copy needed.
@@ -62,12 +63,12 @@ require T: typename
 
 ; ── Option: equality, hashing ─────────────────────────────────────────────────
 
-routine Option<T>.equals(%a: Option<T>, %b: Option<T>) -> Bool
+routine Option<T>.eq(%a: Option<T>, %b: Option<T>) -> Bool
 require T: typename, Equal<T>
     block entry():
         %ta: Bool = %a.tag
         %tb: Bool = %b.tag
-        %tags_eq: Bool = %ta == %tb
+        %tags_eq: Bool = %ta.eq(%tb)
         branch %tags_eq ? maybe_compare(%a, %b, %ta) : return(false)
 
     block maybe_compare(%a: Option<T>, %b: Option<T>, %tag: Bool):
@@ -76,7 +77,7 @@ require T: typename, Equal<T>
     block compare_values(%a: Option<T>, %b: Option<T>):
         %va: T = %a.value
         %vb: T = %b.value
-        %eq: Bool = %va.equals(%vb)
+        %eq: Bool = %va.eq(%vb)
         return(%eq)
 
 routine Option<T>.hash(%self: Option<T>) -> I64
@@ -95,7 +96,7 @@ require T: typename, Hash<T>
     ; live in different buckets.
     block hash_some(%self: Option<T>):
         %v: T = %self.value
-        %hv: I64 = T.hash(%v)
+        %hv: I64 = %v.hash()
         %h: I64 = xxh64_combine2(1, %hv, 0)
         return(%h)
 
@@ -109,18 +110,18 @@ require K: typename, V: typename
     key:   K
     value: V
 
-routine KVPair<K, V>.equals(%a: KVPair<K, V>, %b: KVPair<K, V>) -> Bool
+routine KVPair<K, V>.eq(%a: KVPair<K, V>, %b: KVPair<K, V>) -> Bool
 require K: typename, V: typename, Equal<K>, Equal<V>
     block entry():
         %ka: K = %a.key
         %kb: K = %b.key
-        %k_eq: Bool = K.equals(%ka, %kb)
+        %k_eq: Bool = K.eq(%ka, %kb)
         branch %k_eq ? compare_values(%a, %b) : return(false)
 
     block compare_values(%a: KVPair<K, V>, %b: KVPair<K, V>):
         %va: V = %a.value
         %vb: V = %b.value
-        %v_eq: Bool = V.equals(%va, %vb)
+        %v_eq: Bool = V.eq(%va, %vb)
         return(%v_eq)
 
 routine KVPair<K, V>.hash(%self: KVPair<K, V>) -> I64

@@ -30,14 +30,16 @@ require K: typename, V: typename
         jump scan(%slot, %capacity, #map)
 
     block scan(%slot: I64, %capacity: I64, #map: Ptr<HashMap<K, V>>):
-        %exhausted: Bool = sge(%slot, %capacity)
+        %exhausted: Bool = %slot.sge(%capacity)
         branch %exhausted ? return_none() : check(%slot, %capacity, #map)
 
     block check(%slot: I64, %capacity: I64, #map: Ptr<HashMap<K, V>>):
         #states:   Ptr<I8> := #map.states
         %state:    I8      := #states[%slot]
-        %occupied: Bool    = %state == 1
-        branch %occupied ? yield(%slot, #map) : scan(%slot + 1, %capacity, #map)
+        %s_one: I8 = 1
+        %occupied: Bool    = %state.eq(%s_one)
+        %slot_next: I64 = %slot.add(1)
+        branch %occupied ? yield(%slot, #map) : scan(%slot_next, %capacity, #map)
 
     block return_none():
         %none: Option<KVPair<K, V>> = Option<KVPair<K, V>>.none()
@@ -49,6 +51,7 @@ require K: typename, V: typename
         %key:    K      := #keys[%slot]
         %value:  V      := #values[%slot]
         %pair:   KVPair<K, V> = KVPair<K, V> { key: %key, value: %value }
-        #self.slot = %slot + 1
+        %slot_next: I64 = %slot.add(1)
+        #self.slot = %slot_next
         %some: Option<KVPair<K, V>> = Option<KVPair<K, V>>.some(%pair)
         return(%some)

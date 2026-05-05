@@ -24,7 +24,7 @@ require T: typename
         #deque: Ptr<Deque<T>> := #self.deque
         %len:   I64           = #deque.length()
         %index: I64           := #self.index
-        %done:  Bool          = sge(%index, %len)
+        %done:  Bool          = %index.sge(%len)
         branch %done ? return_none() : return_some(%index, #deque)
 
     block return_none():
@@ -33,6 +33,7 @@ require T: typename
 
     block return_some(%index: I64, #deque: Ptr<Deque<T>>):
         %value: T = #deque.get(%index)
-        #self.index = %index + 1
+        %index_next: I64 = %index.add(1)
+        #self.index = %index_next
         %some: Option<T> = Option<T>.some(%value)
         return(%some)

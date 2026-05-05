@@ -32,22 +32,38 @@ routine I8.trailing_zeros(%self: I8) -> I8
 
 routine I8.abs(%self: I8) -> I8
     block entry():
-        %is_neg: Bool = slt<I8>(%self, 0)
-        %neg: I8 = 0 - %self
+        %is_neg: Bool = %self.slt(0)
+        %zero: I8 = 0
+        %neg: I8 = %zero.sub(%self)
         %result: I8 = %is_neg ? %neg : %self
         return(%result)
 
 routine I8.min(%self: I8, %other: I8) -> I8
     block entry():
-        %less: Bool = slt<I8>(%self, %other)
+        %less: Bool = %self.slt(%other)
         %result: I8 = %less ? %self : %other
         return(%result)
 
 routine I8.max(%self: I8, %other: I8) -> I8
     block entry():
-        %more: Bool = sgt<I8>(%self, %other)
+        %more: Bool = %self.sgt(%other)
         %result: I8 = %more ? %self : %other
         return(%result)
+
+routine I8.add(%self: I8, %other: I8) -> I8
+    block entry():
+        %r: I8 = add<I8>(%self, %other)
+        return(%r)
+
+routine I8.sub(%self: I8, %other: I8) -> I8
+    block entry():
+        %r: I8 = sub<I8>(%self, %other)
+        return(%r)
+
+routine I8.mul(%self: I8, %other: I8) -> I8
+    block entry():
+        %r: I8 = mul<I8>(%self, %other)
+        return(%r)
 
 ; ── bit shifts ────────────────────────────────────────────────────────────────
 
@@ -69,17 +85,41 @@ routine I8.ashr(%self: I8, %n: I8) -> I8
 routine I8.rotl(%self: I8, %n: I8) -> I8
     block entry():
         %left: I8 = shl<I8>(%self, %n)
-        %comp: I8 = 8 - %n
+        %width: I8 = 8
+        %comp: I8 = %width.sub(%n)
         %right: I8 = lshr<I8>(%self, %comp)
-        %r: I8 = %left | %right
+        %r: I8 = %left.bitor(%right)
         return(%r)
 
 routine I8.rotr(%self: I8, %n: I8) -> I8
     block entry():
         %right: I8 = lshr<I8>(%self, %n)
-        %comp: I8 = 8 - %n
+        %width: I8 = 8
+        %comp: I8 = %width.sub(%n)
         %left: I8 = shl<I8>(%self, %comp)
-        %r: I8 = %left | %right
+        %r: I8 = %left.bitor(%right)
+        return(%r)
+
+; ── bitwise operations ────────────────────────────────────────────────────────
+
+routine I8.bitand(%self: I8, %other: I8) -> I8
+    block entry():
+        %r: I8 = band<I8>(%self, %other)
+        return(%r)
+
+routine I8.bitor(%self: I8, %other: I8) -> I8
+    block entry():
+        %r: I8 = bor<I8>(%self, %other)
+        return(%r)
+
+routine I8.bitxor(%self: I8, %other: I8) -> I8
+    block entry():
+        %r: I8 = bxor<I8>(%self, %other)
+        return(%r)
+
+routine I8.bitnot(%self: I8) -> I8
+    block entry():
+        %r: I8 = bnot<I8>(%self)
         return(%r)
 
 ; ── generic conversions ───────────────────────────────────────────────────────
@@ -170,18 +210,23 @@ routine I8.urem(%self: I8, %other: I8) -> I8
 
 ; ── equality, ordering, hashing ───────────────────────────────────────────────
 
-routine I8.equals(%self: I8, %other: I8) -> Bool
+routine I8.eq(%self: I8, %other: I8) -> Bool
     block entry():
-        %r: Bool = %self == %other
+        %r: Bool = ieq<I8>(%self, %other)
+        return(%r)
+
+routine I8.ne(%self: I8, %other: I8) -> Bool
+    block entry():
+        %r: Bool = ine<I8>(%self, %other)
         return(%r)
 
 routine I8.compare(%self: I8, %other: I8) -> I32
     block entry():
-        %lt: Bool = slt<I8>(%self, %other)
+        %lt: Bool = %self.slt(%other)
         branch %lt ? return(-1) : maybe_gt(%self, %other)
 
     block maybe_gt(%self: I8, %other: I8):
-        %gt: Bool = sgt<I8>(%self, %other)
+        %gt: Bool = %self.sgt(%other)
         branch %gt ? return(1) : return(0)
 
 routine I8.hash(%self: I8) -> I64

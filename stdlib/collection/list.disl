@@ -32,7 +32,8 @@ routine List<T>.is_empty(#self: Ptr<List<T>>) -> Bool
 require T: typename
     block entry():
         %length: I64 := #self.length
-        %empty: Bool = %length == 0
+        %zero: I64 = 0
+        %empty: Bool = %length.eq(%zero)
         return(%empty)
 
 routine List<T>.reserve(#self: Ptr<List<T>>, %capacity: I64) -> Void
@@ -46,7 +47,7 @@ require T: typename
         #alloc: Ptr<Allocator> := #self.alloc
         #old_data: Ptr<T> := #self.data
         #new_data: Ptr<T> = realloc<T>(#alloc, #old_data, %capacity)
-        %failed: Bool = #new_data == null
+        %failed: Bool = #new_data.is_null()
         branch %failed ? trap() : install(#new_data, %capacity)
 
     block install(#new_data: Ptr<T>, %capacity: I64):
@@ -62,7 +63,8 @@ require T: typename
         branch %enough ? return() : choose(%capacity, %wanted)
 
     block choose(%capacity: I64, %wanted: I64):
-        %empty: Bool = %capacity == 0
+        %zero: I64 = 0
+        %empty: Bool = %capacity.eq(%zero)
         branch %empty ? initial(%wanted) : double(%capacity, %wanted)
 
     block initial(%wanted: I64):
@@ -73,7 +75,7 @@ require T: typename
         return()
 
     block double(%capacity: I64, %wanted: I64):
-        %next: I64 = %capacity * 2
+        %next: I64 = %capacity.mul(2)
         %enough: Bool = %next.sge(%wanted)
         branch %enough ? reserve(%next) : double(%next, %wanted)
 
@@ -85,7 +87,7 @@ routine List<T>.push(#self: Ptr<List<T>>, %value: T) -> Void
 require T: typename
     block entry():
         %length: I64 := #self.length
-        %wanted: I64 = %length + 1
+        %wanted: I64 = %length.add(1)
         #self.ensure_capacity(%wanted)
         #data: Ptr<T> := #self.data
         #data[%length] = %value
@@ -96,11 +98,12 @@ routine List<T>.pop(#self: Ptr<List<T>>) -> T
 require T: typename
     block entry():
         %length: I64 := #self.length
-        %empty: Bool = %length == 0
+        %zero: I64 = 0
+        %empty: Bool = %length.eq(%zero)
         branch %empty ? trap() : pop(%length)
 
     block pop(%length: I64):
-        %index: I64 = %length - 1
+        %index: I64 = %length.sub(1)
         #data: Ptr<T> := #self.data
         %value: T := #data[%index]
         #self.length = %index
@@ -112,7 +115,7 @@ require T: typename
         %length: I64 := #self.length
         %not_negative: Bool = %index.sge(0)
         %before_end: Bool = %index.slt(%length)
-        %in_bounds: Bool = %not_negative & %before_end
+        %in_bounds: Bool = %not_negative.bitand(%before_end)
         branch %in_bounds ? load(%index) : trap()
 
     block load(%index: I64):
@@ -126,7 +129,7 @@ require T: typename
         %length: I64 := #self.length
         %not_negative: Bool = %index.sge(0)
         %before_end: Bool = %index.slt(%length)
-        %in_bounds: Bool = %not_negative & %before_end
+        %in_bounds: Bool = %not_negative.bitand(%before_end)
         branch %in_bounds ? store(%index, %value) : trap()
 
     block store(%index: I64, %value: T):
@@ -140,12 +143,12 @@ require T: typename
         #self.length = 0
         return()
 
-routine List<T>.equals(%a: List<T>, %b: List<T>) -> Bool
+routine List<T>.eq(%a: List<T>, %b: List<T>) -> Bool
 require T: typename, Equal<T>
     block entry():
         %la: I64 = %a.length
         %lb: I64 = %b.length
-        %same_len: Bool = %la == %lb
+        %same_len: Bool = %la.eq(%lb)
         branch %same_len ? scan(%a, %b, %la) : return(false)
 
     block scan(%a: List<T>, %b: List<T>, %len: I64):
@@ -160,15 +163,15 @@ require T: typename, Equal<T>
     block step(%i: I64, %len: I64, #pa: Ptr<T>, #pb: Ptr<T>):
         %x: T := #pa[%i]
         %y: T := #pb[%i]
-        %eq: Bool = %x.equals(%y)
-        %i_next: I64 = %i + 1
+        %eq: Bool = %x.eq(%y)
+        %i_next: I64 = %i.add(1)
         branch %eq ? loop(%i_next, %len, #pa, #pb) : return(false)
 
 routine List<T>.free(#self: Ptr<List<T>>) -> Void
 require T: typename
     block entry():
         #data: Ptr<T> := #self.data
-        %empty: Bool = #data == null
+        %empty: Bool = #data.is_null()
         branch %empty ? reset() : release(#data)
 
     block release(#data: Ptr<T>):

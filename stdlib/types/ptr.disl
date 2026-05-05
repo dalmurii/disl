@@ -1,4 +1,4 @@
-﻿; Disl stdlib: Ptr<T> — typed pointer
+; Disl stdlib: Ptr<T> — typed pointer
 ;
 ; Maps to LLVM IR ptr (opaque pointer).  The type parameter T records the
 ; pointee type for load/store — it is erased at the IR level.
@@ -7,22 +7,52 @@
 struct Ptr<T>
 require T: typename
 
+; ── pointer identity ──────────────────────────────────────────────────────────
+
+routine Ptr<T>.ptr_eq(#self: Ptr<T>, #other: Ptr<T>) -> Bool
+require T: typename
+    block entry():
+        %a: I64 = ptrtoint<Ptr<T>, I64>(#self)
+        %b: I64 = ptrtoint<Ptr<T>, I64>(#other)
+        %r: Bool = ieq<I64>(%a, %b)
+        return(%r)
+
+routine Ptr<T>.ptr_ne(#self: Ptr<T>, #other: Ptr<T>) -> Bool
+require T: typename
+    block entry():
+        %a: I64 = ptrtoint<Ptr<T>, I64>(#self)
+        %b: I64 = ptrtoint<Ptr<T>, I64>(#other)
+        %r: Bool = ine<I64>(%a, %b)
+        return(%r)
+
 ; ── predicates ────────────────────────────────────────────────────────────────
 
 routine Ptr<T>.is_null(#self: Ptr<T>) -> Bool
 require T: typename
     block entry():
-        %result: Bool = #self == null
-        return(%result)
+        %a: I64 = ptrtoint<Ptr<T>, I64>(#self)
+        %zero: I64 = 0
+        %r: Bool = ieq<I64>(%a, %zero)
+        return(%r)
+
+routine Ptr<T>.is_not_null(#self: Ptr<T>) -> Bool
+require T: typename
+    block entry():
+        %a: I64 = ptrtoint<Ptr<T>, I64>(#self)
+        %zero: I64 = 0
+        %r: Bool = ine<I64>(%a, %zero)
+        return(%r)
 
 ; ── pointer arithmetic ────────────────────────────────────────────────────────
 
-; Returns a pointer offset by %index elements of type T.
-; Equivalent to a GEP in LLVM IR — no bounds checking.
-routine Ptr<T>.offset(#self: Ptr<T>, %index: I64) -> Ptr<T>
+; Returns a pointer offset by %bytes bytes.
+; No bounds checking — caller is responsible for staying in-bounds.
+routine Ptr<T>.offset(#self: Ptr<T>, %bytes: I64) -> Ptr<T>
 require T: typename
     block entry():
-        #result: Ptr<T> = #self[%index]
+        %addr: I64 = ptrtoint<Ptr<T>, I64>(#self)
+        %new_addr: I64 = %addr.add(%bytes)
+        #result: Ptr<T> = inttoptr<I64, Ptr<T>>(%new_addr)
         return(#result)
 
 ; ── casting ───────────────────────────────────────────────────────────────────

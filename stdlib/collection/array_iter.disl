@@ -17,7 +17,9 @@ routine ArrayIter<T, N>.new(#arr: Ptr<Array<T, N>>) -> ArrayIter<T, N>
 require T: typename, N: I64
     block entry():
         #data:  Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#arr)
-        %n:     I64    = sdiv(sizeof<Array<T, N>>(), sizeof<T>())
+        %arr_size: I64 = sizeof<Array<T, N>>()
+        %elem_size: I64 = sizeof<T>()
+        %n:     I64    = %arr_size.sdiv(%elem_size)
         %iter:  ArrayIter<T, N> = ArrayIter<T, N> { data: #data, index: 0, length: %n }
         return(%iter)
 
@@ -26,7 +28,7 @@ require T: typename, N: I64
     block entry():
         %index:  I64  := #self.index
         %length: I64  := #self.length
-        %done:   Bool = sge(%index, %length)
+        %done:   Bool = %index.sge(%length)
         branch %done ? return_none() : return_some(%index)
 
     block return_none():
@@ -36,6 +38,7 @@ require T: typename, N: I64
     block return_some(%index: I64):
         #data:  Ptr<T> := #self.data
         %value: T      := #data[%index]
-        #self.index = %index + 1
+        %index_next: I64 = %index.add(1)
+        #self.index = %index_next
         %some: Option<T> = Option<T>.some(%value)
         return(%some)

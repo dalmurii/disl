@@ -21,7 +21,8 @@ routine StringCharsIter.next(#self: Ptr<StringCharsIter>) -> Option<I32>
     block entry():
         %index: I64  := #self.index
         %str: String := #self.str
-        %done: Bool = sge<I64>(%index, %str.length)
+        %str_len: I64 = %str.length
+        %done: Bool = %index.sge(%str_len)
         branch %done ? return_none() : decode(%index, %str)
 
     block return_none():
@@ -34,8 +35,9 @@ routine StringCharsIter.next(#self: Ptr<StringCharsIter>) -> Option<I32>
         %cp: I32   = %decoded.codepoint
         %next: I64 = %decoded.next_pos
         ; on decode error next_pos == index; advance by 1 to avoid infinite loop
-        %is_err: Bool  = %cp == -1
-        %safe_next: I64 = %index + 1
+        %neg_one: I32 = -1
+        %is_err: Bool  = %cp.eq(%neg_one)
+        %safe_next: I64 = %index.add(1)
         %advance: I64  = %is_err ? %safe_next : %next
         #self.index = %advance
         %some: Option<I32> = Option<I32>.some(%cp)

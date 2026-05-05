@@ -6,7 +6,7 @@
 
 concept Equal<T>
 require T: typename
-    routine T.equals(%a: T, %b: T) -> Bool
+    routine T.eq(%a: T, %b: T) -> Bool
 
 concept Hash<T>
 require T: typename

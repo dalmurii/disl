@@ -43,7 +43,9 @@ struct DijkstraEntry
 ; Lower distance = higher priority.
 routine DijkstraEntry.less(%a: DijkstraEntry, %b: DijkstraEntry) -> Bool
     block entry():
-        %result: Bool = slt(%a.dist, %b.dist)
+        %a_dist: I64 = %a.dist
+        %b_dist: I64 = %b.dist
+        %result: Bool = %a_dist.slt(%b_dist)
         return(%result)
 
 ; ── Graph ─────────────────────────────────────────────────────────────────────
@@ -51,23 +53,24 @@ routine DijkstraEntry.less(%a: DijkstraEntry, %b: DijkstraEntry) -> Bool
 routine Graph.new(%num_nodes: I64, #alloc: Ptr<Allocator>) -> Graph
     block entry():
         #adj: Ptr<Ptr<List<Edge>>> = alloc<Ptr<List<Edge>>>(#alloc, %num_nodes)
-        %adj_null: Bool = #adj == null
+        %adj_null: Bool = #adj.is_null()
         branch %adj_null ? trap() : init_loop(0, #adj)
 
     block init_loop(%i: I64, #adj: Ptr<Ptr<List<Edge>>>):
-        %done: Bool = sge(%i, %num_nodes)
+        %done: Bool = %i.sge(%num_nodes)
         branch %done ? build(#adj) : make_list(%i, #adj)
 
     block make_list(%i: I64, #adj: Ptr<Ptr<List<Edge>>>):
         #list: Ptr<List<Edge>> = alloc<List<Edge>>(#alloc, 1)
-        %list_null: Bool = #list == null
+        %list_null: Bool = #list.is_null()
         branch %list_null ? trap() : init_list(%i, #adj, #list)
 
     block init_list(%i: I64, #adj: Ptr<Ptr<List<Edge>>>, #list: Ptr<List<Edge>>):
         %empty: List<Edge> = List<Edge>.new(#alloc)
         #list = %empty
         #adj[%i] = #list
-        jump init_loop(%i + 1, #adj)
+        %i_next: I64 = %i.add(1)
+        jump init_loop(%i_next, #adj)
 
     block build(#adj: Ptr<Ptr<List<Edge>>>):
         %g: Graph = Graph { adj: #adj, num_nodes: %num_nodes }
@@ -88,14 +91,15 @@ routine Graph.free(#self: Ptr<Graph>, #alloc: Ptr<Allocator>) -> Void
         jump free_loop(0, %n, #adj)
 
     block free_loop(%i: I64, %n: I64, #adj: Ptr<Ptr<List<Edge>>>):
-        %done: Bool = sge(%i, %n)
+        %done: Bool = %i.sge(%n)
         branch %done ? free_arr(#adj) : free_one(%i, %n, #adj)
 
     block free_one(%i: I64, %n: I64, #adj: Ptr<Ptr<List<Edge>>>):
         #list: Ptr<List<Edge>> := #adj[%i]
         #list.free()
         free<List<Edge>>(#alloc, #list)
-        jump free_loop(%i + 1, %n, #adj)
+        %i_next: I64 = %i.add(1)
+        jump free_loop(%i_next, %n, #adj)
 
     block free_arr(#adj: Ptr<Ptr<List<Edge>>>):
         free<Ptr<List<Edge>>>(#alloc, #adj)
@@ -121,12 +125,13 @@ routine dijkstra(
 
     ; Phase 1 — initialise every distance slot to INF.
     block fill_inf(%i: I64, %n: I64, #pq: Ptr<PriorityQueue<DijkstraEntry>>):
-        %done: Bool = sge(%i, %n)
+        %done: Bool = %i.sge(%n)
         branch %done ? seed(#pq) : write_inf(%i, %n, #pq)
 
     block write_inf(%i: I64, %n: I64, #pq: Ptr<PriorityQueue<DijkstraEntry>>):
         #dist[%i] = INF
-        jump fill_inf(%i + 1, %n, #pq)
+        %i_next: I64 = %i.add(1)
+        jump fill_inf(%i_next, %n, #pq)
 
     ; Phase 2 — set the source distance to 0 and seed the queue.
     block seed(#pq: Ptr<PriorityQueue<DijkstraEntry>>):
@@ -145,7 +150,7 @@ routine dijkstra(
         %d:     I64           = %entry.dist
         %u:     I64           = %entry.node
         %best:  I64           := #dist[%u]
-        %stale: Bool          = sgt(%d, %best)
+        %stale: Bool          = %d.sgt(%best)
         ; re-push instead of decrease-key produces stale entries — drop them.
         branch %stale ? main_loop(#pq) : scan(%u, %d, #pq)
 
@@ -156,18 +161,19 @@ routine dijkstra(
         jump edge_loop(0, %len, %d, #list, #pq)
 
     block edge_loop(%i: I64, %len: I64, %d: I64, #list: Ptr<List<Edge>>, #pq: Ptr<PriorityQueue<DijkstraEntry>>):
-        %done: Bool = sge(%i, %len)
+        %done: Bool = %i.sge(%len)
         branch %done ? main_loop(#pq) : relax(%i, %len, %d, #list, #pq)
 
     block relax(%i: I64, %len: I64, %d: I64, #list: Ptr<List<Edge>>, #pq: Ptr<PriorityQueue<DijkstraEntry>>):
         %edge:     Edge = #list.get(%i)
         %v:        I64  = %edge.to
         %w:        I64  = %edge.weight
-        %new_dist: I64  = %d + %w
+        %new_dist: I64  = %d.add(%w)
         %best:     I64  := #dist[%v]
-        %better:   Bool = slt(%new_dist, %best)
+        %better:   Bool = %new_dist.slt(%best)
+        %i_next: I64 = %i.add(1)
         branch %better ? improve(%i, %len, %d, #list, #pq, %v, %new_dist) \
-                       : edge_loop(%i + 1, %len, %d, #list, #pq)
+                       : edge_loop(%i_next, %len, %d, #list, #pq)
 
     block improve(
         %i: I64, %len: I64, %d: I64,
@@ -178,7 +184,8 @@ routine dijkstra(
         #dist[%v] = %new_dist
         %entry: DijkstraEntry = DijkstraEntry { dist: %new_dist, node: %v }
         #pq.push(%entry)
-        jump edge_loop(%i + 1, %len, %d, #list, #pq)
+        %i_next: I64 = %i.add(1)
+        jump edge_loop(%i_next, %len, %d, #list, #pq)
 
     block done(#pq: Ptr<PriorityQueue<DijkstraEntry>>):
         #pq.free()
@@ -230,13 +237,14 @@ routine main() -> I32
         jump print_loop(0, #dist, #graph, #alloc)
 
     block print_loop(%i: I64, #dist: Ptr<I64>, #graph: Ptr<Graph>, #alloc: Ptr<Allocator>):
-        %done: Bool = sge(%i, 6)
+        %done: Bool = %i.sge(6)
         branch %done ? cleanup(#dist, #graph, #alloc) : print_one(%i, #dist, #graph, #alloc)
 
     block print_one(%i: I64, #dist: Ptr<I64>, #graph: Ptr<Graph>, #alloc: Ptr<Allocator>):
         %d: I64 := #dist[%i]
         c_printf_nd("  node %lld  dist %lld\n", %i, %d)
-        jump print_loop(%i + 1, #dist, #graph, #alloc)
+        %i_next: I64 = %i.add(1)
+        jump print_loop(%i_next, #dist, #graph, #alloc)
 
     block cleanup(#dist: Ptr<I64>, #graph: Ptr<Graph>, #alloc: Ptr<Allocator>):
         #graph.free(#alloc)

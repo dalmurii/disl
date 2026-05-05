@@ -6,12 +6,40 @@
 struct Bool
 conform Equal<Bool>, Hash<Bool>
 
+; ── bitwise operations ────────────────────────────────────────────────────────
+
+routine Bool.bitand(%self: Bool, %other: Bool) -> Bool
+    block entry():
+        %r: Bool = band<Bool>(%self, %other)
+        return(%r)
+
+routine Bool.bitor(%self: Bool, %other: Bool) -> Bool
+    block entry():
+        %r: Bool = bor<Bool>(%self, %other)
+        return(%r)
+
+routine Bool.bitxor(%self: Bool, %other: Bool) -> Bool
+    block entry():
+        %r: Bool = bxor<Bool>(%self, %other)
+        return(%r)
+
+routine Bool.bitnot(%self: Bool) -> Bool
+    block entry():
+        %r: Bool = bnot<Bool>(%self)
+        return(%r)
+
 ; ── equality, hashing ─────────────────────────────────────────────────────────
 
-routine Bool.equals(%self: Bool, %other: Bool) -> Bool
+routine Bool.eq(%self: Bool, %other: Bool) -> Bool
     block entry():
-        %r: Bool = %self == %other
+        %r: Bool = ieq<Bool>(%self, %other)
         return(%r)
+
+routine Bool.ne(%self: Bool, %other: Bool) -> Bool
+    block entry():
+        %r: Bool = ine<Bool>(%self, %other)
+        return(%r)
+
 
 routine Bool.hash(%self: Bool) -> I64
     block entry():

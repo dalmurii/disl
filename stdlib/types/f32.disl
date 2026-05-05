@@ -17,22 +17,37 @@ const F32.NAN:          F32 = 0x7FC00000  ; canonical quiet NaN bits
 routine F32.abs(%self: F32) -> F32
     block entry():
         %zero: F32 = 0.0
-        %is_neg: Bool = flt<F32>(%self, %zero)
+        %is_neg: Bool = %self.flt(%zero)
         %neg: F32 = fsub<F32>(%zero, %self)
         %result: F32 = %is_neg ? %neg : %self
         return(%result)
 
 routine F32.min(%self: F32, %other: F32) -> F32
     block entry():
-        %self_less: Bool = flt<F32>(%self, %other)
+        %self_less: Bool = %self.flt(%other)
         %result: F32 = %self_less ? %self : %other
         return(%result)
 
 routine F32.max(%self: F32, %other: F32) -> F32
     block entry():
-        %self_more: Bool = fgt<F32>(%self, %other)
+        %self_more: Bool = %self.fgt(%other)
         %result: F32 = %self_more ? %self : %other
         return(%result)
+
+routine F32.add(%self: F32, %other: F32) -> F32
+    block entry():
+        %r: F32 = fadd<F32>(%self, %other)
+        return(%r)
+
+routine F32.sub(%self: F32, %other: F32) -> F32
+    block entry():
+        %r: F32 = fsub<F32>(%self, %other)
+        return(%r)
+
+routine F32.mul(%self: F32, %other: F32) -> F32
+    block entry():
+        %r: F32 = fmul<F32>(%self, %other)
+        return(%r)
 
 ; ── comparisons ───────────────────────────────────────────────────────────────
 
@@ -75,18 +90,23 @@ routine F32.fdiv(%self: F32, %other: F32) -> F32
 
 ; ── equality, ordering, hashing ───────────────────────────────────────────────
 
-routine F32.equals(%self: F32, %other: F32) -> Bool
+routine F32.eq(%self: F32, %other: F32) -> Bool
     block entry():
         %r: Bool = feq<F32>(%self, %other)
         return(%r)
 
+routine F32.ne(%self: F32, %other: F32) -> Bool
+    block entry():
+        %r: Bool = fne<F32>(%self, %other)
+        return(%r)
+
 routine F32.compare(%self: F32, %other: F32) -> I32
     block entry():
-        %lt: Bool = flt<F32>(%self, %other)
+        %lt: Bool = %self.flt(%other)
         branch %lt ? return(-1) : maybe_gt(%self, %other)
 
     block maybe_gt(%self: F32, %other: F32):
-        %gt: Bool = fgt<F32>(%self, %other)
+        %gt: Bool = %self.fgt(%other)
         branch %gt ? return(1) : return(0)
 
 routine F32.hash(%self: F32) -> I64

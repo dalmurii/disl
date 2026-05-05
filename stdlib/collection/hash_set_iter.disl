@@ -31,14 +31,16 @@ require T: typename
     ; Advance until we hit an occupied slot or exhaust the table.
     ; sge(slot, 0) is true when capacity==0, so an empty set returns None safely.
     block scan(%slot: I64, %capacity: I64, #set: Ptr<HashSet<T>>):
-        %exhausted: Bool = sge(%slot, %capacity)
+        %exhausted: Bool = %slot.sge(%capacity)
         branch %exhausted ? return_none() : check(%slot, %capacity, #set)
 
     block check(%slot: I64, %capacity: I64, #set: Ptr<HashSet<T>>):
         #states:   Ptr<I8> := #set.states
         %state:    I8      := #states[%slot]
-        %occupied: Bool    = %state == 1
-        branch %occupied ? yield(%slot, #set) : scan(%slot + 1, %capacity, #set)
+        %s_one: I8 = 1
+        %occupied: Bool    = %state.eq(%s_one)
+        %slot_next: I64 = %slot.add(1)
+        branch %occupied ? yield(%slot, #set) : scan(%slot_next, %capacity, #set)
 
     block return_none():
         %none: Option<T> = Option<T>.none()
@@ -47,6 +49,7 @@ require T: typename
     block yield(%slot: I64, #set: Ptr<HashSet<T>>):
         #keys:  Ptr<T> := #set.keys
         %key:   T      := #keys[%slot]
-        #self.slot = %slot + 1
+        %slot_next: I64 = %slot.add(1)
+        #self.slot = %slot_next
         %some: Option<T> = Option<T>.some(%key)
         return(%some)

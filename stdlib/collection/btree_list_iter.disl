@@ -27,7 +27,7 @@ require T: typename
     block entry():
         %order: I64  := #self.order
         %total: I64  := #self.total
-        %done:  Bool = sge(%order, %total)
+        %done:  Bool = %order.sge(%total)
         branch %done ? return_none() : return_some(%order)
 
     block return_none():
@@ -37,6 +37,7 @@ require T: typename
     block return_some(%order: I64):
         #list:  Ptr<BTreeList<T>> := #self.list
         %value: T                 = #list.get(%order)
-        #self.order = %order + 1
+        %order_next: I64 = %order.add(1)
+        #self.order = %order_next
         %some: Option<T> = Option<T>.some(%value)
         return(%some)

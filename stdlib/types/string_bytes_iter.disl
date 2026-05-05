@@ -18,7 +18,8 @@ routine StringBytesIter.next(#self: Ptr<StringBytesIter>) -> Option<I8>
     block entry():
         %index: I64 := #self.index
         %str: String := #self.str
-        %done: Bool = sge<I64>(%index, %str.length)
+        %str_len: I64 = %str.length
+        %done: Bool = %index.sge(%str_len)
         branch %done ? return_none() : return_some(%index, %str)
 
     block return_none():
@@ -28,6 +29,7 @@ routine StringBytesIter.next(#self: Ptr<StringBytesIter>) -> Option<I8>
     block return_some(%index: I64, %str: String):
         #data: Ptr<I8> = %str.data
         %byte: I8 := #data[%index]
-        #self.index = %index + 1
+        %index_next: I64 = %index.add(1)
+        #self.index = %index_next
         %some: Option<I8> = Option<I8>.some(%byte)
         return(%some)

@@ -23,7 +23,7 @@ require T: typename
         #list:  Ptr<List<T>> := #self.list
         %len:   I64          = #list.length()
         %index: I64          := #self.index
-        %done:  Bool         = sge(%index, %len)
+        %done:  Bool         = %index.sge(%len)
         branch %done ? return_none() : return_some(%index, #list)
 
     block return_none():
@@ -32,6 +32,7 @@ require T: typename
 
     block return_some(%index: I64, #list: Ptr<List<T>>):
         %value: T = #list.get(%index)
-        #self.index = %index + 1
+        %index_next: I64 = %index.add(1)
+        #self.index = %index_next
         %some: Option<T> = Option<T>.some(%value)
         return(%some)

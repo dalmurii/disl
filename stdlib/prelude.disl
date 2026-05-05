@@ -1,11 +1,8 @@
-﻿; Disl stdlib: prelude
+; Disl stdlib: prelude
 ;
 ; Compiler-intrinsic operations auto-imported into every translation unit.
 ; These map directly to LLVM IR instructions and have no runtime cost beyond
 ; the instruction itself.
-;
-; Declared as external("llvm") so the compiler can lower them directly to the
-; corresponding LLVM instruction or intrinsic during codegen.
 ;
 ; All operations are generic over their operand type:
 ;   integer ops  — T in { I8, I16, I32, I64 }
@@ -16,16 +13,16 @@
 ; Integer comparisons (signed)
 ; ============================================================
 
-@[external("llvm"), symbol("icmp slt")]
+@[external("llvm"), template("{result} = icmp slt {T} {%a}, {%b}")]
 routine slt<T>(%a: T, %b: T) -> Bool
 require T: typename
-@[external("llvm"), symbol("icmp sgt")]
+@[external("llvm"), template("{result} = icmp sgt {T} {%a}, {%b}")]
 routine sgt<T>(%a: T, %b: T) -> Bool
 require T: typename
-@[external("llvm"), symbol("icmp sle")]
+@[external("llvm"), template("{result} = icmp sle {T} {%a}, {%b}")]
 routine sle<T>(%a: T, %b: T) -> Bool
 require T: typename
-@[external("llvm"), symbol("icmp sge")]
+@[external("llvm"), template("{result} = icmp sge {T} {%a}, {%b}")]
 routine sge<T>(%a: T, %b: T) -> Bool
 require T: typename
 
@@ -33,16 +30,16 @@ require T: typename
 ; Integer comparisons (unsigned interpretation of same bits)
 ; ============================================================
 
-@[external("llvm"), symbol("icmp ult")]
+@[external("llvm"), template("{result} = icmp ult {T} {%a}, {%b}")]
 routine ult<T>(%a: T, %b: T) -> Bool
 require T: typename
-@[external("llvm"), symbol("icmp ugt")]
+@[external("llvm"), template("{result} = icmp ugt {T} {%a}, {%b}")]
 routine ugt<T>(%a: T, %b: T) -> Bool
 require T: typename
-@[external("llvm"), symbol("icmp ule")]
+@[external("llvm"), template("{result} = icmp ule {T} {%a}, {%b}")]
 routine ule<T>(%a: T, %b: T) -> Bool
 require T: typename
-@[external("llvm"), symbol("icmp uge")]
+@[external("llvm"), template("{result} = icmp uge {T} {%a}, {%b}")]
 routine uge<T>(%a: T, %b: T) -> Bool
 require T: typename
 
@@ -50,30 +47,72 @@ require T: typename
 ; Division and remainder
 ; ============================================================
 
-@[external("llvm"), symbol("sdiv")]
+@[external("llvm"), template("{result} = sdiv {T} {%a}, {%b}")]
 routine sdiv<T>(%a: T, %b: T) -> T
 require T: typename
-@[external("llvm"), symbol("srem")]
+@[external("llvm"), template("{result} = srem {T} {%a}, {%b}")]
 routine srem<T>(%a: T, %b: T) -> T
 require T: typename
-@[external("llvm"), symbol("udiv")]
+@[external("llvm"), template("{result} = udiv {T} {%a}, {%b}")]
 routine udiv<T>(%a: T, %b: T) -> T
 require T: typename
-@[external("llvm"), symbol("urem")]
+@[external("llvm"), template("{result} = urem {T} {%a}, {%b}")]
 routine urem<T>(%a: T, %b: T) -> T
+require T: typename
+
+; ============================================================
+; Integer arithmetic
+; ============================================================
+
+@[external("llvm"), template("{result} = add {T} {%a}, {%b}")]
+routine add<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = sub {T} {%a}, {%b}")]
+routine sub<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = mul {T} {%a}, {%b}")]
+routine mul<T>(%a: T, %b: T) -> T
+require T: typename
+
+; ============================================================
+; Integer bitwise
+; ============================================================
+
+@[external("llvm"), template("{result} = and {T} {%a}, {%b}")]
+routine band<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = or {T} {%a}, {%b}")]
+routine bor<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = xor {T} {%a}, {%b}")]
+routine bxor<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = xor {T} {%val}, -1")]
+routine bnot<T>(%val: T) -> T
+require T: typename
+
+; ============================================================
+; Integer and bool equality
+; ============================================================
+
+@[external("llvm"), template("{result} = icmp eq {T} {%a}, {%b}")]
+routine ieq<T>(%a: T, %b: T) -> Bool
+require T: typename
+@[external("llvm"), template("{result} = icmp ne {T} {%a}, {%b}")]
+routine ine<T>(%a: T, %b: T) -> Bool
 require T: typename
 
 ; ============================================================
 ; Bit shifts
 ; ============================================================
 
-@[external("llvm"), symbol("shl")]
+@[external("llvm"), template("{result} = shl {T} {%val}, {%amt}")]
 routine shl<T>(%val: T, %amt: T) -> T
 require T: typename
-@[external("llvm"), symbol("ashr")]
+@[external("llvm"), template("{result} = ashr {T} {%val}, {%amt}")]
 routine ashr<T>(%val: T, %amt: T) -> T  ; arithmetic (sign-extend)
 require T: typename
-@[external("llvm"), symbol("lshr")]
+@[external("llvm"), template("{result} = lshr {T} {%val}, {%amt}")]
 routine lshr<T>(%val: T, %amt: T) -> T  ; logical (zero-fill)
 require T: typename
 
@@ -81,16 +120,16 @@ require T: typename
 ; Floating-point arithmetic
 ; ============================================================
 
-@[external("llvm"), symbol("fadd")]
+@[external("llvm"), template("{result} = fadd {T} {%a}, {%b}")]
 routine fadd<T>(%a: T, %b: T) -> T
 require T: typename
-@[external("llvm"), symbol("fsub")]
+@[external("llvm"), template("{result} = fsub {T} {%a}, {%b}")]
 routine fsub<T>(%a: T, %b: T) -> T
 require T: typename
-@[external("llvm"), symbol("fmul")]
+@[external("llvm"), template("{result} = fmul {T} {%a}, {%b}")]
 routine fmul<T>(%a: T, %b: T) -> T
 require T: typename
-@[external("llvm"), symbol("fdiv")]
+@[external("llvm"), template("{result} = fdiv {T} {%a}, {%b}")]
 routine fdiv<T>(%a: T, %b: T) -> T
 require T: typename
 
@@ -98,22 +137,22 @@ require T: typename
 ; Floating-point comparisons (ordered — false if either NaN)
 ; ============================================================
 
-@[external("llvm"), symbol("fcmp oeq")]
+@[external("llvm"), template("{result} = fcmp oeq {T} {%a}, {%b}")]
 routine feq<T>(%a: T, %b: T) -> Bool
 require T: typename
-@[external("llvm"), symbol("fcmp one")]
+@[external("llvm"), template("{result} = fcmp one {T} {%a}, {%b}")]
 routine fne<T>(%a: T, %b: T) -> Bool
 require T: typename
-@[external("llvm"), symbol("fcmp olt")]
+@[external("llvm"), template("{result} = fcmp olt {T} {%a}, {%b}")]
 routine flt<T>(%a: T, %b: T) -> Bool
 require T: typename
-@[external("llvm"), symbol("fcmp ogt")]
+@[external("llvm"), template("{result} = fcmp ogt {T} {%a}, {%b}")]
 routine fgt<T>(%a: T, %b: T) -> Bool
 require T: typename
-@[external("llvm"), symbol("fcmp ole")]
+@[external("llvm"), template("{result} = fcmp ole {T} {%a}, {%b}")]
 routine fle<T>(%a: T, %b: T) -> Bool
 require T: typename
-@[external("llvm"), symbol("fcmp oge")]
+@[external("llvm"), template("{result} = fcmp oge {T} {%a}, {%b}")]
 routine fge<T>(%a: T, %b: T) -> Bool
 require T: typename
 
@@ -121,36 +160,44 @@ require T: typename
 ; Type conversions
 ; ============================================================
 
-@[external("llvm"), symbol("sext")]
+@[external("llvm"), template("{result} = sext {From} {%val} to {To}")]
 routine sext<From, To>(%val: From) -> To
     require From: typename
     require To: typename
-@[external("llvm"), symbol("zext")]
+@[external("llvm"), template("{result} = zext {From} {%val} to {To}")]
 routine zext<From, To>(%val: From) -> To
     require From: typename
     require To: typename
-@[external("llvm"), symbol("trunc")]
+@[external("llvm"), template("{result} = trunc {From} {%val} to {To}")]
 routine trunc<From, To>(%val: From) -> To
     require From: typename
     require To: typename
-@[external("llvm"), symbol("bitcast")]
+@[external("llvm"), template("{result} = bitcast {From} {%val} to {To}")]
 routine bitcast<From, To>(%val: From) -> To
     require From: typename
     require To: typename
-@[external("llvm"), symbol("fptosi")]
+@[external("llvm"), template("{result} = fptosi {From} {%val} to {To}")]
 routine fptosi<From, To>(%val: From) -> To
     require From: typename
     require To: typename
-@[external("llvm"), symbol("sitofp")]
+@[external("llvm"), template("{result} = sitofp {From} {%val} to {To}")]
 routine sitofp<From, To>(%val: From) -> To
     require From: typename
     require To: typename
-@[external("llvm"), symbol("fpext")]
+@[external("llvm"), template("{result} = fpext {From} {%val} to {To}")]
 routine fpext<From, To>(%val: From) -> To
     require From: typename
     require To: typename
-@[external("llvm"), symbol("fptrunc")]
+@[external("llvm"), template("{result} = fptrunc {From} {%val} to {To}")]
 routine fptrunc<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
+@[external("llvm"), template("{result} = ptrtoint {From} {%val} to {To}")]
+routine ptrtoint<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
+@[external("llvm"), template("{result} = inttoptr {From} {%val} to {To}")]
+routine inttoptr<From, To>(%val: From) -> To
     require From: typename
     require To: typename
 
@@ -158,16 +205,16 @@ routine fptrunc<From, To>(%val: From) -> To
 ; Bit manipulation (LLVM intrinsics)
 ; ============================================================
 
-@[external("llvm"), symbol("llvm.ctpop")]
+@[external("llvm"), template("{result} = call {T} @llvm.ctpop.{T}({T} {%val})")]
 routine popcount<T>(%val: T) -> T
 require T: typename
-@[external("llvm"), symbol("llvm.ctlz")]
+@[external("llvm"), template("{result} = call {T} @llvm.ctlz.{T}({T} {%val}, i1 {%is_zero_undef})")]
 routine clz<T>(%val: T, %is_zero_undef: Bool) -> T
 require T: typename
-@[external("llvm"), symbol("llvm.cttz")]
+@[external("llvm"), template("{result} = call {T} @llvm.cttz.{T}({T} {%val}, i1 {%is_zero_undef})")]
 routine ctz<T>(%val: T, %is_zero_undef: Bool) -> T
 require T: typename
-@[external("llvm"), symbol("llvm.bswap")]
+@[external("llvm"), template("{result} = call {T} @llvm.bswap.{T}({T} {%val})")]
 routine bswap<T>(%val: T) -> T
 require T: typename
 
@@ -175,12 +222,5 @@ require T: typename
 ; Misc
 ; ============================================================
 
-@[external("llvm"), symbol("sizeof")]
-routine sizeof<T>() -> I64
-require T: typename
-@[external("llvm"), symbol("alignof")]
-routine alignof<T>() -> I64
-require T: typename
-
-@[external("llvm"), symbol("llvm.trap"), noreturn]
+@[external("llvm"), template("call void @llvm.trap()"), noreturn]
 routine trap() -> Void

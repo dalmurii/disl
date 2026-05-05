@@ -38,17 +38,17 @@ routine xxh64_read_i64(#data: Ptr<I8>, %off: I64) -> I64
         jump loop(0, 0, 0)
 
     block loop(%i: I64, %acc: I64, %shift: I64):
-        %done: Bool = sge(%i, 8)
+        %done: Bool = %i.sge(8)
         branch %done ? return(%acc) : step(%i, %acc, %shift)
 
     block step(%i: I64, %acc: I64, %shift: I64):
-        %idx: I64 = %off + %i
+        %idx: I64 = %off.add(%i)
         %b: I8 := #data[%idx]
         %bu: I64 = %b.zext<I64>()
         %sh: I64 = %bu.shl(%shift)
-        %next: I64 = %acc | %sh
-        %i_next: I64 = %i + 1
-        %shift_next: I64 = %shift + 8
+        %next: I64 = %acc.bitor(%sh)
+        %i_next: I64 = %i.add(1)
+        %shift_next: I64 = %shift.add(8)
         jump loop(%i_next, %next, %shift_next)
 
 routine xxh64_read_i32(#data: Ptr<I8>, %off: I64) -> I32
@@ -56,47 +56,48 @@ routine xxh64_read_i32(#data: Ptr<I8>, %off: I64) -> I32
         jump loop(0, 0, 0)
 
     block loop(%i: I64, %acc: I32, %shift: I32):
-        %done: Bool = sge(%i, 4)
+        %done: Bool = %i.sge(4)
         branch %done ? return(%acc) : step(%i, %acc, %shift)
 
     block step(%i: I64, %acc: I32, %shift: I32):
-        %idx: I64 = %off + %i
+        %idx: I64 = %off.add(%i)
         %b: I8 := #data[%idx]
         %bu: I32 = %b.zext<I32>()
         %sh: I32 = %bu.shl(%shift)
-        %next: I32 = %acc | %sh
-        %i_next: I64 = %i + 1
-        %shift_next: I32 = %shift + 4
+        %next: I32 = %acc.bitor(%sh)
+        %i_next: I64 = %i.add(1)
+        %four: I32 = 4
+        %shift_next: I32 = %shift.add(%four)
         jump loop(%i_next, %next, %shift_next)
 
 ; ── xxh64 internal mixers ─────────────────────────────────────────────────────
 
 routine xxh64_round(%acc: I64, %input: I64) -> I64
     block entry():
-        %m: I64 = %input * XXH64_P2
-        %s: I64 = %acc + %m
+        %m: I64 = %input.mul(XXH64_P2)
+        %s: I64 = %acc.add(%m)
         %r: I64 = %s.rotl(31)
-        %result: I64 = %r * XXH64_P1
+        %result: I64 = %r.mul(XXH64_P1)
         return(%result)
 
 routine xxh64_merge(%acc: I64, %val: I64) -> I64
     block entry():
         %v: I64 = xxh64_round(0, %val)
-        %x: I64 = %acc ^ %v
-        %m: I64 = %x * XXH64_P1
-        %result: I64 = %m + XXH64_P4
+        %x: I64 = %acc.bitxor(%v)
+        %m: I64 = %x.mul(XXH64_P1)
+        %result: I64 = %m.add(XXH64_P4)
         return(%result)
 
 routine xxh64_finalize(%h: I64) -> I64
     block entry():
         %s1: I64 = %h.lshr(33)
-        %x1: I64 = %h ^ %s1
-        %m1: I64 = %x1 * XXH64_P2
+        %x1: I64 = %h.bitxor(%s1)
+        %m1: I64 = %x1.mul(XXH64_P2)
         %s2: I64 = %m1.lshr(29)
-        %x2: I64 = %m1 ^ %s2
-        %m2: I64 = %x2 * XXH64_P3
+        %x2: I64 = %m1.bitxor(%s2)
+        %m2: I64 = %x2.mul(XXH64_P3)
         %s3: I64 = %m2.lshr(32)
-        %result: I64 = %m2 ^ %s3
+        %result: I64 = %m2.bitxor(%s3)
         return(%result)
 
 ; ── one-shot byte hash ────────────────────────────────────────────────────────
@@ -109,30 +110,30 @@ routine xxh64_finalize(%h: I64) -> I64
 
 routine xxh64(#data: Ptr<I8>, %len: I64, %seed: I64) -> I64
     block entry():
-        %big: Bool = sge(%len, 32)
+        %big: Bool = %len.sge(32)
         branch %big ? big_init() : small_init()
 
     block small_init():
-        %h0: I64 = %seed + XXH64_P5
+        %h0: I64 = %seed.add(XXH64_P5)
         jump after_block(%h0, 0)
 
     block big_init():
-        %sp1: I64 = %seed + XXH64_P1
-        %v1_0: I64 = %sp1 + XXH64_P2
-        %v2_0: I64 = %seed + XXH64_P2
+        %sp1: I64 = %seed.add(XXH64_P1)
+        %v1_0: I64 = %sp1.add(XXH64_P2)
+        %v2_0: I64 = %seed.add(XXH64_P2)
         %v3_0: I64 = %seed
-        %v4_0: I64 = %seed - XXH64_P1
+        %v4_0: I64 = %seed.sub(XXH64_P1)
         jump big_loop(%v1_0, %v2_0, %v3_0, %v4_0, 0)
 
     block big_loop(%v1: I64, %v2: I64, %v3: I64, %v4: I64, %off: I64):
-        %remaining: I64 = %len - %off
-        %has32: Bool = sge(%remaining, 32)
+        %remaining: I64 = %len.sub(%off)
+        %has32: Bool = %remaining.sge(32)
         branch %has32 ? big_step(%v1, %v2, %v3, %v4, %off) : big_finish(%v1, %v2, %v3, %v4, %off)
 
     block big_step(%v1: I64, %v2: I64, %v3: I64, %v4: I64, %off: I64):
-        %o2: I64 = %off + 8
-        %o3: I64 = %off + 16
-        %o4: I64 = %off + 24
+        %o2: I64 = %off.add(8)
+        %o3: I64 = %off.add(16)
+        %o4: I64 = %off.add(24)
         %k1: I64 = xxh64_read_i64(#data, %off)
         %k2: I64 = xxh64_read_i64(#data, %o2)
         %k3: I64 = xxh64_read_i64(#data, %o3)
@@ -141,7 +142,7 @@ routine xxh64(#data: Ptr<I8>, %len: I64, %seed: I64) -> I64
         %v2n: I64 = xxh64_round(%v2, %k2)
         %v3n: I64 = xxh64_round(%v3, %k3)
         %v4n: I64 = xxh64_round(%v4, %k4)
-        %off_next: I64 = %off + 32
+        %off_next: I64 = %off.add(32)
         jump big_loop(%v1n, %v2n, %v3n, %v4n, %off_next)
 
     block big_finish(%v1: I64, %v2: I64, %v3: I64, %v4: I64, %off: I64):
@@ -149,9 +150,9 @@ routine xxh64(#data: Ptr<I8>, %len: I64, %seed: I64) -> I64
         %r2: I64 = %v2.rotl( 7)
         %r3: I64 = %v3.rotl(12)
         %r4: I64 = %v4.rotl(18)
-        %s12: I64 = %r1 + %r2
-        %s34: I64 = %r3 + %r4
-        %hsum: I64 = %s12 + %s34
+        %s12: I64 = %r1.add(%r2)
+        %s34: I64 = %r3.add(%r4)
+        %hsum: I64 = %s12.add(%s34)
         %h1: I64 = xxh64_merge(%hsum, %v1)
         %h2: I64 = xxh64_merge(%h1, %v2)
         %h3: I64 = xxh64_merge(%h2, %v3)
@@ -159,53 +160,53 @@ routine xxh64(#data: Ptr<I8>, %len: I64, %seed: I64) -> I64
         jump after_block(%h4, %off)
 
     block after_block(%h: I64, %off: I64):
-        %h_len: I64 = %h + %len
+        %h_len: I64 = %h.add(%len)
         jump tail8_loop(%h_len, %off)
 
     block tail8_loop(%h: I64, %off: I64):
-        %rem: I64 = %len - %off
-        %has8: Bool = sge(%rem, 8)
+        %rem: I64 = %len.sub(%off)
+        %has8: Bool = %rem.sge(8)
         branch %has8 ? tail8_step(%h, %off) : tail4(%h, %off)
 
     block tail8_step(%h: I64, %off: I64):
         %k: I64 = xxh64_read_i64(#data, %off)
         %r: I64 = xxh64_round(0, %k)
-        %x: I64 = %h ^ %r
+        %x: I64 = %h.bitxor(%r)
         %rolled: I64 = %x.rotl(27)
-        %m: I64 = %rolled * XXH64_P1
-        %h2: I64 = %m + XXH64_P4
-        %off_next: I64 = %off + 8
+        %m: I64 = %rolled.mul(XXH64_P1)
+        %h2: I64 = %m.add(XXH64_P4)
+        %off_next: I64 = %off.add(8)
         jump tail8_loop(%h2, %off_next)
 
     block tail4(%h: I64, %off: I64):
-        %rem: I64 = %len - %off
-        %has4: Bool = sge(%rem, 4)
+        %rem: I64 = %len.sub(%off)
+        %has4: Bool = %rem.sge(4)
         branch %has4 ? tail4_step(%h, %off) : tail1_loop(%h, %off)
 
     block tail4_step(%h: I64, %off: I64):
         %k32: I32 = xxh64_read_i32(#data, %off)
         %ku: I64 = %k32.zext<I64>()
-        %m: I64 = %ku * XXH64_P1
-        %x: I64 = %h ^ %m
+        %m: I64 = %ku.mul(XXH64_P1)
+        %x: I64 = %h.bitxor(%m)
         %rolled: I64 = %x.rotl(23)
-        %m2: I64 = %rolled * XXH64_P2
-        %h2: I64 = %m2 + XXH64_P3
-        %off_next: I64 = %off + 4
+        %m2: I64 = %rolled.mul(XXH64_P2)
+        %h2: I64 = %m2.add(XXH64_P3)
+        %off_next: I64 = %off.add(4)
         jump tail1_loop(%h2, %off_next)
 
     block tail1_loop(%h: I64, %off: I64):
-        %rem: I64 = %len - %off
-        %has1: Bool = sge(%rem, 1)
+        %rem: I64 = %len.sub(%off)
+        %has1: Bool = %rem.sge(1)
         branch %has1 ? tail1_step(%h, %off) : finalize(%h)
 
     block tail1_step(%h: I64, %off: I64):
         %b: I8 := #data[%off]
         %bu: I64 = %b.zext<I64>()
-        %m: I64 = %bu * XXH64_P5
-        %x: I64 = %h ^ %m
+        %m: I64 = %bu.mul(XXH64_P5)
+        %x: I64 = %h.bitxor(%m)
         %rolled: I64 = %x.rotl(11)
-        %h2: I64 = %rolled * XXH64_P1
-        %off_next: I64 = %off + 1
+        %h2: I64 = %rolled.mul(XXH64_P1)
+        %off_next: I64 = %off.add(1)
         jump tail1_loop(%h2, %off_next)
 
     block finalize(%h: I64):
@@ -222,13 +223,13 @@ routine xxh64(#data: Ptr<I8>, %len: I64, %seed: I64) -> I64
 
 routine xxh64_hash_i64(%v: I64, %seed: I64) -> I64
     block entry():
-        %h0: I64 = %seed + XXH64_P5
-        %h_len: I64 = %h0 + 8
+        %h0: I64 = %seed.add(XXH64_P5)
+        %h_len: I64 = %h0.add(8)
         %k: I64 = xxh64_round(0, %v)
-        %x: I64 = %h_len ^ %k
+        %x: I64 = %h_len.bitxor(%k)
         %rolled: I64 = %x.rotl(27)
-        %m: I64 = %rolled * XXH64_P1
-        %h2: I64 = %m + XXH64_P4
+        %m: I64 = %rolled.mul(XXH64_P1)
+        %h2: I64 = %m.add(XXH64_P4)
         %result: I64 = xxh64_finalize(%h2)
         return(%result)
 
@@ -240,17 +241,17 @@ routine xxh64_hash_i64(%v: I64, %seed: I64) -> I64
 
 routine xxh64_combine2(%h1: I64, %h2: I64, %seed: I64) -> I64
     block entry():
-        %h0: I64 = %seed + XXH64_P5
-        %h_len: I64 = %h0 + 16
+        %h0: I64 = %seed.add(XXH64_P5)
+        %h_len: I64 = %h0.add(16)
         %r1: I64 = xxh64_round(0, %h1)
-        %x1: I64 = %h_len ^ %r1
+        %x1: I64 = %h_len.bitxor(%r1)
         %rolled1: I64 = %x1.rotl(27)
-        %m1: I64 = %rolled1 * XXH64_P1
-        %a1: I64 = %m1 + XXH64_P4
+        %m1: I64 = %rolled1.mul(XXH64_P1)
+        %a1: I64 = %m1.add(XXH64_P4)
         %r2: I64 = xxh64_round(0, %h2)
-        %x2: I64 = %a1 ^ %r2
+        %x2: I64 = %a1.bitxor(%r2)
         %rolled2: I64 = %x2.rotl(27)
-        %m2: I64 = %rolled2 * XXH64_P1
-        %a2: I64 = %m2 + XXH64_P4
+        %m2: I64 = %rolled2.mul(XXH64_P1)
+        %a2: I64 = %m2.add(XXH64_P4)
         %result: I64 = xxh64_finalize(%a2)
         return(%result)
