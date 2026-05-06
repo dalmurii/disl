@@ -69,8 +69,7 @@ routine Graph.new(%num_nodes: I64, #alloc: Ptr<Allocator>) -> Graph
         %empty: List<Edge> = List<Edge>.new(#alloc)
         #list = %empty
         #adj[%i] = #list
-        %i_next: I64 = %i.add(1)
-        jump init_loop(%i_next, #adj)
+        jump init_loop(%i.add(1), #adj)
 
     block build(#adj: Ptr<Ptr<List<Edge>>>):
         %g: Graph = Graph { adj: #adj, num_nodes: %num_nodes }
@@ -98,8 +97,7 @@ routine Graph.free(#self: Ptr<Graph>, #alloc: Ptr<Allocator>) -> Void
         #list: Ptr<List<Edge>> := #adj[%i]
         #list.free()
         free<List<Edge>>(#alloc, #list)
-        %i_next: I64 = %i.add(1)
-        jump free_loop(%i_next, %n, #adj)
+        jump free_loop(%i.add(1), %n, #adj)
 
     block free_arr(#adj: Ptr<Ptr<List<Edge>>>):
         free<Ptr<List<Edge>>>(#alloc, #adj)
@@ -130,8 +128,7 @@ routine dijkstra(
 
     block write_inf(%i: I64, %n: I64, #pq: Ptr<PriorityQueue<DijkstraEntry>>):
         #dist[%i] = INF
-        %i_next: I64 = %i.add(1)
-        jump fill_inf(%i_next, %n, #pq)
+        jump fill_inf(%i.add(1), %n, #pq)
 
     ; Phase 2 — set the source distance to 0 and seed the queue.
     block seed(#pq: Ptr<PriorityQueue<DijkstraEntry>>):
@@ -171,9 +168,8 @@ routine dijkstra(
         %new_dist: I64  = %d.add(%w)
         %best:     I64  := #dist[%v]
         %better:   Bool = %new_dist.slt(%best)
-        %i_next: I64 = %i.add(1)
         branch %better ? improve(%i, %len, %d, #list, #pq, %v, %new_dist) \
-                       : edge_loop(%i_next, %len, %d, #list, #pq)
+                       : edge_loop(%i.add(1), %len, %d, #list, #pq)
 
     block improve(
         %i: I64, %len: I64, %d: I64,
@@ -184,8 +180,7 @@ routine dijkstra(
         #dist[%v] = %new_dist
         %entry: DijkstraEntry = DijkstraEntry { dist: %new_dist, node: %v }
         #pq.push(%entry)
-        %i_next: I64 = %i.add(1)
-        jump edge_loop(%i_next, %len, %d, #list, #pq)
+        jump edge_loop(%i.add(1), %len, %d, #list, #pq)
 
     block done(#pq: Ptr<PriorityQueue<DijkstraEntry>>):
         #pq.free()
@@ -243,8 +238,7 @@ routine main() -> I32
     block print_one(%i: I64, #dist: Ptr<I64>, #graph: Ptr<Graph>, #alloc: Ptr<Allocator>):
         %d: I64 := #dist[%i]
         c_printf_nd("  node %lld  dist %lld\n", %i, %d)
-        %i_next: I64 = %i.add(1)
-        jump print_loop(%i_next, #dist, #graph, #alloc)
+        jump print_loop(%i.add(1), #dist, #graph, #alloc)
 
     block cleanup(#dist: Ptr<I64>, #graph: Ptr<Graph>, #alloc: Ptr<Allocator>):
         #graph.free(#alloc)

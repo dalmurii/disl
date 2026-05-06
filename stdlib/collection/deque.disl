@@ -52,12 +52,18 @@ require T: typename
         %failed: Bool = #new_data.is_null()
         branch %failed ? trap() : move(#new_data, %new_start, %length, %new_capacity, #alloc)
 
-    block move(#new_data: Ptr<T>, %new_start: I64, %length: I64, %new_capacity: I64, #alloc: Ptr<Allocator>):
+    block move(
+            #new_data: Ptr<T>, %new_start: I64, %length: I64,
+            %new_capacity: I64, #alloc: Ptr<Allocator>):
         #old_data: Ptr<T> := #self.data
         %old_null: Bool = #old_data.is_null()
-        branch %old_null ? install(#new_data, %new_start, %new_capacity) : copy_live(#new_data, %new_start, #old_data, %length, %new_capacity, #alloc)
+        branch %old_null
+            ? install(#new_data, %new_start, %new_capacity)
+            : copy_live(#new_data, %new_start, #old_data, %length, %new_capacity, #alloc)
 
-    block copy_live(#new_data: Ptr<T>, %new_start: I64, #old_data: Ptr<T>, %length: I64, %new_capacity: I64, #alloc: Ptr<Allocator>):
+    block copy_live(
+            #new_data: Ptr<T>, %new_start: I64, #old_data: Ptr<T>,
+            %length: I64, %new_capacity: I64, #alloc: Ptr<Allocator>):
         %old_start: I64 := #self.start
         #src: Ptr<T> = #old_data[%old_start]
         #dst: Ptr<T> = #new_data[%new_start]

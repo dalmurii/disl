@@ -152,9 +152,7 @@ routine main() -> I32
         #int_ptr: ptr<Number> = alloca<Number>([%as_int])
         #flt_ptr: ptr<Number> = alloca<Number>([%as_float])
 
-        %i: I64 = #int_ptr.as_int()
-        %f: F64 = #flt_ptr.as_float()
-        c_printf_int("Number int view: %lld\n", %i)
-        c_printf_float("Number float view: %f\n", %f)
+        c_printf_int("Number int view: %lld\n", #int_ptr.as_int())
+        c_printf_float("Number float view: %f\n", #flt_ptr.as_float())
 
         return(0)

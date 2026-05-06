@@ -94,7 +94,8 @@ require K: typename, V: typename
         #self.subtree_count = %sum
         return()
 
-routine BTreeMap<K, V>.find_index(#self: Ptr<BTreeMap<K, V>>, #node: Ptr<BTreeMapNode<K, V>>, %key: K) -> I64
+routine BTreeMap<K, V>.find_index(
+        #self: Ptr<BTreeMap<K, V>>, #node: Ptr<BTreeMapNode<K, V>>, %key: K) -> I64
 require K: typename, V: typename
     block entry():
         jump loop(0)
@@ -295,7 +296,8 @@ require K: typename, V: typename
         %key: K := #node.keys[%i]
         return(%key)
 
-routine BTreeMapNode<K, V>.split_child(#self: Ptr<BTreeMapNode<K, V>>, %index: I64, #alloc: Ptr<Allocator>) -> Void
+routine BTreeMapNode<K, V>.split_child(
+        #self: Ptr<BTreeMapNode<K, V>>, %index: I64, #alloc: Ptr<Allocator>) -> Void
 require K: typename, V: typename
     block entry():
         #left: Ptr<BTreeMapNode<K, V>> := #self.children[%index]
@@ -308,38 +310,54 @@ require K: typename, V: typename
         #right.keys.copy(0, #left.keys, %mid_p1, %right_count)
         #right.values.copy(0, #left.values, %mid_p1, %right_count)
         #right.length = %right_count
-        branch %leaf ? promote(#left, #right, %mid) : copy_children(#left, #right, %mid, %right_count)
+        branch %leaf
+            ? promote(#left, #right, %mid)
+            : copy_children(#left, #right, %mid, %right_count)
 
-    block copy_children(#left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64, %right_count: I64):
+    block copy_children(
+            #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>,
+            %mid: I64, %right_count: I64):
         jump child_loop(0, #left, #right, %mid, %right_count)
 
-    block child_loop(%i: I64, #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64, %right_count: I64):
+    block child_loop(
+            %i: I64, #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>,
+            %mid: I64, %right_count: I64):
         %done: Bool = %i.sgt(%right_count)
-        branch %done ? promote(#left, #right, %mid) : child_copy(%i, #left, #right, %mid, %right_count)
+        branch %done
+            ? promote(#left, #right, %mid)
+            : child_copy(%i, #left, #right, %mid, %right_count)
 
-    block child_copy(%i: I64, #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64, %right_count: I64):
+    block child_copy(
+            %i: I64, #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>,
+            %mid: I64, %right_count: I64):
         %src: I64 = %mid.add(1).add(%i)
         #child: Ptr<BTreeMapNode<K, V>> := #left.children[%src]
         #right.children[%i] = #child
         jump child_loop(%i.add(1), #left, #right, %mid, %right_count)
 
-    block promote(#left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64):
+    block promote(
+            #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64):
         %parent_length: I64 := #self.length
         #self.keys.shift_right(%index, %parent_length)
         #self.values.shift_right(%index, %parent_length)
         jump shift_children(%parent_length, #left, #right, %mid)
 
-    block shift_children(%i: I64, #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64):
+    block shift_children(
+            %i: I64, #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>,
+            %mid: I64):
         %stop: I64 = %index.add(1)
         %done: Bool = %i.slt(%stop)
         branch %done ? install(#left, #right, %mid) : move_child(%i, #left, #right, %mid)
 
-    block move_child(%i: I64, #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64):
+    block move_child(
+            %i: I64, #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>,
+            %mid: I64):
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
         #self.children[%i.add(1)] = #child
         jump shift_children(%i.sub(1), #left, #right, %mid)
 
-    block install(#left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64):
+    block install(
+            #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64):
         %middle_key: K := #left.keys[%mid]
         %middle_value: V := #left.values[%mid]
         #self.keys[%index] = %middle_key
@@ -354,7 +372,9 @@ require K: typename, V: typename
         #self.recount()
         return()
 
-routine BTreeMapNode<K, V>.insert_nonfull(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K, %value: V, #alloc: Ptr<Allocator>) -> Void
+routine BTreeMapNode<K, V>.insert_nonfull(
+        #self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>,
+        %key: K, %value: V, #alloc: Ptr<Allocator>) -> Void
 require K: typename, V: typename
     block entry():
         %leaf: Bool := #self.leaf
@@ -435,7 +455,9 @@ require K: typename, V: typename
         #self.length = %length.add(1)
         return()
 
-routine BTreeMapNode<K, V>.replace(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K, %value: V) -> Bool
+routine BTreeMapNode<K, V>.replace(
+        #self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>,
+        %key: K, %value: V) -> Bool
 require K: typename, V: typename
     block entry():
         %slot: I64 = #map.find_index(#self, %key)
@@ -498,16 +520,22 @@ require K: typename, V: typename
         #self.keys[%i_m1] = %new_pivot_key
         #self.values[%i_m1] = %new_pivot_value
         %leaf: Bool := #child.leaf
-        branch %leaf ? finalize(#left, #child, %left_length, %child_length) : move_child(#left, #child, %left_length, %child_length)
+        branch %leaf
+            ? finalize(#left, #child, %left_length, %child_length)
+            : move_child(#left, #child, %left_length, %child_length)
 
-    block move_child(#left: Ptr<BTreeMapNode<K, V>>, #child: Ptr<BTreeMapNode<K, V>>, %left_length: I64, %child_length: I64):
+    block move_child(
+            #left: Ptr<BTreeMapNode<K, V>>, #child: Ptr<BTreeMapNode<K, V>>,
+            %left_length: I64, %child_length: I64):
         %child_count: I64 = %child_length.add(1)
         #child.children.shift_right(0, %child_count)
         #moved: Ptr<BTreeMapNode<K, V>> := #left.children[%left_length]
         #child.children[0] = #moved
         jump finalize(#left, #child, %left_length, %child_length)
 
-    block finalize(#left: Ptr<BTreeMapNode<K, V>>, #child: Ptr<BTreeMapNode<K, V>>, %left_length: I64, %child_length: I64):
+    block finalize(
+            #left: Ptr<BTreeMapNode<K, V>>, #child: Ptr<BTreeMapNode<K, V>>,
+            %left_length: I64, %child_length: I64):
         #left.length = %left_length.sub(1)
         #child.length = %child_length.add(1)
         #left.recount()
@@ -533,15 +561,21 @@ require K: typename, V: typename
         #right.keys.shift_left(0, %right_length)
         #right.values.shift_left(0, %right_length)
         %leaf: Bool := #child.leaf
-        branch %leaf ? finalize(#child, #right, %child_length, %right_length) : move_child(#child, #right, %child_length, %right_length)
+        branch %leaf
+            ? finalize(#child, #right, %child_length, %right_length)
+            : move_child(#child, #right, %child_length, %right_length)
 
-    block move_child(#child: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %child_length: I64, %right_length: I64):
+    block move_child(
+            #child: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>,
+            %child_length: I64, %right_length: I64):
         #moved: Ptr<BTreeMapNode<K, V>> := #right.children[0]
         #child.children[%child_length.add(1)] = #moved
         #right.children.shift_left(0, %right_length.add(1))
         jump finalize(#child, #right, %child_length, %right_length)
 
-    block finalize(#child: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %child_length: I64, %right_length: I64):
+    block finalize(
+            #child: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>,
+            %child_length: I64, %right_length: I64):
         #child.length = %child_length.add(1)
         #right.length = %right_length.sub(1)
         #child.recount()
@@ -549,7 +583,8 @@ require K: typename, V: typename
         #self.recount()
         return()
 
-routine BTreeMapNode<K, V>.merge_children(#self: Ptr<BTreeMapNode<K, V>>, %i: I64, #alloc: Ptr<Allocator>) -> Void
+routine BTreeMapNode<K, V>.merge_children(
+        #self: Ptr<BTreeMapNode<K, V>>, %i: I64, #alloc: Ptr<Allocator>) -> Void
 require K: typename, V: typename
     block entry():
         %i_p1: I64 = %i.add(1)
@@ -565,13 +600,19 @@ require K: typename, V: typename
         #left.keys.copy(%dst_start, #right.keys, 0, %right_length)
         #left.values.copy(%dst_start, #right.values, 0, %right_length)
         %leaf: Bool := #left.leaf
-        branch %leaf ? finalize(#left, #right, %left_length, %right_length) : copy_children(#left, #right, %left_length, %right_length)
+        branch %leaf
+            ? finalize(#left, #right, %left_length, %right_length)
+            : copy_children(#left, #right, %left_length, %right_length)
 
-    block copy_children(#left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %left_length: I64, %right_length: I64):
+    block copy_children(
+            #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>,
+            %left_length: I64, %right_length: I64):
         #left.children.copy(%left_length.add(1), #right.children, 0, %right_length.add(1))
         jump finalize(#left, #right, %left_length, %right_length)
 
-    block finalize(#left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %left_length: I64, %right_length: I64):
+    block finalize(
+            #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>,
+            %left_length: I64, %right_length: I64):
         #left.length = %left_length.add(1).add(%right_length)
         %parent_length: I64 := #self.length
         #self.keys.shift_left(%i, %parent_length)
@@ -584,7 +625,8 @@ require K: typename, V: typename
         #self.recount()
         return()
 
-routine BTreeMapNode<K, V>.ensure_min(#self: Ptr<BTreeMapNode<K, V>>, %i: I64, #alloc: Ptr<Allocator>) -> I64
+routine BTreeMapNode<K, V>.ensure_min(
+        #self: Ptr<BTreeMapNode<K, V>>, %i: I64, #alloc: Ptr<Allocator>) -> I64
 require K: typename, V: typename
     block entry():
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
@@ -636,7 +678,8 @@ require K: typename, V: typename
         #self.merge_children(%i, #alloc)
         return(%i)
 
-routine BTreeMapNode<K, V>.take_max_key(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, #out_value: Ptr<V>) -> K
+routine BTreeMapNode<K, V>.take_max_key(
+        #self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, #out_value: Ptr<V>) -> K
 require K: typename, V: typename
     block entry():
         %leaf: Bool := #self.leaf
@@ -659,7 +702,8 @@ require K: typename, V: typename
         #self.recount()
         return(%key)
 
-routine BTreeMapNode<K, V>.take_min_key(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, #out_value: Ptr<V>) -> K
+routine BTreeMapNode<K, V>.take_min_key(
+        #self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, #out_value: Ptr<V>) -> K
 require K: typename, V: typename
     block entry():
         %leaf: Bool := #self.leaf
@@ -679,7 +723,8 @@ require K: typename, V: typename
         #self.recount()
         return(%key)
 
-routine BTreeMapNode<K, V>.remove(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K) -> Bool
+routine BTreeMapNode<K, V>.remove(
+        #self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K) -> Bool
 require K: typename, V: typename
     block entry():
         %slot: I64 = #map.find_index(#self, %key)
@@ -789,7 +834,8 @@ require K: typename, V: typename
         return(true)
 
 ; Internal nodes store `length` separator keys and `length + 1` children.
-routine BTreeMapNode<K, V>.free_recursive(#self: Ptr<BTreeMapNode<K, V>>, #alloc: Ptr<Allocator>) -> Void
+routine BTreeMapNode<K, V>.free_recursive(
+        #self: Ptr<BTreeMapNode<K, V>>, #alloc: Ptr<Allocator>) -> Void
 require K: typename, V: typename
     block entry():
         %leaf: Bool := #self.leaf

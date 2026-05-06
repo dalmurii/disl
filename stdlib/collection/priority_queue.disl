@@ -158,7 +158,9 @@ require T: typename
     block choose_child(%index: I64, %left: I64, %right: I64, %result: T):
         %length: I64 := #self.length
         %has_right: Bool = %right.slt(%length)
-        branch %has_right ? compare_children(%index, %left, %right, %result) : compare_with_child(%index, %left, %result)
+        branch %has_right
+            ? compare_children(%index, %left, %right, %result)
+            : compare_with_child(%index, %left, %result)
 
     block compare_children(%index: I64, %left: I64, %right: I64, %result: T):
         #data: Ptr<T> := #self.data
@@ -173,7 +175,9 @@ require T: typename
         %index_value: T := #data[%index]
         %child_value: T := #data[%child]
         %child_less: Bool = #self.less(%child_value, %index_value)
-        branch %child_less ? swap_down(%index, %child, %index_value, %child_value, %result) : return(%result)
+        branch %child_less
+            ? swap_down(%index, %child, %index_value, %child_value, %result)
+            : return(%result)
 
     block swap_down(%index: I64, %child: I64, %index_value: T, %child_value: T, %result: T):
         #data: Ptr<T> := #self.data

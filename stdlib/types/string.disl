@@ -149,7 +149,9 @@ routine String.compare(%self: String, %other: String) -> I32
         %lt: Bool = %ua.slt(%ub)
         branch %lt ? return(-1) : maybe_gt(%i, %min, %la, %lb, %ua, %ub, #pa, #pb)
 
-    block maybe_gt(%i: I64, %min: I64, %la: I64, %lb: I64, %ua: I64, %ub: I64, #pa: Ptr<I8>, #pb: Ptr<I8>):
+    block maybe_gt(
+            %i: I64, %min: I64, %la: I64, %lb: I64,
+            %ua: I64, %ub: I64, #pa: Ptr<I8>, #pb: Ptr<I8>):
         %gt: Bool = %ua.sgt(%ub)
         branch %gt ? return(1) : loop(%i.add(1), %min, %la, %lb, #pa, #pb)
 
@@ -257,7 +259,9 @@ routine String.find(#self: Ptr<String>, %needle: String) -> Option<I64>
         %a: I8 := #sd[%idx]
         %b: I8 := #nd[%j]
         %eq: Bool = %a.eq(%b)
-        branch %eq ? inner(%i, %j.add(1), %last, %nlen, #sd, #nd) : outer(%i.add(1), %last, %nlen, #sd, #nd)
+        branch %eq
+            ? inner(%i, %j.add(1), %last, %nlen, #sd, #nd)
+            : outer(%i.add(1), %last, %nlen, #sd, #nd)
 
 routine String.contains(#self: Ptr<String>, %needle: String) -> Bool
     block entry():
