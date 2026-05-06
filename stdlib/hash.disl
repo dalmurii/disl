@@ -66,8 +66,7 @@ routine xxh64_read_i32(#data: Ptr<I8>, %off: I64) -> I32
         %sh: I32 = %bu.shl(%shift)
         %next: I32 = %acc.bitor(%sh)
         %i_next: I64 = %i.add(1)
-        %four: I32 = 4
-        %shift_next: I32 = %shift.add(%four)
+        %shift_next: I32 = %shift.add(4)
         jump loop(%i_next, %next, %shift_next)
 
 ; ── xxh64 internal mixers ─────────────────────────────────────────────────────

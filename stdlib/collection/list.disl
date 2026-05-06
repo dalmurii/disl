@@ -32,8 +32,7 @@ routine List<T>.is_empty(#self: Ptr<List<T>>) -> Bool
 require T: typename
     block entry():
         %length: I64 := #self.length
-        %zero: I64 = 0
-        %empty: Bool = %length.eq(%zero)
+        %empty: Bool = %length.eq(0)
         return(%empty)
 
 routine List<T>.reserve(#self: Ptr<List<T>>, %capacity: I64) -> Void
@@ -63,8 +62,7 @@ require T: typename
         branch %enough ? return() : choose(%capacity, %wanted)
 
     block choose(%capacity: I64, %wanted: I64):
-        %zero: I64 = 0
-        %empty: Bool = %capacity.eq(%zero)
+        %empty: Bool = %capacity.eq(0)
         branch %empty ? initial(%wanted) : double(%capacity, %wanted)
 
     block initial(%wanted: I64):
@@ -98,8 +96,7 @@ routine List<T>.pop(#self: Ptr<List<T>>) -> T
 require T: typename
     block entry():
         %length: I64 := #self.length
-        %zero: I64 = 0
-        %empty: Bool = %length.eq(%zero)
+        %empty: Bool = %length.eq(0)
         branch %empty ? trap() : pop(%length)
 
     block pop(%length: I64):

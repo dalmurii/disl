@@ -45,10 +45,8 @@ require T: typename
     block probe(%index: I64, %first_tombstone: I64):
         #states: Ptr<I8> := #self.states
         %state: I8 := #states[%index]
-        %s_zero: I8 = 0
-        %s_two: I8 = 2
-        %state_is_zero = %state.eq(%s_zero)
-        %state_is_two = %state.eq(%s_two)
+        %state_is_zero = %state.eq(0)
+        %state_is_two = %state.eq(2)
         select:
             %state_is_zero -> empty_slot(%index, %first_tombstone)
             %state_is_two -> tombstone_slot(%index, %first_tombstone)
@@ -91,8 +89,7 @@ routine HashSet<T>.find(#self: Ptr<HashSet<T>>, %key: T) -> I64
 require T: typename
     block entry():
         %capacity: I64 := #self.capacity
-        %zero_cap: I64 = 0
-        %empty: Bool = %capacity.eq(%zero_cap)
+        %empty: Bool = %capacity.eq(0)
         branch %empty ? return(-1): hash()
 
     block hash():
@@ -100,8 +97,7 @@ require T: typename
         %slot: I64 = #self.slot(%key, %hash)
         #states: Ptr<I8> := #self.states
         %state: I8 := #states[%slot]
-        %s_one_f: I8 = 1
-        %found: Bool = %state.eq(%s_one_f)
+        %found: Bool = %state.eq(1)
         branch %found ? return(%slot): return(-1)
 
 routine HashSet<T>.contains(#self: Ptr<HashSet<T>>, %key: T) -> Bool
@@ -133,8 +129,7 @@ require T: typename, HashEqual<T>
     block check(%i: I64, %cap: I64):
         #states: Ptr<I8> := #a.states
         %state: I8 := #states[%i]
-        %s_one_c: I8 = 1
-        %occupied: Bool = %state.eq(%s_one_c)
+        %occupied: Bool = %state.eq(1)
         %i_next: I64 = %i.add(1)
         branch %occupied ? probe(%i, %i_next, %cap) : loop(%i_next, %cap)
 
@@ -186,8 +181,7 @@ require T: typename
 
     block move_one(%i: I64, #old_keys: Ptr<T>, #old_hashes: Ptr<I64>, #old_states: Ptr<I8>, %old_capacity: I64, #alloc: Ptr<Allocator>):
         %state: I8 := #old_states[%i]
-        %s_one_m: I8 = 1
-        %occupied: Bool = %state.eq(%s_one_m)
+        %occupied: Bool = %state.eq(1)
         %i_next: I64 = %i.add(1)
         branch %occupied ? insert_old(%i, #old_keys, #old_hashes, #old_states, %old_capacity, #alloc) : move_loop(%i_next, #old_keys, #old_hashes, #old_states, %old_capacity, #alloc)
 
@@ -211,8 +205,7 @@ routine HashSet<T>.ensure(#self: Ptr<HashSet<T>>) -> Void
 require T: typename
     block entry():
         %capacity: I64 := #self.capacity
-        %zero_cap2: I64 = 0
-        %empty: Bool = %capacity.eq(%zero_cap2)
+        %empty: Bool = %capacity.eq(0)
         branch %empty ? first() : check(%capacity)
 
     block first():
@@ -242,13 +235,11 @@ require T: typename
         %slot: I64 = #self.slot(%key, %hash)
         #states: Ptr<i8> := #self.states
         %state: i8 := #states[%slot]
-        %s_one_e: i8 = 1
-        %exists: Bool = %state.eq(%s_one_e)
+        %exists: Bool = %state.eq(1)
         branch %exists ? return(false): add(%slot, %key, %hash, %state)
 
     block add(%slot: I64, %key: T, %hash: I64, %state: i8):
-        %s_two_a: i8 = 2
-        %was_tombstone: Bool = %state.eq(%s_two_a)
+        %was_tombstone: Bool = %state.eq(2)
         branch %was_tombstone ? reuse(%slot, %key, %hash) : write(%slot, %key, %hash)
 
     block reuse(%slot: I64, %key: T, %hash: I64):

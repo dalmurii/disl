@@ -31,8 +31,7 @@ routine PriorityQueue<T>.is_empty(#self: Ptr<PriorityQueue<T>>) -> Bool
 require T: typename
     block entry():
         %length: I64 := #self.length
-        %zero_l: I64 = 0
-        %empty: Bool = %length.eq(%zero_l)
+        %empty: Bool = %length.eq(0)
         return(%empty)
 
 routine PriorityQueue<T>.reserve(#self: Ptr<PriorityQueue<T>>, %capacity: I64) -> Void
@@ -62,8 +61,7 @@ require T: typename
         branch %enough ? return() : choose(%capacity, %wanted)
 
     block choose(%capacity: I64, %wanted: I64):
-        %zero_cap: I64 = 0
-        %empty: Bool = %capacity.eq(%zero_cap)
+        %empty: Bool = %capacity.eq(0)
         branch %empty ? initial(%wanted) : double(%capacity, %wanted)
 
     block initial(%wanted: I64):
@@ -100,8 +98,7 @@ require T: typename
         jump sift_up(%length)
 
     block sift_up(%index: I64):
-        %zero_idx: I64 = 0
-        %at_root: Bool = %index.eq(%zero_idx)
+        %at_root: Bool = %index.eq(0)
         branch %at_root ? return() : compare_parent(%index)
 
     block compare_parent(%index: I64):
@@ -123,8 +120,7 @@ routine PriorityQueue<T>.peek(#self: Ptr<PriorityQueue<T>>) -> T
 require T: typename
     block entry():
         %length: I64 := #self.length
-        %zero_l2: I64 = 0
-        %empty: Bool = %length.eq(%zero_l2)
+        %empty: Bool = %length.eq(0)
         branch %empty ? trap() : load()
 
     block load():
@@ -136,8 +132,7 @@ routine PriorityQueue<T>.pop(#self: Ptr<PriorityQueue<T>>) -> T
 require T: typename
     block entry():
         %length: I64 := #self.length
-        %zero_l3: I64 = 0
-        %empty: Bool = %length.eq(%zero_l3)
+        %empty: Bool = %length.eq(0)
         branch %empty ? trap() : remove_root(%length)
 
     block remove_root(%length: I64):
@@ -145,8 +140,7 @@ require T: typename
         %result: T := #data[0]
         %new_length: I64 = %length.sub(1)
         #self.length = %new_length
-        %zero_nl: I64 = 0
-        %now_empty: Bool = %new_length.eq(%zero_nl)
+        %now_empty: Bool = %new_length.eq(0)
         branch %now_empty ? return(%result): move_last(%result, %new_length)
 
     block move_last(%result: T, %new_length: I64):

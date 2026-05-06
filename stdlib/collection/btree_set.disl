@@ -129,8 +129,7 @@ require T: typename, Compare<T>
         %x: T = #a.get_order(%i)
         %y: T = #b.get_order(%i)
         %cmp: I32 = %x.compare(%y)
-        %zero_cmp: I32 = 0
-        %eq: Bool = %cmp.eq(%zero_cmp)
+        %eq: Bool = %cmp.eq(0)
         %i_next: I64 = %i.add(1)
         branch %eq ? loop(%i_next, %len) : return(false)
 
@@ -150,8 +149,7 @@ require T: typename
     block maybe_match(#node: Ptr<BTreeSetNode<T>>, %i: I64, %key: T):
         %node_key: T := #node.keys[%i]
         %cmp: I32 = %key.compare(%node_key)
-        %zero_cmp: I32 = 0
-        %equal: Bool = %cmp.eq(%zero_cmp)
+        %equal: Bool = %cmp.eq(0)
         branch %equal ? return(true): descend_or_missing(#node, %i, %key)
 
     block descend_or_missing(#node: Ptr<BTreeSetNode<T>>, %i: I64, %key: T):
@@ -200,8 +198,7 @@ require T: typename
 
     block check_key(#node: Ptr<BTreeSetNode<T>>, %order: I64, %i: I64, %child_count: I64):
         %after_child: I64 = %order.sub(%child_count)
-        %zero_ac: I64 = 0
-        %is_key: Bool = %after_child.eq(%zero_ac)
+        %is_key: Bool = %after_child.eq(0)
         %after_child_m1: I64 = %after_child.sub(1)
         %i_next: I64 = %i.add(1)
         branch %is_key ? load_key(#node, %i) : scan(#node, %after_child_m1, %i_next)
@@ -574,8 +571,7 @@ require T: typename
     block maybe_match(%slot: I64):
         %node_key: T := #self.keys[%slot]
         %cmp: I32 = %key.compare(%node_key)
-        %zero_cmp: I32 = 0
-        %equal: Bool = %cmp.eq(%zero_cmp)
+        %equal: Bool = %cmp.eq(0)
         branch %equal ? remove_here(%slot) : descend_or_missing(%slot)
 
     block remove_here(%slot: I64):
@@ -649,8 +645,7 @@ require T: typename
         %length: I64 := #self.length
         #self.length = %length.sub(1)
         %root_length: I64 := #root.length
-        %zero_er: I64 = 0
-        %empty_root: Bool = %root_length.eq(%zero_er)
+        %empty_root: Bool = %root_length.eq(0)
         branch %empty_root ? maybe_shrink(#root) : return(true)
 
     block maybe_shrink(#root: Ptr<BTreeSetNode<T>>):

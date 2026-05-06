@@ -56,8 +56,7 @@ routine println_slice(%slice: StringSlice) -> Void
 
 routine print_int(%n: I64) -> Void
     block entry():
-        %zero_val: I64 = 0
-        %is_zero: Bool = %n.eq(%zero_val)
+        %is_zero: Bool = %n.eq(0)
         branch %is_zero ? write_zero() : check_neg(%n)
 
     block write_zero():
@@ -82,23 +81,20 @@ routine print_int(%n: I64) -> Void
         jump digit_loop(19, %n, #bytes, %neg)
 
     block digit_loop(%pos: I64, %n: I64, #bytes: Ptr<I8>, %neg: I64):
-        %zero_val: I64 = 0
-        %done: Bool = %n.eq(%zero_val)
+        %done: Bool = %n.eq(0)
         branch %done ? maybe_sign(%pos, #bytes, %neg) : extract(%pos, %n, #bytes, %neg)
 
     block extract(%pos: I64, %n: I64, #bytes: Ptr<I8>, %neg: I64):
         %digit: I64 = %n.srem(10)
         %rest:  I64 = %n.sdiv(10)
         %prev:  I64 = %pos.sub(1)
-        %forty_eight: I64 = 48
-        %digit_48: I64 = %digit.add(%forty_eight)     ; '0' = 48
+        %digit_48: I64 = %digit.add(48)     ; '0' = 48
         %ascii: I8  = trunc<I64, I8>(%digit_48)
         #bytes[%prev] = %ascii
         jump digit_loop(%prev, %rest, #bytes, %neg)
 
     block maybe_sign(%pos: I64, #bytes: Ptr<I8>, %neg: I64):
-        %one_val: I64 = 1
-        %has_neg: Bool = %neg.eq(%one_val)
+        %has_neg: Bool = %neg.eq(1)
         branch %has_neg ? write_sign(%pos, #bytes) : write(%pos, #bytes)
 
     block write_sign(%pos: I64, #bytes: Ptr<I8>):
@@ -107,8 +103,7 @@ routine print_int(%n: I64) -> Void
         jump write(%prev, #bytes)
 
     block write(%pos: I64, #bytes: Ptr<I8>):
-        %nineteen: I64 = 19
-        %len:   I64     = %nineteen.sub(%pos)
+        %len:   I64     = 19.sub(%pos)
         %len_c: CSize   = i64_to_csize(%len)
         #start: Ptr<I8> = #bytes[%pos]
         c_write(1, #start, %len_c)

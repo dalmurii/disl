@@ -128,8 +128,7 @@ require K: typename, V: typename
     block maybe_match(#node: Ptr<BTreeMapNode<K, V>>, %i: I64, %key: K):
         %node_key: K := #node.keys[%i]
         %cmp: I32 = K.compare(%key, %node_key)
-        %zero_cmp: I32 = 0
-        %equal: Bool = %cmp.eq(%zero_cmp)
+        %equal: Bool = %cmp.eq(0)
         branch %equal ? load(#node, %i) : descend_or_missing(#node, %i, %key)
 
     block descend_or_missing(#node: Ptr<BTreeMapNode<K, V>>, %i: I64, %key: K):
@@ -162,8 +161,7 @@ require K: typename, V: typename, Compare<K>, Equal<V>
         %ka: K = #a.key_order(%i)
         %kb: K = #b.key_order(%i)
         %cmp: I32 = K.compare(%ka, %kb)
-        %zero_cmp: I32 = 0
-        %k_eq: Bool = %cmp.eq(%zero_cmp)
+        %k_eq: Bool = %cmp.eq(0)
         branch %k_eq ? compare_value(%i, %len) : return(false)
 
     block compare_value(%i: I64, %len: I64):
@@ -189,8 +187,7 @@ require K: typename, V: typename
     block maybe_match(#node: Ptr<BTreeMapNode<K, V>>, %i: I64, %key: K):
         %node_key: K := #node.keys[%i]
         %cmp: I32 = K.compare(%key, %node_key)
-        %zero_cmp: I32 = 0
-        %equal: Bool = %cmp.eq(%zero_cmp)
+        %equal: Bool = %cmp.eq(0)
         branch %equal ? return(true) : descend_or_missing(#node, %i, %key)
 
     block descend_or_missing(#node: Ptr<BTreeMapNode<K, V>>, %i: I64, %key: K):
@@ -239,8 +236,7 @@ require K: typename, V: typename
 
     block check_key(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64, %child_count: I64):
         %after_child: I64 = %order.sub(%child_count)
-        %zero_ac: I64 = 0
-        %is_key: Bool = %after_child.eq(%zero_ac)
+        %is_key: Bool = %after_child.eq(0)
         %after_child_m1: I64 = %after_child.sub(1)
         %i_next: I64 = %i.add(1)
         branch %is_key ? load_order(#node, %i) : scan(#node, %after_child_m1, %i_next)
@@ -295,8 +291,7 @@ require K: typename, V: typename
 
     block check_key(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64, %child_count: I64):
         %after_child: I64 = %order.sub(%child_count)
-        %zero_ac: I64 = 0
-        %is_key: Bool = %after_child.eq(%zero_ac)
+        %is_key: Bool = %after_child.eq(0)
         %after_child_m1: I64 = %after_child.sub(1)
         %i_next: I64 = %i.add(1)
         branch %is_key ? load_key(#node, %i) : scan(#node, %after_child_m1, %i_next)
@@ -470,8 +465,7 @@ require K: typename, V: typename
     block maybe_match(%slot: I64):
         %node_key: K := #self.keys[%slot]
         %cmp: I32 = K.compare(%key, %node_key)
-        %zero_cmp: I32 = 0
-        %equal: Bool = %cmp.eq(%zero_cmp)
+        %equal: Bool = %cmp.eq(0)
         branch %equal ? replace(%slot) : descend_or_missing(%slot)
 
     block replace(%slot: I64):
@@ -727,8 +721,7 @@ require K: typename, V: typename
     block maybe_match(%slot: I64):
         %node_key: K := #self.keys[%slot]
         %cmp: I32 = K.compare(%key, %node_key)
-        %zero_cmp: I32 = 0
-        %equal: Bool = %cmp.eq(%zero_cmp)
+        %equal: Bool = %cmp.eq(0)
         branch %equal ? remove_here(%slot) : descend_or_missing(%slot)
 
     block remove_here(%slot: I64):
@@ -809,8 +802,7 @@ require K: typename, V: typename
         %new_length: I64 = %length.sub(1)
         #self.length = %new_length
         %root_length: I64 := #root.length
-        %zero_er: I64 = 0
-        %empty_root: Bool = %root_length.eq(%zero_er)
+        %empty_root: Bool = %root_length.eq(0)
         branch %empty_root ? maybe_shrink(#root) : return(true)
 
     block maybe_shrink(#root: Ptr<BTreeMapNode<K, V>>):

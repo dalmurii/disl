@@ -36,8 +36,7 @@ routine String.from_ptr(#data: Ptr<I8>, %length: I64) -> String
 routine String.is_empty(#self: Ptr<String>) -> Bool
     block entry():
         %length: I64 := #self.length
-        %zero: I64 = 0
-        %result: Bool = %length.eq(%zero)
+        %result: Bool = %length.eq(0)
         return(%result)
 
 ; ── element access ────────────────────────────────────────────────────────────
@@ -85,8 +84,7 @@ routine String.concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> String
         %la: I64 = %a.length
         %lb: I64 = %b.length
         %length: I64 = %la.add(%lb)
-        %one: I64 = 1
-        %buf_size: I64 = %length.add(%one)
+        %buf_size: I64 = %length.add(1)
         #data: Ptr<I8> = alloc<I8>(#alloc, %buf_size)
         %failed: Bool = #data.is_null()
         branch %failed ? trap() : copy_a(#data)
@@ -233,8 +231,7 @@ routine String.find(#self: Ptr<String>, %needle: String) -> Option<I64>
     block entry():
         %nlen: I64 = %needle.length
         %slen: I64 := #self.length
-        %zero: I64 = 0
-        %empty_needle: Bool = %nlen.eq(%zero)
+        %empty_needle: Bool = %nlen.eq(0)
         branch %empty_needle ? hit(0) : check_fits(%nlen, %slen)
 
     block check_fits(%nlen: I64, %slen: I64):

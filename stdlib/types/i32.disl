@@ -38,8 +38,7 @@ routine I32.swap_bytes(%self: I32) -> I32
 routine I32.abs(%self: I32) -> I32
     block entry():
         %is_neg: Bool = %self.slt(0)
-        %zero: I32 = 0
-        %neg: I32 = %zero.sub(%self)
+        %neg: I32 = 0.sub(%self)
         %result: I32 = %is_neg ? %neg : %self
         return(%result)
 

@@ -36,8 +36,7 @@ require K: typename, V: typename
     block check(%slot: I64, %capacity: I64, #map: Ptr<HashMap<K, V>>):
         #states:   Ptr<I8> := #map.states
         %state:    I8      := #states[%slot]
-        %s_one: I8 = 1
-        %occupied: Bool    = %state.eq(%s_one)
+        %occupied: Bool    = %state.eq(1)
         %slot_next: I64 = %slot.add(1)
         branch %occupied ? yield(%slot, #map) : scan(%slot_next, %capacity, #map)
 

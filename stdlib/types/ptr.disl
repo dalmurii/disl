@@ -31,16 +31,14 @@ routine Ptr<T>.is_null(#self: Ptr<T>) -> Bool
 require T: typename
     block entry():
         %a: I64 = ptrtoint<Ptr<T>, I64>(#self)
-        %zero: I64 = 0
-        %r: Bool = ieq<I64>(%a, %zero)
+        %r: Bool = ieq<I64>(%a, 0)
         return(%r)
 
 routine Ptr<T>.is_not_null(#self: Ptr<T>) -> Bool
 require T: typename
     block entry():
         %a: I64 = ptrtoint<Ptr<T>, I64>(#self)
-        %zero: I64 = 0
-        %r: Bool = ine<I64>(%a, %zero)
+        %r: Bool = ine<I64>(%a, 0)
         return(%r)
 
 ; ── pointer arithmetic ────────────────────────────────────────────────────────

@@ -38,8 +38,7 @@ routine Deque<T>.is_empty(#self: Ptr<Deque<T>>) -> Bool
 require T: typename
     block entry():
         %length: I64 := #self.length
-        %zero: I64 = 0
-        %empty: Bool = %length.eq(%zero)
+        %empty: Bool = %length.eq(0)
         return(%empty)
 
 routine Deque<T>.recenter(#self: Ptr<Deque<T>>, %new_capacity: I64) -> Void
@@ -81,8 +80,7 @@ require T: typename
 
     block choose():
         %capacity: I64 := #self.capacity
-        %zero: I64 = 0
-        %empty: Bool = %capacity.eq(%zero)
+        %empty: Bool = %capacity.eq(0)
         branch %empty ? initial() : grow(%capacity)
 
     block initial():
@@ -105,8 +103,7 @@ require T: typename
         branch %has_back_space ? return() : choose(%capacity)
 
     block choose(%capacity: I64):
-        %zero: I64 = 0
-        %empty: Bool = %capacity.eq(%zero)
+        %empty: Bool = %capacity.eq(0)
         branch %empty ? initial() : grow(%capacity)
 
     block initial():
@@ -155,8 +152,7 @@ routine Deque<T>.pop_back(#self: Ptr<Deque<T>>) -> T
 require T: typename
     block entry:
         %length: I64 := #self.length
-        %zero: I64 = 0
-        %empty: Bool = %length.eq(%zero)
+        %empty: Bool = %length.eq(0)
         branch %empty ? trap() : pop(%length)
 
     block pop(%length: I64):
@@ -178,8 +174,7 @@ routine Deque<T>.pop_front(#self: Ptr<Deque<T>>) -> T
 require T: typename
     block entry:
         %length: I64 := #self.length
-        %zero: I64 = 0
-        %empty: Bool = %length.eq(%zero)
+        %empty: Bool = %length.eq(0)
         branch %empty ? trap() : pop(%length)
 
     block pop(%length: I64):

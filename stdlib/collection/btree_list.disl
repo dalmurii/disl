@@ -596,14 +596,12 @@ require T: typename
 
     block maybe_clear(#root: Ptr<BTreeListNode<T>>, %value: T):
         %root_length: I64 := #root.length
-        %zero_rl: I64 = 0
-        %empty: Bool = %root_length.eq(%zero_rl)
+        %empty: Bool = %root_length.eq(0)
         branch %empty ? clear_root(#root, %value) : return(%value)
 
     block maybe_shrink(#root: Ptr<BTreeListNode<T>>, %value: T):
         %root_length: I64 := #root.length
-        %one_rl: I64 = 1
-        %only_one: Bool = %root_length.eq(%one_rl)
+        %only_one: Bool = %root_length.eq(1)
         branch %only_one ? shrink(#root, %value) : return(%value)
 
     block clear_root(#root: Ptr<BTreeListNode<T>>, %value: T):

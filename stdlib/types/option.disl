@@ -45,8 +45,7 @@ routine Option<T>.is_none(#self: Ptr<Option<T>>) -> Bool
 require T: typename
     block entry():
         %tag: Bool := #self.tag
-        %false_val: Bool = false
-        %result: Bool = %tag.eq(%false_val)
+        %result: Bool = %tag.eq(false)
         return(%result)
 
 ; unwrap takes a pointer so the value GEP is cheap — no struct copy needed.

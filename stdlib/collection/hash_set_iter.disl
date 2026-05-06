@@ -37,8 +37,7 @@ require T: typename
     block check(%slot: I64, %capacity: I64, #set: Ptr<HashSet<T>>):
         #states:   Ptr<I8> := #set.states
         %state:    I8      := #states[%slot]
-        %s_one: I8 = 1
-        %occupied: Bool    = %state.eq(%s_one)
+        %occupied: Bool    = %state.eq(1)
         %slot_next: I64 = %slot.add(1)
         branch %occupied ? yield(%slot, #set) : scan(%slot_next, %capacity, #set)
 
