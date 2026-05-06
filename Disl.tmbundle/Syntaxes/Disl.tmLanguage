@@ -268,7 +268,7 @@
             <key>name</key>
             <string>support.type.primitive.disl</string>
             <key>match</key>
-            <string>\b(I8|I16|I32|I64|F32|F64|Bool|Void|CAddr|CChar|CWChar|CShort|CInt|CLong|CLongLong|Ptr|Array)
+            <string>\b(I8|I16|I32|I64|F32|F64|Bool|Void|CAddr|CLong|CSize|CWChar|Ptr|Array)
             \b</string>
         </dict>
 
