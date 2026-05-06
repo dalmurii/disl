@@ -14,13 +14,13 @@ require T: typename
     set:  Ptr<HashSet<T>>
     slot: I64
 
-routine HashSetIter<T>.new(#set: Ptr<HashSet<T>>) -> HashSetIter<T>
+routine HashSetIter<T>.new(#set: Ptr<HashSet<T>>) -> Self
 require T: typename
     block entry():
-        %iter: HashSetIter<T> = HashSetIter<T> { set: #set, slot: 0 }
+        %iter: Self = Self { set: #set, slot: 0 }
         return(%iter)
 
-routine HashSetIter<T>.next(#self: Ptr<HashSetIter<T>>) -> Option<T>
+routine HashSetIter<T>.next(#self: Ptr<Self>) -> Option<T>
 require T: typename
     block entry():
         #set:     Ptr<HashSet<T>> := #self.set

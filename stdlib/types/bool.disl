@@ -8,40 +8,40 @@ conform Equal<Bool>, Hash<Bool>
 
 ; ── bitwise operations ────────────────────────────────────────────────────────
 
-routine Bool.bitand(%self: Bool, %other: Bool) -> Bool
+routine Bool.bitand(%self: Self, %other: Self) -> Self
     block entry():
-        %r: Bool = band<Bool>(%self, %other)
+        %r: Self = band<Self>(%self, %other)
         return(%r)
 
-routine Bool.bitor(%self: Bool, %other: Bool) -> Bool
+routine Bool.bitor(%self: Self, %other: Self) -> Self
     block entry():
-        %r: Bool = bor<Bool>(%self, %other)
+        %r: Self = bor<Self>(%self, %other)
         return(%r)
 
-routine Bool.bitxor(%self: Bool, %other: Bool) -> Bool
+routine Bool.bitxor(%self: Self, %other: Self) -> Self
     block entry():
-        %r: Bool = bxor<Bool>(%self, %other)
+        %r: Self = bxor<Self>(%self, %other)
         return(%r)
 
-routine Bool.bitnot(%self: Bool) -> Bool
+routine Bool.bitnot(%self: Self) -> Self
     block entry():
-        %r: Bool = bnot<Bool>(%self)
+        %r: Self = bnot<Self>(%self)
         return(%r)
 
 ; ── equality, hashing ─────────────────────────────────────────────────────────
 
-routine Bool.eq(%self: Bool, %other: Bool) -> Bool
+routine Bool.eq(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = ieq<Bool>(%self, %other)
+        %r: Bool = ieq<Self>(%self, %other)
         return(%r)
 
-routine Bool.ne(%self: Bool, %other: Bool) -> Bool
+routine Bool.ne(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = ine<Bool>(%self, %other)
+        %r: Bool = ine<Self>(%self, %other)
         return(%r)
 
 
-routine Bool.hash(%self: Bool) -> I64
+routine Bool.hash(%self: Self) -> I64
     block entry():
         %v: I64 = %self.zext<I64>()
         %h: I64 = xxh64_hash_i64(%v, 0)
@@ -49,25 +49,25 @@ routine Bool.hash(%self: Bool) -> I64
 
 ; ── generic conversions ───────────────────────────────────────────────────────
 
-routine Bool.zext<To>(%self: Bool) -> To
+routine Bool.zext<To>(%self: Self) -> To
 require To: typename
     block entry():
-        %r: To = zext<Bool, To>(%self)
+        %r: To = zext<Self, To>(%self)
         return(%r)
 
 ; ── named conversions ─────────────────────────────────────────────────────────
 
-routine Bool.to_i8(%self: Bool) -> I8
+routine Bool.to_i8(%self: Self) -> I8
     block entry():
-        %result: I8 = zext<Bool, I8>(%self)
+        %result: I8 = zext<Self, I8>(%self)
         return(%result)
 
-routine Bool.to_i32(%self: Bool) -> I32
+routine Bool.to_i32(%self: Self) -> I32
     block entry():
-        %result: I32 = zext<Bool, I32>(%self)
+        %result: I32 = zext<Self, I32>(%self)
         return(%result)
 
-routine Bool.to_i64(%self: Bool) -> I64
+routine Bool.to_i64(%self: Self) -> I64
     block entry():
-        %result: I64 = zext<Bool, I64>(%self)
+        %result: I64 = zext<Self, I64>(%self)
         return(%result)

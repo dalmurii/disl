@@ -21,19 +21,19 @@ conform Equal<String>, Compare<String>, Hash<String>
 
 ; ── construction ──────────────────────────────────────────────────────────────
 
-routine String.empty() -> String
+routine String.empty() -> Self
     block entry():
-        %str: String = String { data: null, length: 0 }
+        %str: Self = Self { data: null, length: 0 }
         return(%str)
 
-routine String.from_ptr(#data: Ptr<I8>, %length: I64) -> String
+routine String.from_ptr(#data: Ptr<I8>, %length: I64) -> Self
     block entry():
-        %str: String = String { data: #data, length: %length }
+        %str: Self = Self { data: #data, length: %length }
         return(%str)
 
 ; ── predicates ────────────────────────────────────────────────────────────────
 
-routine String.is_empty(#self: Ptr<String>) -> Bool
+routine String.is_empty(#self: Ptr<Self>) -> Bool
     block entry():
         %length: I64 := #self.length
         %result: Bool = %length.eq(0)
@@ -41,7 +41,7 @@ routine String.is_empty(#self: Ptr<String>) -> Bool
 
 ; ── element access ────────────────────────────────────────────────────────────
 
-routine String.byte_at(#self: Ptr<String>, %index: I64) -> I8
+routine String.byte_at(#self: Ptr<Self>, %index: I64) -> I8
     block entry():
         %length: I64 := #self.length
         %in_bounds: Bool = %index.sge(0).bitand(%index.slt(%length))
@@ -55,7 +55,7 @@ routine String.byte_at(#self: Ptr<String>, %index: I64) -> I8
 ; ── slicing ───────────────────────────────────────────────────────────────────
 
 ; Returns a sub-view [start, end).  Traps if range is out of bounds.
-routine String.slice(#self: Ptr<String>, %start: I64, %end: I64) -> String
+routine String.slice(#self: Ptr<Self>, %start: I64, %end: I64) -> Self
     block entry():
         %length: I64 := #self.length
         %valid_start: Bool = %start.sge(0)
@@ -69,14 +69,14 @@ routine String.slice(#self: Ptr<String>, %start: I64, %end: I64) -> String
         #from: Ptr<I8> = #base[%start]
         %length: I64 := #self.length
         %slice_len: I64 = %end.sub(%start)
-        %result: String = String { data: #from, length: %slice_len }
+        %result: Self = Self { data: #from, length: %slice_len }
         return(%result)
 
 ; ── heap-allocating operations ────────────────────────────────────────────────
 
 ; Allocates a new buffer containing a followed by b.
 ; Caller must free the returned String's data pointer via free<I8>.
-routine String.concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> String
+routine String.concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> Self
     block entry():
         %la: I64 = %a.length
         %lb: I64 = %b.length
@@ -98,7 +98,7 @@ routine String.concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> String
         copy<I8>(#dst, #src_b, %len_b)
         %length: I64    = %offset.add(%len_b)
         #data[%length]  = 0
-        %result: String = String { data: #data, length: %length }
+        %result: Self = Self { data: #data, length: %length }
         return(%result)
 
 ; ── equality, ordering, hashing ───────────────────────────────────────────────
@@ -173,7 +173,7 @@ routine String.hash(%self: String) -> I64
 
 ; ── search ────────────────────────────────────────────────────────────────────
 
-routine String.starts_with(#self: Ptr<String>, %prefix: String) -> Bool
+routine String.starts_with(#self: Ptr<Self>, %prefix: String) -> Bool
     block entry():
         %sl: I64 := #self.length
         %pl: I64 = %prefix.length
@@ -195,7 +195,7 @@ routine String.starts_with(#self: Ptr<String>, %prefix: String) -> Bool
         %eq: Bool = %a.eq(%b)
         branch %eq ? loop(%i.add(1), %pl, #sd, #pd) : return(false)
 
-routine String.ends_with(#self: Ptr<String>, %suffix: String) -> Bool
+routine String.ends_with(#self: Ptr<Self>, %suffix: String) -> Bool
     block entry():
         %sl: I64 := #self.length
         %fl: I64 = %suffix.length
@@ -221,7 +221,7 @@ routine String.ends_with(#self: Ptr<String>, %suffix: String) -> Bool
 
 ; Naive O(n*m) substring search. Returns the byte index of the first match,
 ; or Option<I64>.none() when not found. An empty needle matches at 0.
-routine String.find(#self: Ptr<String>, %needle: String) -> Option<I64>
+routine String.find(#self: Ptr<Self>, %needle: String) -> Option<I64>
     block entry():
         %nlen: I64 = %needle.length
         %slen: I64 := #self.length
@@ -263,7 +263,7 @@ routine String.find(#self: Ptr<String>, %needle: String) -> Option<I64>
             ? inner(%i, %j.add(1), %last, %nlen, #sd, #nd)
             : outer(%i.add(1), %last, %nlen, #sd, #nd)
 
-routine String.contains(#self: Ptr<String>, %needle: String) -> Bool
+routine String.contains(#self: Ptr<Self>, %needle: String) -> Bool
     block entry():
         %r: Option<I64> = #self.find(%needle)
         %tag: Bool = %r.tag
@@ -271,13 +271,13 @@ routine String.contains(#self: Ptr<String>, %needle: String) -> Bool
 
 ; ── iterators ─────────────────────────────────────────────────────────────────
 
-routine String.bytes(#self: Ptr<String>) -> StringBytesIter
+routine String.bytes(#self: Ptr<Self>) -> StringBytesIter
     block entry():
         %str: String := #self
         %iter: StringBytesIter = StringBytesIter { str: %str, index: 0 }
         return(%iter)
 
-routine String.chars(#self: Ptr<String>) -> StringCharsIter
+routine String.chars(#self: Ptr<Self>) -> StringCharsIter
     block entry():
         %str: String := #self
         %iter: StringCharsIter = StringCharsIter { str: %str, index: 0 }

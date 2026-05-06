@@ -31,7 +31,7 @@ struct Edge
 ; slot.  Storing Ptr<List<Edge>> (not List<Edge>) means loading adj[u] gives a
 ; callable method receiver directly — no address-of-element operation needed.
 struct Graph
-    adj:       Ptr<Ptr<List<Edge>>>
+    adj:       Ptr<List<Ptr<List<Edge>>>>
     num_nodes: I64
 
 struct DijkstraEntry
@@ -50,57 +50,63 @@ routine DijkstraEntry.less(%a: DijkstraEntry, %b: DijkstraEntry) -> Bool
 
 ; ── Graph ─────────────────────────────────────────────────────────────────────
 
-routine Graph.new(%num_nodes: I64, #alloc: Ptr<Allocator>) -> Graph
+routine Graph.new(%num_nodes: I64, #alloc: Ptr<Allocator>) -> Self
     block entry():
-        #adj: Ptr<Ptr<List<Edge>>> = alloc<Ptr<List<Edge>>>(#alloc, %num_nodes)
+        #adj: Ptr<List<Ptr<List<Edge>>>> = alloc<List<Ptr<List<Edge>>>>(#alloc, 1)
         %adj_null: Bool = #adj.is_null()
-        branch %adj_null ? trap() : init_loop(0, #adj)
+        branch %adj_null ? trap() : setup(#adj)
 
-    block init_loop(%i: I64, #adj: Ptr<Ptr<List<Edge>>>):
+    block setup(#adj: Ptr<List<Ptr<List<Edge>>>>):
+        %adj_val: List<Ptr<List<Edge>>> = List<Ptr<List<Edge>>>.new(#alloc)
+        #adj = %adj_val
+        jump init_loop(0, #adj)
+
+    block init_loop(%i: I64, #adj: Ptr<List<Ptr<List<Edge>>>>):
         %done: Bool = %i.sge(%num_nodes)
         branch %done ? build(#adj) : make_list(%i, #adj)
 
-    block make_list(%i: I64, #adj: Ptr<Ptr<List<Edge>>>):
+    block make_list(%i: I64, #adj: Ptr<List<Ptr<List<Edge>>>>):
         #list: Ptr<List<Edge>> = alloc<List<Edge>>(#alloc, 1)
         %list_null: Bool = #list.is_null()
         branch %list_null ? trap() : init_list(%i, #adj, #list)
 
-    block init_list(%i: I64, #adj: Ptr<Ptr<List<Edge>>>, #list: Ptr<List<Edge>>):
+    block init_list(%i: I64, #adj: Ptr<List<Ptr<List<Edge>>>>, #list: Ptr<List<Edge>>):
         %empty: List<Edge> = List<Edge>.new(#alloc)
         #list = %empty
-        #adj[%i] = #list
+        #adj.push(#list)
         jump init_loop(%i.add(1), #adj)
 
-    block build(#adj: Ptr<Ptr<List<Edge>>>):
-        %g: Graph = Graph { adj: #adj, num_nodes: %num_nodes }
+    block build(#adj: Ptr<List<Ptr<List<Edge>>>>):
+        %g: Self = Self { adj: #adj, num_nodes: %num_nodes }
         return(%g)
 
-routine Graph.add_edge(#self: Ptr<Graph>, %from: I64, %to: I64, %weight: I64) -> Void
+routine Graph.add_edge(#self: Ptr<Self>, %from: I64, %to: I64, %weight: I64) -> Void
     block entry():
-        #adj:  Ptr<Ptr<List<Edge>>> := #self.adj
-        #list: Ptr<List<Edge>>      := #adj[%from]
+        #adj:  Ptr<List<Ptr<List<Edge>>>> := #self.adj
+        #list: Ptr<List<Edge>>            = #adj.get(%from)
         %edge: Edge = Edge { to: %to, weight: %weight }
         #list.push(%edge)
         return()
 
-routine Graph.free(#self: Ptr<Graph>, #alloc: Ptr<Allocator>) -> Void
+routine Graph.free(#self: Ptr<Self>, #alloc: Ptr<Allocator>) -> Void
     block entry():
-        %n:   I64                  := #self.num_nodes
-        #adj: Ptr<Ptr<List<Edge>>> := #self.adj
+        %n:   I64                         := #self.num_nodes
+        #adj: Ptr<List<Ptr<List<Edge>>>> := #self.adj
         jump free_loop(0, %n, #adj)
 
-    block free_loop(%i: I64, %n: I64, #adj: Ptr<Ptr<List<Edge>>>):
+    block free_loop(%i: I64, %n: I64, #adj: Ptr<List<Ptr<List<Edge>>>>):
         %done: Bool = %i.sge(%n)
-        branch %done ? free_arr(#adj) : free_one(%i, %n, #adj)
+        branch %done ? free_outer(#adj) : free_one(%i, %n, #adj)
 
-    block free_one(%i: I64, %n: I64, #adj: Ptr<Ptr<List<Edge>>>):
-        #list: Ptr<List<Edge>> := #adj[%i]
+    block free_one(%i: I64, %n: I64, #adj: Ptr<List<Ptr<List<Edge>>>>):
+        #list: Ptr<List<Edge>> = #adj.get(%i)
         #list.free()
         free<List<Edge>>(#alloc, #list)
         jump free_loop(%i.add(1), %n, #adj)
 
-    block free_arr(#adj: Ptr<Ptr<List<Edge>>>):
-        free<Ptr<List<Edge>>>(#alloc, #adj)
+    block free_outer(#adj: Ptr<List<Ptr<List<Edge>>>>):
+        #adj.free()
+        free<List<Ptr<List<Edge>>>>(#alloc, #adj)
         return()
 
 ; ── Dijkstra ─────────────────────────────────────────────────────────────────
@@ -152,9 +158,9 @@ routine dijkstra(
         branch %stale ? main_loop(#pq) : scan(%u, %d, #pq)
 
     block scan(%u: I64, %d: I64, #pq: Ptr<PriorityQueue<DijkstraEntry>>):
-        #adj:  Ptr<Ptr<List<Edge>>> := #graph.adj
-        #list: Ptr<List<Edge>>      := #adj[%u]
-        %len:  I64                  = #list.length()
+        #adj:  Ptr<List<Ptr<List<Edge>>>> := #graph.adj
+        #list: Ptr<List<Edge>>            = #adj.get(%u)
+        %len:  I64                        = #list.length()
         jump edge_loop(0, %len, %d, #list, #pq)
 
     block edge_loop(%i: I64, %len: I64, %d: I64, #list: Ptr<List<Edge>>, #pq: Ptr<PriorityQueue<DijkstraEntry>>):

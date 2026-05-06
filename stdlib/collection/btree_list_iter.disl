@@ -1,4 +1,4 @@
-﻿; Disl stdlib collection: BTreeListIter<T>
+; Disl stdlib collection: BTreeListIter<T>
 ;
 ; In-order iterator over BTreeList<T>.  Yields elements from index 0 to
 ; length-1 in insertion-order sequence, delegating to BTreeList.get for
@@ -15,14 +15,14 @@ require T: typename
     order: I64
     total: I64
 
-routine BTreeListIter<T>.new(#list: Ptr<BTreeList<T>>) -> BTreeListIter<T>
+routine BTreeListIter<T>.new(#list: Ptr<BTreeList<T>>) -> Self
 require T: typename
     block entry():
         %total: I64 = #list.length()
-        %iter: BTreeListIter<T> = BTreeListIter<T> { list: #list, order: 0, total: %total }
+        %iter: Self = Self { list: #list, order: 0, total: %total }
         return(%iter)
 
-routine BTreeListIter<T>.next(#self: Ptr<BTreeListIter<T>>) -> Option<T>
+routine BTreeListIter<T>.next(#self: Ptr<Self>) -> Option<T>
 require T: typename
     block entry():
         %order: I64  := #self.order

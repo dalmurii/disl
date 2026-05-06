@@ -9,12 +9,12 @@ struct StringBytesIter
     str:   String
     index: I64
 
-routine StringBytesIter.new(%str: String) -> StringBytesIter
+routine StringBytesIter.new(%str: String) -> Self
     block entry():
-        %iter: StringBytesIter = StringBytesIter { str: %str, index: 0 }
+        %iter: Self = Self { str: %str, index: 0 }
         return(%iter)
 
-routine StringBytesIter.next(#self: Ptr<StringBytesIter>) -> Option<I8>
+routine StringBytesIter.next(#self: Ptr<Self>) -> Option<I8>
     block entry():
         %index: I64 := #self.index
         %str: String := #self.str

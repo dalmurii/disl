@@ -23,17 +23,17 @@ require T: typename, Compare<T>
     length: I64
     alloc: Ptr<Allocator>
 
-routine BTreeSet<T>.new(#alloc: Ptr<Allocator>) -> BTreeSet<T>
+routine BTreeSet<T>.new(#alloc: Ptr<Allocator>) -> Self
 require T: typename, Compare<T>
     block entry():
-        %set: BTreeSet<T> = BTreeSet<T> {
+        %set: Self = Self {
             root: null,
             length: 0,
             alloc: #alloc
         }
         return(%set)
 
-routine BTreeSet<T>.length(#self: Ptr<BTreeSet<T>>) -> I64
+routine BTreeSet<T>.length(#self: Ptr<Self>) -> I64
 require T: typename
     block entry():
         %length: I64 := #self.length
@@ -52,17 +52,17 @@ require T: typename
         #node.subtree_count = 0
         return(#node)
 
-routine BTreeSetNode<T>.count(#self: Ptr<BTreeSetNode<T>>) -> I64
+routine BTreeSetNode<T>.count(#self: Ptr<Self>) -> I64
 require T: typename
     block entry():
         %empty: Bool = #self.is_null()
         branch %empty ? return(0): count(#self)
 
-    block count(#self: Ptr<BTreeSetNode<T>>):
+    block count(#self: Ptr<Self>):
         %count: I64 := #self.subtree_count
         return(%count)
 
-routine BTreeSetNode<T>.recount(#self: Ptr<BTreeSetNode<T>>) -> Void
+routine BTreeSetNode<T>.recount(#self: Ptr<Self>) -> Void
 require T: typename
     block entry():
         %leaf: Bool := #self.leaf
@@ -93,7 +93,7 @@ require T: typename
         #self.subtree_count = %sum
         return()
 
-routine BTreeSet<T>.find_index(#self: Ptr<BTreeSet<T>>, #node: Ptr<BTreeSetNode<T>>, %key: T) -> I64
+routine BTreeSet<T>.find_index(#self: Ptr<Self>, #node: Ptr<BTreeSetNode<T>>, %key: T) -> I64
 require T: typename
     block entry():
         jump loop(0)
@@ -130,7 +130,7 @@ require T: typename, Compare<T>
         %eq: Bool = %cmp.eq(0)
         branch %eq ? loop(%i.add(1), %len) : return(false)
 
-routine BTreeSet<T>.contains(#self: Ptr<BTreeSet<T>>, %key: T) -> Bool
+routine BTreeSet<T>.contains(#self: Ptr<Self>, %key: T) -> Bool
 require T: typename
     block entry():
         #root: Ptr<BTreeSetNode<T>> := #self.root
@@ -157,7 +157,7 @@ require T: typename
         #child: Ptr<BTreeSetNode<T>> := #node.children[%i]
         jump search(#child, %key)
 
-routine BTreeSet<T>.get_order(#self: Ptr<BTreeSet<T>>, %order: I64) -> T
+routine BTreeSet<T>.get_order(#self: Ptr<Self>, %order: I64) -> T
 require T: typename
     block entry():
         %length: I64 := #self.length
@@ -208,7 +208,7 @@ require T: typename
         return(%key)
 
 routine BTreeSetNode<T>.split_child(
-        #self: Ptr<BTreeSetNode<T>>, %index: I64, #alloc: Ptr<Allocator>) -> Void
+        #self: Ptr<Self>, %index: I64, #alloc: Ptr<Allocator>) -> Void
 require T: typename
     block entry():
         #left: Ptr<BTreeSetNode<T>> := #self.children[%index]
@@ -277,7 +277,7 @@ require T: typename
         return()
 
 routine BTreeSetNode<T>.insert_nonfull(
-        #self: Ptr<BTreeSetNode<T>>, #set: Ptr<BTreeSet<T>>,
+        #self: Ptr<Self>, #set: Ptr<BTreeSet<T>>,
         %key: T, #alloc: Ptr<Allocator>) -> Void
 require T: typename
     block entry():
@@ -316,7 +316,7 @@ require T: typename
         #self.recount()
         return()
 
-routine BTreeSet<T>.add(#self: Ptr<BTreeSet<T>>, %key: T) -> Bool
+routine BTreeSet<T>.add(#self: Ptr<Self>, %key: T) -> Bool
 require T: typename
     block entry():
         %exists: Bool = #self.contains(%key)
@@ -355,7 +355,7 @@ require T: typename
         #self.length = %length.add(1)
         return(true)
 
-routine BTreeSetNode<T>.remove_leaf_at(#self: Ptr<BTreeSetNode<T>>, %index: I64) -> T
+routine BTreeSetNode<T>.remove_leaf_at(#self: Ptr<Self>, %index: I64) -> T
 require T: typename
     block entry():
         %old: T := #self.keys[%index]
@@ -371,7 +371,7 @@ require T: typename
 ; Helpers below ensure a child has length >= 4 (= t) before any deletion
 ; descent so the child can absorb a one-key drop without underflowing.
 
-routine BTreeSetNode<T>.borrow_from_left(#self: Ptr<BTreeSetNode<T>>, %i: I64) -> Void
+routine BTreeSetNode<T>.borrow_from_left(#self: Ptr<Self>, %i: I64) -> Void
 require T: typename
     block entry():
         %i_m1: I64 = %i.sub(1)
@@ -408,7 +408,7 @@ require T: typename
         #self.recount()
         return()
 
-routine BTreeSetNode<T>.borrow_from_right(#self: Ptr<BTreeSetNode<T>>, %i: I64) -> Void
+routine BTreeSetNode<T>.borrow_from_right(#self: Ptr<Self>, %i: I64) -> Void
 require T: typename
     block entry():
         #child: Ptr<BTreeSetNode<T>> := #self.children[%i]
@@ -444,7 +444,7 @@ require T: typename
         return()
 
 routine BTreeSetNode<T>.merge_children(
-        #self: Ptr<BTreeSetNode<T>>, %i: I64, #alloc: Ptr<Allocator>) -> Void
+        #self: Ptr<Self>, %i: I64, #alloc: Ptr<Allocator>) -> Void
 require T: typename
     block entry():
         %i_p1: I64 = %i.add(1)
@@ -482,7 +482,7 @@ require T: typename
         return()
 
 routine BTreeSetNode<T>.ensure_min(
-        #self: Ptr<BTreeSetNode<T>>, %i: I64, #alloc: Ptr<Allocator>) -> I64
+        #self: Ptr<Self>, %i: I64, #alloc: Ptr<Allocator>) -> I64
 require T: typename
     block entry():
         #child: Ptr<BTreeSetNode<T>> := #self.children[%i]
@@ -534,7 +534,7 @@ require T: typename
         #self.merge_children(%i, #alloc)
         return(%i)
 
-routine BTreeSetNode<T>.take_max(#self: Ptr<BTreeSetNode<T>>, #set: Ptr<BTreeSet<T>>) -> T
+routine BTreeSetNode<T>.take_max(#self: Ptr<Self>, #set: Ptr<BTreeSet<T>>) -> T
 require T: typename
     block entry():
         %leaf: Bool := #self.leaf
@@ -555,7 +555,7 @@ require T: typename
         #self.recount()
         return(%key)
 
-routine BTreeSetNode<T>.take_min(#self: Ptr<BTreeSetNode<T>>, #set: Ptr<BTreeSet<T>>) -> T
+routine BTreeSetNode<T>.take_min(#self: Ptr<Self>, #set: Ptr<BTreeSet<T>>) -> T
 require T: typename
     block entry():
         %leaf: Bool := #self.leaf
@@ -573,7 +573,7 @@ require T: typename
         #self.recount()
         return(%key)
 
-routine BTreeSetNode<T>.remove(#self: Ptr<BTreeSetNode<T>>, #set: Ptr<BTreeSet<T>>, %key: T) -> Bool
+routine BTreeSetNode<T>.remove(#self: Ptr<Self>, #set: Ptr<BTreeSet<T>>, %key: T) -> Bool
 require T: typename
     block entry():
         %slot: I64 = #set.find_index(#self, %key)
@@ -641,7 +641,7 @@ require T: typename
         #self.recount()
         return(%removed)
 
-routine BTreeSet<T>.remove(#self: Ptr<BTreeSet<T>>, %key: T) -> Bool
+routine BTreeSet<T>.remove(#self: Ptr<Self>, %key: T) -> Bool
 require T: typename
     block entry():
         #root: Ptr<BTreeSetNode<T>> := #self.root
@@ -677,7 +677,7 @@ require T: typename
         return(true)
 
 ; Internal nodes store `length` separator keys and `length + 1` children.
-routine BTreeSetNode<T>.free_recursive(#self: Ptr<BTreeSetNode<T>>, #alloc: Ptr<Allocator>) -> Void
+routine BTreeSetNode<T>.free_recursive(#self: Ptr<Self>, #alloc: Ptr<Allocator>) -> Void
 require T: typename
     block entry():
         %leaf: Bool := #self.leaf
@@ -700,7 +700,7 @@ require T: typename
         free<BTreeSetNode<T>>(#alloc, #self)
         return()
 
-routine BTreeSet<T>.free(#self: Ptr<BTreeSet<T>>) -> Void
+routine BTreeSet<T>.free(#self: Ptr<Self>) -> Void
 require T: typename
     block entry():
         #root: Ptr<BTreeSetNode<T>> := #self.root

@@ -42,32 +42,32 @@ struct Result
     tag: ResultTag
     payload: UnionTwo<I64, I32>
 
-routine Result.ok(%value: I64) -> Result
+routine Result.ok(%value: I64) -> Self
     block entry():
         #payload_buf: ptr<UnionTwo<I64, I32>> = alloca<UnionTwo<I64, I32>>
         #ok_view: ptr<I64> = bitcast<ptr<UnionTwo<I64, I32>>, ptr<I64>>(#payload_buf)
         #ok_view = %value
         %payload: UnionTwo<I64, I32> := #payload_buf
-        %r: Result = Result {
+        %r: Self = Self {
             tag: ResultTag.Ok,
             payload: %payload
         }
         return(%r)
 
-routine Result.err(%code: I32) -> Result
+routine Result.err(%code: I32) -> Self
     block entry():
         #payload_buf: ptr<UnionTwo<I64, I32>> = alloca<UnionTwo<I64, I32>>
         #err_view: ptr<I32> = bitcast<ptr<UnionTwo<I64, I32>>, ptr<I32>>(#payload_buf)
         #err_view = %code
         %payload: UnionTwo<I64, I32> := #payload_buf
-        %r: Result = Result {
+        %r: Self = Self {
             tag: ResultTag.Err,
             payload: %payload
         }
         return(%r)
 
 ; Caller checks the tag explicitly, then bitcasts to the active view.
-routine Result.print(#self: ptr<Result>) -> void
+routine Result.print(#self: ptr<Self>) -> void
     block entry():
         %tag: ResultTag := #self.tag
         switch %tag:
@@ -102,7 +102,7 @@ struct Number
     @aligned(max(alignof<I64>(), alignof<F64>()))
     storage: array<i8, max(sizeof<I64>(), sizeof<F64>())>
 
-routine Number.from_int(%n: I64) -> Number
+routine Number.from_int(%n: I64) -> Self
     block entry():
         #buf: ptr<Number> = alloca<Number>
         #int_view: ptr<I64> = bitcast<ptr<Number>, ptr<I64>>(#buf)
@@ -110,7 +110,7 @@ routine Number.from_int(%n: I64) -> Number
         %u: Number := #buf
         return(%u)
 
-routine Number.from_float(%f: F64) -> Number
+routine Number.from_float(%f: F64) -> Self
     block entry():
         #buf: ptr<Number> = alloca<Number>
         #float_view: ptr<F64> = bitcast<ptr<Number>, ptr<F64>>(#buf)
@@ -118,13 +118,13 @@ routine Number.from_float(%f: F64) -> Number
         %u: Number := #buf
         return(%u)
 
-routine Number.as_int(#self: ptr<Number>) -> I64
+routine Number.as_int(#self: ptr<Self>) -> I64
     block entry():
         #view: ptr<I64> = bitcast<ptr<Number>, ptr<I64>>(#self)
         %n: I64 := #view
         return(%n)
 
-routine Number.as_float(#self: ptr<Number>) -> F64
+routine Number.as_float(#self: ptr<Self>) -> F64
     block entry():
         #view: ptr<F64> = bitcast<ptr<Number>, ptr<F64>>(#self)
         %f: F64 := #view

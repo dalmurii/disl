@@ -6,11 +6,11 @@
 
 concept Equal<T>
 require T: typename
-    routine T.eq(%a: T, %b: T) -> Bool
+    routine Self.eq(%a: Self, %b: Self) -> Bool
 
 concept Hash<T>
 require T: typename
-    routine T.hash(%value: T) -> I64
+    routine Self.hash(%value: Self) -> I64
 
 concept HashEqual<T>
 conform Equal<T>, Hash<T>
@@ -19,15 +19,15 @@ require T: typename
 concept Compare<T>
 require T: typename
     ; Return < 0 when a < b, 0 when a == b, and > 0 when a > b.
-    routine T.compare(%a: T, %b: T) -> I32
+    routine Self.compare(%a: Self, %b: Self) -> I32
 
 concept Priority<T>
 require T: typename
     ; Return true when a should be closer to the top than b.
-    routine T.less(%a: T, %b: T) -> Bool
+    routine Self.less(%a: Self, %b: Self) -> Bool
 
 concept Iterator<T, Iter>
 require T: typename
     ; Advance and return the next element, or Option<T>.none() when exhausted.
     ; next() mutates the iterator state, so #self is a pointer.
-    routine Iter.next(#self: Ptr<Iter>) -> Option<T>
+    routine Self.next(#self: Ptr<Self>) -> Option<T>

@@ -39,26 +39,26 @@ require T: typename
 
 ; ── Construction ──────────────────────────────────────────────────────────────
 
-routine LinkedList<T>.new() -> LinkedList<T>
+routine LinkedList<T>.new() -> Self
     block entry():
-        %list: LinkedList<T> = LinkedList<T> { head: null, tail: null, length: 0 }
+        %list: Self = Self { head: null, tail: null, length: 0 }
         return(%list)
 
 ; ── Queries ───────────────────────────────────────────────────────────────────
 
-routine LinkedList<T>.length(#self: Ptr<LinkedList<T>>) -> I64
+routine LinkedList<T>.length(#self: Ptr<Self>) -> I64
     block entry():
         %len: I64 := #self.length
         return(%len)
 
-routine LinkedList<T>.is_empty(#self: Ptr<LinkedList<T>>) -> Bool
+routine LinkedList<T>.is_empty(#self: Ptr<Self>) -> Bool
     block entry():
         %len: I64 := #self.length
         %zero: I64 = 0
         %empty: Bool = %len.eq(%zero)
         return(%empty)
 
-routine LinkedList<T>.peek_front(#self: Ptr<LinkedList<T>>) -> Option<T>
+routine LinkedList<T>.peek_front(#self: Ptr<Self>) -> Option<T>
     block entry():
         #head: Ptr<ListNode<T>> := #self.head
         %empty: Bool = #head.is_null()
@@ -73,7 +73,7 @@ routine LinkedList<T>.peek_front(#self: Ptr<LinkedList<T>>) -> Option<T>
         %some: Option<T> = Option<T>.some(%val)
         return(%some)
 
-routine LinkedList<T>.peek_back(#self: Ptr<LinkedList<T>>) -> Option<T>
+routine LinkedList<T>.peek_back(#self: Ptr<Self>) -> Option<T>
     block entry():
         #tail: Ptr<ListNode<T>> := #self.tail
         %empty: Bool = #tail.is_null()
@@ -90,7 +90,7 @@ routine LinkedList<T>.peek_back(#self: Ptr<LinkedList<T>>) -> Option<T>
 
 ; ── Insert ────────────────────────────────────────────────────────────────────
 
-routine LinkedList<T>.push_front(#self: Ptr<LinkedList<T>>, %val: T, #alloc: Ptr<Allocator>) -> Void
+routine LinkedList<T>.push_front(#self: Ptr<Self>, %val: T, #alloc: Ptr<Allocator>) -> Void
     block entry():
         %one: I64 = 1
         #node: Ptr<ListNode<T>> = alloc<ListNode<T>>(#alloc, %one)
@@ -121,7 +121,7 @@ routine LinkedList<T>.push_front(#self: Ptr<LinkedList<T>>, %val: T, #alloc: Ptr
         #self.length = %next_len
         return()
 
-routine LinkedList<T>.push_back(#self: Ptr<LinkedList<T>>, %val: T, #alloc: Ptr<Allocator>) -> Void
+routine LinkedList<T>.push_back(#self: Ptr<Self>, %val: T, #alloc: Ptr<Allocator>) -> Void
     block entry():
         %one: I64 = 1
         #node: Ptr<ListNode<T>> = alloc<ListNode<T>>(#alloc, %one)
@@ -154,7 +154,7 @@ routine LinkedList<T>.push_back(#self: Ptr<LinkedList<T>>, %val: T, #alloc: Ptr<
 
 ; ── Remove ────────────────────────────────────────────────────────────────────
 
-routine LinkedList<T>.pop_front(#self: Ptr<LinkedList<T>>, #alloc: Ptr<Allocator>) -> Option<T>
+routine LinkedList<T>.pop_front(#self: Ptr<Self>, #alloc: Ptr<Allocator>) -> Option<T>
     block entry():
         #head: Ptr<ListNode<T>> := #self.head
         %empty: Bool = #head.is_null()
@@ -188,7 +188,7 @@ routine LinkedList<T>.pop_front(#self: Ptr<LinkedList<T>>, #alloc: Ptr<Allocator
         %some: Option<T> = Option<T>.some(%val)
         return(%some)
 
-routine LinkedList<T>.pop_back(#self: Ptr<LinkedList<T>>, #alloc: Ptr<Allocator>) -> Option<T>
+routine LinkedList<T>.pop_back(#self: Ptr<Self>, #alloc: Ptr<Allocator>) -> Option<T>
     block entry():
         #tail: Ptr<ListNode<T>> := #self.tail
         %empty: Bool = #tail.is_null()
@@ -224,14 +224,14 @@ routine LinkedList<T>.pop_back(#self: Ptr<LinkedList<T>>, #alloc: Ptr<Allocator>
 
 ; ── Iterator ──────────────────────────────────────────────────────────────────
 
-routine LinkedList<T>.iter(#self: Ptr<LinkedList<T>>) -> LinkedListIter<T>
+routine LinkedList<T>.iter(#self: Ptr<Self>) -> LinkedListIter<T>
     block entry():
         #head: Ptr<ListNode<T>> := #self.head
         %iter: LinkedListIter<T> = LinkedListIter<T> { current: #head }
         return(%iter)
 
 ; satisfies Iterator<T, LinkedListIter<T>>
-routine LinkedListIter<T>.next(#self: Ptr<LinkedListIter<T>>) -> Option<T>
+routine LinkedListIter<T>.next(#self: Ptr<Self>) -> Option<T>
     block entry():
         #cur: Ptr<ListNode<T>> := #self.current
         %done: Bool = #cur.is_null()
@@ -250,7 +250,7 @@ routine LinkedListIter<T>.next(#self: Ptr<LinkedListIter<T>>) -> Option<T>
 
 ; ── Free ──────────────────────────────────────────────────────────────────────
 
-routine LinkedList<T>.free(#self: Ptr<LinkedList<T>>, #alloc: Ptr<Allocator>) -> Void
+routine LinkedList<T>.free(#self: Ptr<Self>, #alloc: Ptr<Allocator>) -> Void
     block entry():
         #cur: Ptr<ListNode<T>> := #self.head
         jump loop(#cur)

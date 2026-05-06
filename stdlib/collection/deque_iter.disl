@@ -1,4 +1,4 @@
-﻿; Disl stdlib collection: DequeIter<T>
+; Disl stdlib collection: DequeIter<T>
 ;
 ; Forward iterator over Deque<T>, yielding elements front-to-back.
 ; Delegates index-to-physical mapping to Deque.get, which handles the
@@ -12,13 +12,13 @@ require T: typename
     deque: Ptr<Deque<T>>
     index: I64
 
-routine DequeIter<T>.new(#deque: Ptr<Deque<T>>) -> DequeIter<T>
+routine DequeIter<T>.new(#deque: Ptr<Deque<T>>) -> Self
 require T: typename
     block entry():
-        %iter: DequeIter<T> = DequeIter<T> { deque: #deque, index: 0 }
+        %iter: Self = Self { deque: #deque, index: 0 }
         return(%iter)
 
-routine DequeIter<T>.next(#self: Ptr<DequeIter<T>>) -> Option<T>
+routine DequeIter<T>.next(#self: Ptr<Self>) -> Option<T>
 require T: typename
     block entry():
         #deque: Ptr<Deque<T>> := #self.deque

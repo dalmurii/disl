@@ -1,4 +1,4 @@
-﻿; Disl stdlib collection: BTreeSetIter<T>
+; Disl stdlib collection: BTreeSetIter<T>
 ;
 ; In-order iterator over BTreeSet<T> using the existing get_order
 ; order-statistic routine.  Yields keys in ascending sorted order.
@@ -17,14 +17,14 @@ require T: typename
     order: I64
     total: I64
 
-routine BTreeSetIter<T>.new(#set: Ptr<BTreeSet<T>>) -> BTreeSetIter<T>
+routine BTreeSetIter<T>.new(#set: Ptr<BTreeSet<T>>) -> Self
 require T: typename
     block entry():
         %total: I64 = #set.length()
-        %iter: BTreeSetIter<T> = BTreeSetIter<T> { set: #set, order: 0, total: %total }
+        %iter: Self = Self { set: #set, order: 0, total: %total }
         return(%iter)
 
-routine BTreeSetIter<T>.next(#self: Ptr<BTreeSetIter<T>>) -> Option<T>
+routine BTreeSetIter<T>.next(#self: Ptr<Self>) -> Option<T>
 require T: typename
     block entry():
         %order: I64  := #self.order

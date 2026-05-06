@@ -18,7 +18,7 @@ require T: typename
     tag: Bool
     value: T
 
-routine Option<T>.none() -> Option<T>
+routine Option<T>.none() -> Self
 require T: typename
     block entry():
         #buf: Ptr<Option<T>> = alloca<Option<T>>
@@ -26,7 +26,7 @@ require T: typename
         %opt: Option<T> := #buf
         return(%opt)
 
-routine Option<T>.some(%value: T) -> Option<T>
+routine Option<T>.some(%value: T) -> Self
 require T: typename
     block entry():
         #buf: Ptr<Option<T>> = alloca<Option<T>>
@@ -35,13 +35,13 @@ require T: typename
         %opt: Option<T> := #buf
         return(%opt)
 
-routine Option<T>.is_some(#self: Ptr<Option<T>>) -> Bool
+routine Option<T>.is_some(#self: Ptr<Self>) -> Bool
 require T: typename
     block entry():
         %tag: Bool := #self.tag
         return(%tag)
 
-routine Option<T>.is_none(#self: Ptr<Option<T>>) -> Bool
+routine Option<T>.is_none(#self: Ptr<Self>) -> Bool
 require T: typename
     block entry():
         %tag: Bool := #self.tag
@@ -50,7 +50,7 @@ require T: typename
 
 ; unwrap takes a pointer so the value GEP is cheap — no struct copy needed.
 ; Traps if tag is false.
-routine Option<T>.unwrap(#self: Ptr<Option<T>>) -> T
+routine Option<T>.unwrap(#self: Ptr<Self>) -> T
 require T: typename
     block entry():
         %tag: Bool := #self.tag

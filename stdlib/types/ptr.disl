@@ -45,7 +45,7 @@ require T: typename
 
 ; Returns a pointer offset by %bytes bytes.
 ; No bounds checking — caller is responsible for staying in-bounds.
-routine Ptr<T>.offset(#self: Ptr<T>, %bytes: I64) -> Ptr<T>
+routine Ptr<T>.offset(#self: Ptr<T>, %bytes: I64) -> Self
 require T: typename
     block entry():
         %addr: I64 = ptrtoint<Ptr<T>, I64>(#self)

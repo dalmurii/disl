@@ -14,7 +14,7 @@ const F32.NAN:          F32 = 0x7FC00000  ; canonical quiet NaN bits
 
 ; ── arithmetic ────────────────────────────────────────────────────────────────
 
-routine F32.abs(%self: F32) -> F32
+routine F32.abs(%self: F32) -> Self
     block entry():
         %zero: F32 = 0.0
         %is_neg: Bool = %self.flt(%zero)
@@ -22,29 +22,29 @@ routine F32.abs(%self: F32) -> F32
         %result: F32 = %is_neg ? %neg : %self
         return(%result)
 
-routine F32.min(%self: F32, %other: F32) -> F32
+routine F32.min(%self: F32, %other: F32) -> Self
     block entry():
         %self_less: Bool = %self.flt(%other)
         %result: F32 = %self_less ? %self : %other
         return(%result)
 
-routine F32.max(%self: F32, %other: F32) -> F32
+routine F32.max(%self: F32, %other: F32) -> Self
     block entry():
         %self_more: Bool = %self.fgt(%other)
         %result: F32 = %self_more ? %self : %other
         return(%result)
 
-routine F32.add(%self: F32, %other: F32) -> F32
+routine F32.add(%self: F32, %other: F32) -> Self
     block entry():
         %r: F32 = fadd<F32>(%self, %other)
         return(%r)
 
-routine F32.sub(%self: F32, %other: F32) -> F32
+routine F32.sub(%self: F32, %other: F32) -> Self
     block entry():
         %r: F32 = fsub<F32>(%self, %other)
         return(%r)
 
-routine F32.mul(%self: F32, %other: F32) -> F32
+routine F32.mul(%self: F32, %other: F32) -> Self
     block entry():
         %r: F32 = fmul<F32>(%self, %other)
         return(%r)
@@ -73,7 +73,7 @@ routine F32.ge(%self: F32, %other: F32) -> Bool
 
 ; ── division ──────────────────────────────────────────────────────────────────
 
-routine F32.fdiv(%self: F32, %other: F32) -> F32
+routine F32.fdiv(%self: F32, %other: F32) -> Self
     block entry():
         %r: F32 = fdiv<F32>(%self, %other)
         return(%r)

@@ -21,10 +21,10 @@ require K: typename, V: typename, HashEqual<K>, Equal<V>
     capacity: I64
     alloc: Ptr<Allocator>
 
-routine HashMap<K, V>.new(#alloc: Ptr<Allocator>) -> HashMap<K, V>
+routine HashMap<K, V>.new(#alloc: Ptr<Allocator>) -> Self
 require K: typename, V: typename, HashEqual<K>
     block entry():
-        %map: HashMap<K, V> = HashMap<K, V> {
+        %map: Self = Self {
             keys: null,
             values: null,
             hashes: null,
@@ -36,13 +36,13 @@ require K: typename, V: typename, HashEqual<K>
         }
         return(%map)
 
-routine HashMap<K, V>.length(#self: Ptr<HashMap<K, V>>) -> I64
+routine HashMap<K, V>.length(#self: Ptr<Self>) -> I64
 require K: typename, V: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
-routine HashMap<K, V>.slot(#self: Ptr<HashMap<K, V>>, %key: K, %hash: I64) -> I64
+routine HashMap<K, V>.slot(#self: Ptr<Self>, %key: K, %hash: I64) -> I64
 require K: typename, V: typename
     block entry():
         %capacity: I64 := #self.capacity
@@ -89,7 +89,7 @@ require K: typename, V: typename
         %next: I64 = %index.add(1).bitand(%capacity.sub(1))
         jump probe(%next, %first_tombstone)
 
-routine HashMap<K, V>.find(#self: Ptr<HashMap<K, V>>, %key: K) -> I64
+routine HashMap<K, V>.find(#self: Ptr<Self>, %key: K) -> I64
 require K: typename, V: typename
     block entry():
         %capacity: I64 := #self.capacity
@@ -104,7 +104,7 @@ require K: typename, V: typename
         %found: Bool = %state.eq(1)
         branch %found ? return(%slot): return(-1)
 
-routine HashMap<K, V>.contains(#self: Ptr<HashMap<K, V>>, %key: K) -> Bool
+routine HashMap<K, V>.contains(#self: Ptr<Self>, %key: K) -> Bool
 require K: typename, V: typename
     block entry():
         %found: Bool = #self.find(%key).sge(0)
@@ -150,7 +150,7 @@ require K: typename, V: typename, HashEqual<K>, Equal<V>
         %eq: Bool = %va.eq(%vb)
         branch %eq ? loop(%i_next, %cap) : return(false)
 
-routine HashMap<K, V>.rehash(#self: Ptr<HashMap<K, V>>, %new_capacity: I64) -> Void
+routine HashMap<K, V>.rehash(#self: Ptr<Self>, %new_capacity: I64) -> Void
 require K: typename, V: typename
     block entry():
         #alloc: Ptr<Allocator> := #self.alloc
@@ -264,7 +264,7 @@ require K: typename, V: typename
         free<i8>(#alloc, #old_states)
         return()
 
-routine HashMap<K, V>.ensure(#self: Ptr<HashMap<K, V>>) -> Void
+routine HashMap<K, V>.ensure(#self: Ptr<Self>) -> Void
 require K: typename, V: typename
     block entry():
         %capacity: I64 := #self.capacity
@@ -289,7 +289,7 @@ require K: typename, V: typename
         return()
 
 ; Insert without growing — used internally by rehash after new arrays are in place.
-routine HashMap<K, V>.put_direct(#self: Ptr<HashMap<K, V>>, %key: K, %value: V) -> Void
+routine HashMap<K, V>.put_direct(#self: Ptr<Self>, %key: K, %value: V) -> Void
 require K: typename, V: typename
     block entry():
         %hash: I64 = K.hash(%key)
@@ -328,14 +328,14 @@ require K: typename, V: typename
         #self.length = %length.add(1)
         return()
 
-routine HashMap<K, V>.put(#self: Ptr<HashMap<K, V>>, %key: K, %value: V) -> Void
+routine HashMap<K, V>.put(#self: Ptr<Self>, %key: K, %value: V) -> Void
 require K: typename, V: typename
     block entry():
         #self.ensure()
         #self.put_direct(%key, %value)
         return()
 
-routine HashMap<K, V>.get(#self: Ptr<HashMap<K, V>>, %key: K) -> V
+routine HashMap<K, V>.get(#self: Ptr<Self>, %key: K) -> V
 require K: typename, V: typename
     block entry():
         %slot: I64 = #self.find(%key)
@@ -347,7 +347,7 @@ require K: typename, V: typename
         %value: V := #values[%slot]
         return(%value)
 
-routine HashMap<K, V>.remove(#self: Ptr<HashMap<K, V>>, %key: K) -> Bool
+routine HashMap<K, V>.remove(#self: Ptr<Self>, %key: K) -> Bool
 require K: typename, V: typename
     block entry():
         %slot: I64 = #self.find(%key)
@@ -363,7 +363,7 @@ require K: typename, V: typename
         #self.tombstones = %tombstones.add(1)
         return(true)
 
-routine HashMap<K, V>.free(#self: Ptr<HashMap<K, V>>) -> Void
+routine HashMap<K, V>.free(#self: Ptr<Self>) -> Void
 require K: typename, V: typename
     block entry():
         #states: Ptr<i8> := #self.states

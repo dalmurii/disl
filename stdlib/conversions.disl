@@ -6,13 +6,13 @@
 
 ; ── casts ─────────────────────────────────────────────────────────────────────
 
-routine bitcast<T, U>(%self: T) -> U
+routine T.bitcast<U>(%self: T) -> U
 require T: typename, U: typename
     block entry():
         %r: U = bitcast<T, U>(%self)
         return(%r)
 
-routine trunc<T, U>(%self: T) -> U
+routine T.trunc<U>(%self: T) -> U
 require T: typename, U: typename
     block entry():
         %r: U = trunc<T, U>(%self)

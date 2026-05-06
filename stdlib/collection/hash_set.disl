@@ -14,10 +14,10 @@ require T: typename, HashEqual<T>
     capacity: I64
     alloc: Ptr<Allocator>
 
-routine HashSet<T>.new(#alloc: Ptr<Allocator>) -> HashSet<T>
+routine HashSet<T>.new(#alloc: Ptr<Allocator>) -> Self
 require T: typename, HashEqual<T>
     block entry():
-        %set: HashSet<T> = HashSet<T> {
+        %set: Self = Self {
             keys: null,
             hashes: null,
             states: null,
@@ -28,13 +28,13 @@ require T: typename, HashEqual<T>
         }
         return(%set)
 
-routine HashSet<T>.length(#self: Ptr<HashSet<T>>) -> I64
+routine HashSet<T>.length(#self: Ptr<Self>) -> I64
 require T: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
-routine HashSet<T>.slot(#self: Ptr<HashSet<T>>, %key: T, %hash: I64) -> I64
+routine HashSet<T>.slot(#self: Ptr<Self>, %key: T, %hash: I64) -> I64
 require T: typename
     block entry():
         %capacity: I64 := #self.capacity
@@ -81,7 +81,7 @@ require T: typename
         %next: I64 = %index.add(1).bitand(%capacity.sub(1))
         jump probe(%next, %first_tombstone)
 
-routine HashSet<T>.find(#self: Ptr<HashSet<T>>, %key: T) -> I64
+routine HashSet<T>.find(#self: Ptr<Self>, %key: T) -> I64
 require T: typename
     block entry():
         %capacity: I64 := #self.capacity
@@ -96,7 +96,7 @@ require T: typename
         %found: Bool = %state.eq(1)
         branch %found ? return(%slot): return(-1)
 
-routine HashSet<T>.contains(#self: Ptr<HashSet<T>>, %key: T) -> Bool
+routine HashSet<T>.contains(#self: Ptr<Self>, %key: T) -> Bool
 require T: typename
     block entry():
         %found: Bool = #self.find(%key).sge(0)
@@ -133,7 +133,7 @@ require T: typename, HashEqual<T>
         %has: Bool = #b.contains(%key)
         branch %has ? loop(%i_next, %cap) : return(false)
 
-routine HashSet<T>.rehash(#self: Ptr<HashSet<T>>, %new_capacity: I64) -> Void
+routine HashSet<T>.rehash(#self: Ptr<Self>, %new_capacity: I64) -> Void
 require T: typename
     block entry():
         #alloc: Ptr<Allocator> := #self.alloc
@@ -231,7 +231,7 @@ require T: typename
         free<i8>(#alloc, #old_states)
         return()
 
-routine HashSet<T>.ensure(#self: Ptr<HashSet<T>>) -> Void
+routine HashSet<T>.ensure(#self: Ptr<Self>) -> Void
 require T: typename
     block entry():
         %capacity: I64 := #self.capacity
@@ -256,7 +256,7 @@ require T: typename
         return()
 
 ; Insert without growing — used internally by rehash after new arrays are in place.
-routine HashSet<T>.add_direct(#self: Ptr<HashSet<T>>, %key: T) -> Bool
+routine HashSet<T>.add_direct(#self: Ptr<Self>, %key: T) -> Bool
 require T: typename
     block entry():
         %hash: I64 = %key.hash()
@@ -286,14 +286,14 @@ require T: typename
         #self.length = %length.add(1)
         return(true)
 
-routine HashSet<T>.add(#self: Ptr<HashSet<T>>, %key: T) -> Bool
+routine HashSet<T>.add(#self: Ptr<Self>, %key: T) -> Bool
 require T: typename
     block entry():
         #self.ensure()
         %added: Bool = #self.add_direct(%key)
         return(%added)
 
-routine HashSet<T>.remove(#self: Ptr<HashSet<T>>, %key: T) -> Bool
+routine HashSet<T>.remove(#self: Ptr<Self>, %key: T) -> Bool
 require T: typename
     block entry():
         %slot: I64 = #self.find(%key)
@@ -309,7 +309,7 @@ require T: typename
         #self.tombstones = %tombstones.add(1)
         return(true)
 
-routine HashSet<T>.free(#self: Ptr<HashSet<T>>) -> Void
+routine HashSet<T>.free(#self: Ptr<Self>) -> Void
 require T: typename
     block entry():
         #states: Ptr<i8> := #self.states

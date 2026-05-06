@@ -13,24 +13,24 @@ const I8.MAX: I8 =  127
 
 ; ── bit operations ────────────────────────────────────────────────────────────
 
-routine I8.count_ones(%self: I8) -> I8
+routine I8.count_ones(%self: I8) -> Self
     block entry():
         %result: I8 = popcount<I8>(%self)
         return(%result)
 
-routine I8.leading_zeros(%self: I8) -> I8
+routine I8.leading_zeros(%self: I8) -> Self
     block entry():
         %result: I8 = clz<I8>(%self, false)
         return(%result)
 
-routine I8.trailing_zeros(%self: I8) -> I8
+routine I8.trailing_zeros(%self: I8) -> Self
     block entry():
         %result: I8 = ctz<I8>(%self, false)
         return(%result)
 
 ; ── arithmetic ────────────────────────────────────────────────────────────────
 
-routine I8.abs(%self: I8) -> I8
+routine I8.abs(%self: I8) -> Self
     block entry():
         %is_neg: Bool = %self.slt(0)
         %zero: I8 = 0
@@ -38,51 +38,51 @@ routine I8.abs(%self: I8) -> I8
         %result: I8 = %is_neg ? %neg : %self
         return(%result)
 
-routine I8.min(%self: I8, %other: I8) -> I8
+routine I8.min(%self: I8, %other: I8) -> Self
     block entry():
         %less: Bool = %self.slt(%other)
         %result: I8 = %less ? %self : %other
         return(%result)
 
-routine I8.max(%self: I8, %other: I8) -> I8
+routine I8.max(%self: I8, %other: I8) -> Self
     block entry():
         %more: Bool = %self.sgt(%other)
         %result: I8 = %more ? %self : %other
         return(%result)
 
-routine I8.add(%self: I8, %other: I8) -> I8
+routine I8.add(%self: I8, %other: I8) -> Self
     block entry():
         %r: I8 = add<I8>(%self, %other)
         return(%r)
 
-routine I8.sub(%self: I8, %other: I8) -> I8
+routine I8.sub(%self: I8, %other: I8) -> Self
     block entry():
         %r: I8 = sub<I8>(%self, %other)
         return(%r)
 
-routine I8.mul(%self: I8, %other: I8) -> I8
+routine I8.mul(%self: I8, %other: I8) -> Self
     block entry():
         %r: I8 = mul<I8>(%self, %other)
         return(%r)
 
 ; ── bit shifts ────────────────────────────────────────────────────────────────
 
-routine I8.shl(%self: I8, %n: I8) -> I8
+routine I8.shl(%self: I8, %n: I8) -> Self
     block entry():
         %r: I8 = shl<I8>(%self, %n)
         return(%r)
 
-routine I8.lshr(%self: I8, %n: I8) -> I8
+routine I8.lshr(%self: I8, %n: I8) -> Self
     block entry():
         %r: I8 = lshr<I8>(%self, %n)
         return(%r)
 
-routine I8.ashr(%self: I8, %n: I8) -> I8
+routine I8.ashr(%self: I8, %n: I8) -> Self
     block entry():
         %r: I8 = ashr<I8>(%self, %n)
         return(%r)
 
-routine I8.rotl(%self: I8, %n: I8) -> I8
+routine I8.rotl(%self: I8, %n: I8) -> Self
     block entry():
         %left: I8 = shl<I8>(%self, %n)
         %width: I8 = 8
@@ -91,7 +91,7 @@ routine I8.rotl(%self: I8, %n: I8) -> I8
         %r: I8 = %left.bitor(%right)
         return(%r)
 
-routine I8.rotr(%self: I8, %n: I8) -> I8
+routine I8.rotr(%self: I8, %n: I8) -> Self
     block entry():
         %right: I8 = lshr<I8>(%self, %n)
         %width: I8 = 8
@@ -102,22 +102,22 @@ routine I8.rotr(%self: I8, %n: I8) -> I8
 
 ; ── bitwise operations ────────────────────────────────────────────────────────
 
-routine I8.bitand(%self: I8, %other: I8) -> I8
+routine I8.bitand(%self: I8, %other: I8) -> Self
     block entry():
         %r: I8 = band<I8>(%self, %other)
         return(%r)
 
-routine I8.bitor(%self: I8, %other: I8) -> I8
+routine I8.bitor(%self: I8, %other: I8) -> Self
     block entry():
         %r: I8 = bor<I8>(%self, %other)
         return(%r)
 
-routine I8.bitxor(%self: I8, %other: I8) -> I8
+routine I8.bitxor(%self: I8, %other: I8) -> Self
     block entry():
         %r: I8 = bxor<I8>(%self, %other)
         return(%r)
 
-routine I8.bitnot(%self: I8) -> I8
+routine I8.bitnot(%self: I8) -> Self
     block entry():
         %r: I8 = bnot<I8>(%self)
         return(%r)
@@ -168,22 +168,22 @@ routine I8.uge(%self: I8, %other: I8) -> Bool
 
 ; ── integer division and remainder ────────────────────────────────────────────
 
-routine I8.sdiv(%self: I8, %other: I8) -> I8
+routine I8.sdiv(%self: I8, %other: I8) -> Self
     block entry():
         %r: I8 = sdiv<I8>(%self, %other)
         return(%r)
 
-routine I8.udiv(%self: I8, %other: I8) -> I8
+routine I8.udiv(%self: I8, %other: I8) -> Self
     block entry():
         %r: I8 = udiv<I8>(%self, %other)
         return(%r)
 
-routine I8.srem(%self: I8, %other: I8) -> I8
+routine I8.srem(%self: I8, %other: I8) -> Self
     block entry():
         %r: I8 = srem<I8>(%self, %other)
         return(%r)
 
-routine I8.urem(%self: I8, %other: I8) -> I8
+routine I8.urem(%self: I8, %other: I8) -> Self
     block entry():
         %r: I8 = urem<I8>(%self, %other)
         return(%r)

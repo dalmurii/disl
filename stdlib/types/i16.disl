@@ -13,29 +13,29 @@ const I16.MAX: I16 =  32767
 
 ; ── bit operations ────────────────────────────────────────────────────────────
 
-routine I16.count_ones(%self: I16) -> I16
+routine I16.count_ones(%self: I16) -> Self
     block entry():
         %result: I16 = popcount<I16>(%self)
         return(%result)
 
-routine I16.leading_zeros(%self: I16) -> I16
+routine I16.leading_zeros(%self: I16) -> Self
     block entry():
         %result: I16 = clz<I16>(%self, false)
         return(%result)
 
-routine I16.trailing_zeros(%self: I16) -> I16
+routine I16.trailing_zeros(%self: I16) -> Self
     block entry():
         %result: I16 = ctz<I16>(%self, false)
         return(%result)
 
-routine I16.swap_bytes(%self: I16) -> I16
+routine I16.swap_bytes(%self: I16) -> Self
     block entry():
         %result: I16 = bswap<I16>(%self)
         return(%result)
 
 ; ── arithmetic ────────────────────────────────────────────────────────────────
 
-routine I16.abs(%self: I16) -> I16
+routine I16.abs(%self: I16) -> Self
     block entry():
         %is_neg: Bool = %self.slt(0)
         %zero: I16 = 0
@@ -43,51 +43,51 @@ routine I16.abs(%self: I16) -> I16
         %result: I16 = %is_neg ? %neg : %self
         return(%result)
 
-routine I16.min(%self: I16, %other: I16) -> I16
+routine I16.min(%self: I16, %other: I16) -> Self
     block entry():
         %less: Bool = %self.slt(%other)
         %result: I16 = %less ? %self : %other
         return(%result)
 
-routine I16.max(%self: I16, %other: I16) -> I16
+routine I16.max(%self: I16, %other: I16) -> Self
     block entry():
         %more: Bool = %self.sgt(%other)
         %result: I16 = %more ? %self : %other
         return(%result)
 
-routine I16.add(%self: I16, %other: I16) -> I16
+routine I16.add(%self: I16, %other: I16) -> Self
     block entry():
         %r: I16 = add<I16>(%self, %other)
         return(%r)
 
-routine I16.sub(%self: I16, %other: I16) -> I16
+routine I16.sub(%self: I16, %other: I16) -> Self
     block entry():
         %r: I16 = sub<I16>(%self, %other)
         return(%r)
 
-routine I16.mul(%self: I16, %other: I16) -> I16
+routine I16.mul(%self: I16, %other: I16) -> Self
     block entry():
         %r: I16 = mul<I16>(%self, %other)
         return(%r)
 
 ; ── bit shifts ────────────────────────────────────────────────────────────────
 
-routine I16.shl(%self: I16, %n: I16) -> I16
+routine I16.shl(%self: I16, %n: I16) -> Self
     block entry():
         %r: I16 = shl<I16>(%self, %n)
         return(%r)
 
-routine I16.lshr(%self: I16, %n: I16) -> I16
+routine I16.lshr(%self: I16, %n: I16) -> Self
     block entry():
         %r: I16 = lshr<I16>(%self, %n)
         return(%r)
 
-routine I16.ashr(%self: I16, %n: I16) -> I16
+routine I16.ashr(%self: I16, %n: I16) -> Self
     block entry():
         %r: I16 = ashr<I16>(%self, %n)
         return(%r)
 
-routine I16.rotl(%self: I16, %n: I16) -> I16
+routine I16.rotl(%self: I16, %n: I16) -> Self
     block entry():
         %left: I16 = shl<I16>(%self, %n)
         %width: I16 = 16
@@ -96,7 +96,7 @@ routine I16.rotl(%self: I16, %n: I16) -> I16
         %r: I16 = %left.bitor(%right)
         return(%r)
 
-routine I16.rotr(%self: I16, %n: I16) -> I16
+routine I16.rotr(%self: I16, %n: I16) -> Self
     block entry():
         %right: I16 = lshr<I16>(%self, %n)
         %width: I16 = 16
@@ -107,22 +107,22 @@ routine I16.rotr(%self: I16, %n: I16) -> I16
 
 ; ── bitwise operations ────────────────────────────────────────────────────────
 
-routine I16.bitand(%self: I16, %other: I16) -> I16
+routine I16.bitand(%self: I16, %other: I16) -> Self
     block entry():
         %r: I16 = band<I16>(%self, %other)
         return(%r)
 
-routine I16.bitor(%self: I16, %other: I16) -> I16
+routine I16.bitor(%self: I16, %other: I16) -> Self
     block entry():
         %r: I16 = bor<I16>(%self, %other)
         return(%r)
 
-routine I16.bitxor(%self: I16, %other: I16) -> I16
+routine I16.bitxor(%self: I16, %other: I16) -> Self
     block entry():
         %r: I16 = bxor<I16>(%self, %other)
         return(%r)
 
-routine I16.bitnot(%self: I16) -> I16
+routine I16.bitnot(%self: I16) -> Self
     block entry():
         %r: I16 = bnot<I16>(%self)
         return(%r)
@@ -173,22 +173,22 @@ routine I16.uge(%self: I16, %other: I16) -> Bool
 
 ; ── integer division and remainder ────────────────────────────────────────────
 
-routine I16.sdiv(%self: I16, %other: I16) -> I16
+routine I16.sdiv(%self: I16, %other: I16) -> Self
     block entry():
         %r: I16 = sdiv<I16>(%self, %other)
         return(%r)
 
-routine I16.udiv(%self: I16, %other: I16) -> I16
+routine I16.udiv(%self: I16, %other: I16) -> Self
     block entry():
         %r: I16 = udiv<I16>(%self, %other)
         return(%r)
 
-routine I16.srem(%self: I16, %other: I16) -> I16
+routine I16.srem(%self: I16, %other: I16) -> Self
     block entry():
         %r: I16 = srem<I16>(%self, %other)
         return(%r)
 
-routine I16.urem(%self: I16, %other: I16) -> I16
+routine I16.urem(%self: I16, %other: I16) -> Self
     block entry():
         %r: I16 = urem<I16>(%self, %other)
         return(%r)
