@@ -102,8 +102,7 @@ require T: typename
         branch %at_root ? return() : compare_parent(%index)
 
     block compare_parent(%index: I64):
-        %index_m1: I64 = %index.sub(1)
-        %parent: I64 = %index_m1.sdiv(2)
+        %parent: I64 = %index.sub(1).sdiv(2)
         #data: Ptr<T> := #self.data
         %child_value: T := #data[%index]
         %parent_value: T := #data[%parent]
@@ -151,8 +150,7 @@ require T: typename
 
     block sift_down(%index: I64, %result: T):
         %length: I64 := #self.length
-        %index_x2: I64 = %index.mul(2)
-        %left: I64 = %index_x2.add(1)
+        %left: I64 = %index.mul(2).add(1)
         %right: I64 = %left.add(1)
         %has_left: Bool = %left.slt(%length)
         branch %has_left ? choose_child(%index, %left, %right, %result) : return(%result)

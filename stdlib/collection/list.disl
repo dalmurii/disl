@@ -161,8 +161,7 @@ require T: typename, Equal<T>
         %x: T := #pa[%i]
         %y: T := #pb[%i]
         %eq: Bool = %x.eq(%y)
-        %i_next: I64 = %i.add(1)
-        branch %eq ? loop(%i_next, %len, #pa, #pb) : return(false)
+        branch %eq ? loop(%i.add(1), %len, #pa, #pb) : return(false)
 
 routine List<T>.free(#self: Ptr<List<T>>) -> Void
 require T: typename

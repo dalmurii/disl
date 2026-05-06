@@ -46,13 +46,11 @@ routine utf8_decode(#bytes: Ptr<I8>, %pos: I64, %len: I64) -> Utf8Decoded
         %b1:  I8  := #bytes[%next]
         %b1x: I32 = sext<I8, I32>(%b1)
         %b1u: I32 = %b1x.bitand(255)
-        %cont: I32 = %b1u.bitand(192)              ; 0xC0
-        %valid: Bool = %cont.eq(128)
+        %valid: Bool = %b1u.bitand(192).eq(128)
         branch %valid ? done_two(%b0u, %b1u, %next) : error(%next)
 
     block done_two(%b0u: I32, %b1u: I32, %next: I64):
-        %b0u_masked: I32 = %b0u.bitand(31)
-        %hi:  I32 = %b0u_masked.mul(64)    ; << 6
+        %hi:  I32 = %b0u.bitand(31).mul(64)    ; << 6
         %lo:  I32 = %b1u.bitand(63)
         %cp:  I32 = %hi.bitor(%lo)
         %after: I64 = %next.add(1)
@@ -73,22 +71,16 @@ routine utf8_decode(#bytes: Ptr<I8>, %pos: I64, %len: I64) -> Utf8Decoded
         %b2:  I8  := #bytes[%n2]
         %b2x: I32 = sext<I8, I32>(%b2)
         %b2u: I32 = %b2x.bitand(255)
-        %v1: I32 = %b1u.bitand(192)
-        %v2: I32 = %b2u.bitand(192)
-        %c128: I32 = 128
-        %ok1: Bool = %v1.eq(%c128)
-        %ok2: Bool = %v2.eq(%c128)
+        %ok1: Bool = %b1u.bitand(192).eq(128)
+        %ok2: Bool = %b2u.bitand(192).eq(128)
         %valid: Bool = %ok1.bitand(%ok2)
         branch %valid ? done_three(%b0u, %b1u, %b2u, %n2) : error(%next)
 
     block done_three(%b0u: I32, %b1u: I32, %b2u: I32, %n2: I64):
-        %b0u_masked: I32 = %b0u.bitand(15)
-        %hi:  I32 = %b0u_masked.mul(4096)    ; << 12
-        %b1u_masked: I32 = %b1u.bitand(63)
-        %mid: I32 = %b1u_masked.mul(64) ; << 6
+        %hi:  I32 = %b0u.bitand(15).mul(4096)    ; << 12
+        %mid: I32 = %b1u.bitand(63).mul(64)      ; << 6
         %lo:  I32 = %b2u.bitand(63)
-        %hm:  I32 = %hi.bitor(%mid)
-        %cp:  I32 = %hm.bitor(%lo)
+        %cp:  I32 = %hi.bitor(%mid).bitor(%lo)
         %after: I64 = %n2.add(1)
         %result: Utf8Decoded = Utf8Decoded { codepoint: %cp, next_pos: %after }
         return(%result)
@@ -111,28 +103,18 @@ routine utf8_decode(#bytes: Ptr<I8>, %pos: I64, %len: I64) -> Utf8Decoded
         %b3:  I8  := #bytes[%n3]
         %b3x: I32 = sext<I8, I32>(%b3)
         %b3u: I32 = %b3x.bitand(255)
-        %v1: I32 = %b1u.bitand(192)
-        %v2: I32 = %b2u.bitand(192)
-        %v3: I32 = %b3u.bitand(192)
-        %c128: I32 = 128
-        %ok1:     Bool = %v1.eq(%c128)
-        %ok2:     Bool = %v2.eq(%c128)
-        %ok3:     Bool = %v3.eq(%c128)
-        %valid12: Bool = %ok1.bitand(%ok2)
-        %valid:   Bool = %valid12.bitand(%ok3)
+        %ok1:   Bool = %b1u.bitand(192).eq(128)
+        %ok2:   Bool = %b2u.bitand(192).eq(128)
+        %ok3:   Bool = %b3u.bitand(192).eq(128)
+        %valid: Bool = %ok1.bitand(%ok2).bitand(%ok3)
         branch %valid ? done_four(%b0u, %b1u, %b2u, %b3u, %n3) : error(%next)
 
     block done_four(%b0u: I32, %b1u: I32, %b2u: I32, %b3u: I32, %n3: I64):
-        %b0u_masked: I32 = %b0u.bitand(7)
-        %p0: I32 = %b0u_masked.mul(262144)     ; << 18
-        %b1u_masked: I32 = %b1u.bitand(63)
-        %p1: I32 = %b1u_masked.mul(4096)      ; << 12
-        %b2u_masked: I32 = %b2u.bitand(63)
-        %p2: I32 = %b2u_masked.mul(64)   ; << 6
+        %p0: I32 = %b0u.bitand(7).mul(262144)    ; << 18
+        %p1: I32 = %b1u.bitand(63).mul(4096)     ; << 12
+        %p2: I32 = %b2u.bitand(63).mul(64)       ; << 6
         %p3: I32 = %b3u.bitand(63)
-        %p01: I32 = %p0.bitor(%p1)
-        %p012: I32 = %p01.bitor(%p2)
-        %cp:   I32 = %p012.bitor(%p3)
+        %cp: I32 = %p0.bitor(%p1).bitor(%p2).bitor(%p3)
         %after: I64 = %n3.add(1)
         %result: Utf8Decoded = Utf8Decoded { codepoint: %cp, next_pos: %after }
         return(%result)
@@ -160,10 +142,8 @@ routine utf8_encode(%cp: I32, #out: Ptr<I8>) -> I64
         branch %in_two ? enc_two(%cp) : check_three(%cp)
 
     block enc_two(%cp: I32):
-        %cp_div64: I32 = %cp.sdiv(64)
-        %hi: I32 = %cp_div64.bitor(192)      ; 0xC0
-        %cp_masked: I32 = %cp.bitand(63)
-        %lo: I32 = %cp_masked.bitor(128)    ; 0x80
+        %hi: I32 = %cp.sdiv(64).bitor(192)      ; 0xC0
+        %lo: I32 = %cp.bitand(63).bitor(128)    ; 0x80
         #out[0] = trunc<I32, I8>(%hi)
         #out[1] = trunc<I32, I8>(%lo)
         return(2)
@@ -173,14 +153,9 @@ routine utf8_encode(%cp: I32, #out: Ptr<I8>) -> I64
         branch %in_three ? enc_three(%cp) : check_four(%cp)
 
     block enc_three(%cp: I32):
-        %cp_div4096: I32 = %cp.sdiv(4096)
-        %b0: I32 = %cp_div4096.bitor(224)    ; 0xE0
-        %cp_div64: I32 = %cp.sdiv(64)
-        %cp_div64_masked: I32 = %cp_div64.bitand(63)
-        %c80: I32 = 128
-        %b1: I32 = %cp_div64_masked.bitor(%c80)
-        %cp_masked: I32 = %cp.bitand(63)
-        %b2: I32 = %cp_masked.bitor(%c80)
+        %b0: I32 = %cp.sdiv(4096).bitor(224)         ; 0xE0
+        %b1: I32 = %cp.sdiv(64).bitand(63).bitor(128)
+        %b2: I32 = %cp.bitand(63).bitor(128)
         #out[0] = trunc<I32, I8>(%b0)
         #out[1] = trunc<I32, I8>(%b1)
         #out[2] = trunc<I32, I8>(%b2)
@@ -191,17 +166,10 @@ routine utf8_encode(%cp: I32, #out: Ptr<I8>) -> I64
         branch %in_four ? enc_four(%cp) : return(0)
 
     block enc_four(%cp: I32):
-        %cp_div262144: I32 = %cp.sdiv(262144)
-        %b0: I32 = %cp_div262144.bitor(240)  ; 0xF0
-        %cp_div4096: I32 = %cp.sdiv(4096)
-        %cp_div4096_masked: I32 = %cp_div4096.bitand(63)
-        %c80: I32 = 128
-        %b1: I32 = %cp_div4096_masked.bitor(%c80)
-        %cp_div64: I32 = %cp.sdiv(64)
-        %cp_div64_masked: I32 = %cp_div64.bitand(63)
-        %b2: I32 = %cp_div64_masked.bitor(%c80)
-        %cp_masked: I32 = %cp.bitand(63)
-        %b3: I32 = %cp_masked.bitor(%c80)
+        %b0: I32 = %cp.sdiv(262144).bitor(240)        ; 0xF0
+        %b1: I32 = %cp.sdiv(4096).bitand(63).bitor(128)
+        %b2: I32 = %cp.sdiv(64).bitand(63).bitor(128)
+        %b3: I32 = %cp.bitand(63).bitor(128)
         #out[0] = trunc<I32, I8>(%b0)
         #out[1] = trunc<I32, I8>(%b1)
         #out[2] = trunc<I32, I8>(%b2)

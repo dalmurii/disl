@@ -19,25 +19,25 @@
 
 @target(size: 64)
 routine i64_to_csize(%n: I64) -> CSize
-    block entry:
+    block entry():
         %r: CSize = bitcast<I64, CSize>(%n)
         return(%r)
 
 @target(size: 32)
 routine i64_to_csize(%n: I64) -> CSize
-    block entry:
+    block entry():
         %r: CSize = trunc<I64, CSize>(%n)
         return(%r)
 
 @target(size: 64)
 routine csize_to_i64(%n: CSize) -> I64
-    block entry:
+    block entry():
         %r: I64 = bitcast<CSize, I64>(%n)
         return(%r)
 
 @target(size: 32)
 routine csize_to_i64(%n: CSize) -> I64
-    block entry:
+    block entry():
         %r: I64 = zext<CSize, I64>(%n)
         return(%r)
 
@@ -78,19 +78,19 @@ struct Allocator
 
 @callconv("c")
 routine heap_alloc_fn(#state: Ptr, %size: CSize) -> Ptr
-    block entry:
+    block entry():
         #result: Ptr = c_malloc(%size)
         return(#result)
 
 @callconv("c")
 routine heap_realloc_fn(#state: Ptr, #old_Ptr: Ptr, %size: CSize) -> Ptr
-    block entry:
+    block entry():
         #result: Ptr = c_realloc(#old_Ptr, %size)
         return(#result)
 
 @callconv("c")
 routine heap_free_fn(#state: Ptr, #Ptr: Ptr) -> Void
-    block entry:
+    block entry():
         c_free(#Ptr)
         return()
 
@@ -99,7 +99,7 @@ routine heap_free_fn(#state: Ptr, #Ptr: Ptr) -> Void
 ; ============================================================
 
 routine make_heap_allocator() -> Allocator
-    block entry:
+    block entry():
         %alloc: Allocator = Allocator {
             alloc_fn:   heap_alloc_fn,
             realloc_fn: heap_realloc_fn,
@@ -117,7 +117,7 @@ routine make_heap_allocator() -> Allocator
 
 routine alloc<T>(#alloc: Ptr<Allocator>, %count: I64) -> Ptr<T>
 require T: typename
-    block entry:
+    block entry():
         %elem_size: I64 = sizeof<T>
         %size:   I64    = %elem_size.mul(%count)
         %size_c: CSize  = i64_to_csize(%size)
@@ -127,7 +127,7 @@ require T: typename
 
 routine realloc<T>(#alloc: Ptr<Allocator>, #Ptr: Ptr<T>, %new_count: I64) -> Ptr<T>
 require T: typename
-    block entry:
+    block entry():
         %elem_size: I64  = sizeof<T>
         %size:    I64    = %elem_size.mul(%new_count)
         %size_c:  CSize  = i64_to_csize(%size)
@@ -138,14 +138,14 @@ require T: typename
 
 routine free<T>(#alloc: Ptr<Allocator>, #Ptr: Ptr<T>) -> Void
 require T: typename
-    block entry:
+    block entry():
         #raw: Ptr = bitcast<Ptr<T>, Ptr>(#Ptr)
         #alloc.free_fn(#alloc.state, #raw)
         return()
 
 routine zero<T>(#Ptr: Ptr<T>, %count: I64) -> Void
 require T: typename
-    block entry:
+    block entry():
         %elem_size: I64 = sizeof<T>
         %size:   I64   = %elem_size.mul(%count)
         %size_c: CSize = i64_to_csize(%size)
@@ -155,7 +155,7 @@ require T: typename
 
 routine copy<T>(#dst: Ptr<T>, #src: Ptr<T>, %count: I64) -> Void
 require T: typename
-    block entry:
+    block entry():
         %elem_size: I64 = sizeof<T>
         %size:    I64   = %elem_size.mul(%count)
         %size_c:  CSize = i64_to_csize(%size)

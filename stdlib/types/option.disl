@@ -114,13 +114,13 @@ require K: typename, V: typename, Equal<K>, Equal<V>
     block entry():
         %ka: K = %a.key
         %kb: K = %b.key
-        %k_eq: Bool = K.eq(%ka, %kb)
+        %k_eq: Bool = %ka.eq(%kb)
         branch %k_eq ? compare_values(%a, %b) : return(false)
 
     block compare_values(%a: KVPair<K, V>, %b: KVPair<K, V>):
         %va: V = %a.value
         %vb: V = %b.value
-        %v_eq: Bool = V.eq(%va, %vb)
+        %v_eq: Bool = %va.eq(%vb)
         return(%v_eq)
 
 routine KVPair<K, V>.hash(%self: KVPair<K, V>) -> I64

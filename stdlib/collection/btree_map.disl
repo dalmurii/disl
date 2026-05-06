@@ -88,8 +88,7 @@ require K: typename, V: typename
         %has_key: Bool = %i.slt(%length)
         %with_child_p1: I64 = %with_child.add(1)
         %next_sum: I64 = %has_key ? %with_child_p1 : %with_child
-        %i_next: I64 = %i.add(1)
-        jump loop(%i_next, %next_sum, %length)
+        jump loop(%i.add(1), %next_sum, %length)
 
     block finish(%sum: I64):
         #self.subtree_count = %sum
@@ -107,10 +106,9 @@ require K: typename, V: typename
 
     block compare(%i: I64):
         %node_key: K := #node.keys[%i]
-        %cmp: I32 = K.compare(%key, %node_key)
+        %cmp: I32 = %key.compare(%node_key)
         %before_or_equal: Bool = %cmp.sle(0)
-        %i_next: I64 = %i.add(1)
-        branch %before_or_equal ? return(%i) : loop(%i_next)
+        branch %before_or_equal ? return(%i) : loop(%i.add(1))
 
 routine BTreeMap<K, V>.get(#self: Ptr<BTreeMap<K, V>>, %key: K) -> V
 require K: typename, V: typename
@@ -127,7 +125,7 @@ require K: typename, V: typename
 
     block maybe_match(#node: Ptr<BTreeMapNode<K, V>>, %i: I64, %key: K):
         %node_key: K := #node.keys[%i]
-        %cmp: I32 = K.compare(%key, %node_key)
+        %cmp: I32 = %key.compare(%node_key)
         %equal: Bool = %cmp.eq(0)
         branch %equal ? load(#node, %i) : descend_or_missing(#node, %i, %key)
 
@@ -160,16 +158,15 @@ require K: typename, V: typename, Compare<K>, Equal<V>
     block step(%i: I64, %len: I64):
         %ka: K = #a.key_order(%i)
         %kb: K = #b.key_order(%i)
-        %cmp: I32 = K.compare(%ka, %kb)
+        %cmp: I32 = %ka.compare(%kb)
         %k_eq: Bool = %cmp.eq(0)
         branch %k_eq ? compare_value(%i, %len) : return(false)
 
     block compare_value(%i: I64, %len: I64):
         %va: V = #a.get_order(%i)
         %vb: V = #b.get_order(%i)
-        %v_eq: Bool = V.eq(%va, %vb)
-        %i_next: I64 = %i.add(1)
-        branch %v_eq ? loop(%i_next, %len) : return(false)
+        %v_eq: Bool = %va.eq(%vb)
+        branch %v_eq ? loop(%i.add(1), %len) : return(false)
 
 routine BTreeMap<K, V>.contains(#self: Ptr<BTreeMap<K, V>>, %key: K) -> Bool
 require K: typename, V: typename
@@ -186,7 +183,7 @@ require K: typename, V: typename
 
     block maybe_match(#node: Ptr<BTreeMapNode<K, V>>, %i: I64, %key: K):
         %node_key: K := #node.keys[%i]
-        %cmp: I32 = K.compare(%key, %node_key)
+        %cmp: I32 = %key.compare(%node_key)
         %equal: Bool = %cmp.eq(0)
         branch %equal ? return(true) : descend_or_missing(#node, %i, %key)
 
@@ -201,10 +198,8 @@ require K: typename, V: typename
 routine BTreeMap<K, V>.get_order(#self: Ptr<BTreeMap<K, V>>, %order: I64) -> V
 require K: typename, V: typename
     block entry():
-        %not_negative: Bool = %order.sge(0)
         %length: I64 := #self.length
-        %before_end: Bool = %order.slt(%length)
-        %in_bounds: Bool = %not_negative.bitand(%before_end)
+        %in_bounds: Bool = %order.sge(0).bitand(%order.slt(%length))
         branch %in_bounds ? select_root(%order) : trap()
 
     block select_root(%order: I64):
@@ -225,8 +220,7 @@ require K: typename, V: typename
 
     block leaf_key(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64):
         %match: Bool = %order.eq(%i)
-        %i_next: I64 = %i.add(1)
-        branch %match ? load_order(#node, %i) : scan(#node, %order, %i_next)
+        branch %match ? load_order(#node, %i) : scan(#node, %order, %i.add(1))
 
     block internal_child(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64):
         #child: Ptr<BTreeMapNode<K, V>> := #node.children[%i]
@@ -237,9 +231,7 @@ require K: typename, V: typename
     block check_key(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64, %child_count: I64):
         %after_child: I64 = %order.sub(%child_count)
         %is_key: Bool = %after_child.eq(0)
-        %after_child_m1: I64 = %after_child.sub(1)
-        %i_next: I64 = %i.add(1)
-        branch %is_key ? load_order(#node, %i) : scan(#node, %after_child_m1, %i_next)
+        branch %is_key ? load_order(#node, %i) : scan(#node, %after_child.sub(1), %i.add(1))
 
     block last_child(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64):
         %leaf: Bool := #node.leaf
@@ -256,10 +248,8 @@ require K: typename, V: typename
 routine BTreeMap<K, V>.key_order(#self: Ptr<BTreeMap<K, V>>, %order: I64) -> K
 require K: typename, V: typename
     block entry():
-        %not_negative: Bool = %order.sge(0)
         %length: I64 := #self.length
-        %before_end: Bool = %order.slt(%length)
-        %in_bounds: Bool = %not_negative.bitand(%before_end)
+        %in_bounds: Bool = %order.sge(0).bitand(%order.slt(%length))
         branch %in_bounds ? select_root(%order) : trap()
 
     block select_root(%order: I64):
@@ -280,8 +270,7 @@ require K: typename, V: typename
 
     block leaf_key(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64):
         %match: Bool = %order.eq(%i)
-        %i_next: I64 = %i.add(1)
-        branch %match ? load_key(#node, %i) : scan(#node, %order, %i_next)
+        branch %match ? load_key(#node, %i) : scan(#node, %order, %i.add(1))
 
     block internal_child(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64):
         #child: Ptr<BTreeMapNode<K, V>> := #node.children[%i]
@@ -292,9 +281,7 @@ require K: typename, V: typename
     block check_key(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64, %child_count: I64):
         %after_child: I64 = %order.sub(%child_count)
         %is_key: Bool = %after_child.eq(0)
-        %after_child_m1: I64 = %after_child.sub(1)
-        %i_next: I64 = %i.add(1)
-        branch %is_key ? load_key(#node, %i) : scan(#node, %after_child_m1, %i_next)
+        branch %is_key ? load_key(#node, %i) : scan(#node, %after_child.sub(1), %i.add(1))
 
     block last_child(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64):
         %leaf: Bool := #node.leaf
@@ -331,12 +318,10 @@ require K: typename, V: typename
         branch %done ? promote(#left, #right, %mid) : child_copy(%i, #left, #right, %mid, %right_count)
 
     block child_copy(%i: I64, #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64, %right_count: I64):
-        %mid_p1: I64 = %mid.add(1)
-        %src: I64 = %mid_p1.add(%i)
+        %src: I64 = %mid.add(1).add(%i)
         #child: Ptr<BTreeMapNode<K, V>> := #left.children[%src]
         #right.children[%i] = #child
-        %i_next: I64 = %i.add(1)
-        jump child_loop(%i_next, #left, #right, %mid, %right_count)
+        jump child_loop(%i.add(1), #left, #right, %mid, %right_count)
 
     block promote(#left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64):
         %parent_length: I64 := #self.length
@@ -351,10 +336,8 @@ require K: typename, V: typename
 
     block move_child(%i: I64, #left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64):
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
-        %i_p1: I64 = %i.add(1)
-        #self.children[%i_p1] = #child
-        %i_m1: I64 = %i.sub(1)
-        jump shift_children(%i_m1, #left, #right, %mid)
+        #self.children[%i.add(1)] = #child
+        jump shift_children(%i.sub(1), #left, #right, %mid)
 
     block install(#left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %mid: I64):
         %middle_key: K := #left.keys[%mid]
@@ -365,8 +348,7 @@ require K: typename, V: typename
         #self.children[%index_p1] = #right
         #left.length = %mid
         %parent_length: I64 := #self.length
-        %parent_length_p1: I64 = %parent_length.add(1)
-        #self.length = %parent_length_p1
+        #self.length = %parent_length.add(1)
         #left.recount()
         #right.recount()
         #self.recount()
@@ -400,7 +382,7 @@ require K: typename, V: typename
     block split_then_insert(%slot: I64, #child: Ptr<BTreeMapNode<K, V>>):
         #self.split_child(%slot, #alloc)
         %pivot: K := #self.keys[%slot]
-        %cmp: I32 = K.compare(%key, %pivot)
+        %cmp: I32 = %key.compare(%pivot)
         %go_right: Bool = %cmp.sgt(0)
         %slot_p1: I64 = %slot.add(1)
         %next_slot: I64 = %go_right ? %slot_p1 : %slot
@@ -450,8 +432,7 @@ require K: typename, V: typename
     block insert_nonfull(#root: Ptr<BTreeMapNode<K, V>>, #alloc: Ptr<Allocator>):
         #root.insert_nonfull(#self, %key, %value, #alloc)
         %length: I64 := #self.length
-        %new_length: I64 = %length.add(1)
-        #self.length = %new_length
+        #self.length = %length.add(1)
         return()
 
 routine BTreeMapNode<K, V>.replace(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K, %value: V) -> Bool
@@ -464,7 +445,7 @@ require K: typename, V: typename
 
     block maybe_match(%slot: I64):
         %node_key: K := #self.keys[%slot]
-        %cmp: I32 = K.compare(%key, %node_key)
+        %cmp: I32 = %key.compare(%node_key)
         %equal: Bool = %cmp.eq(0)
         branch %equal ? replace(%slot) : descend_or_missing(%slot)
 
@@ -483,7 +464,7 @@ require K: typename, V: typename
 
 routine BTreeMapNode<K, V>.remove_leaf_at(#self: Ptr<BTreeMapNode<K, V>>, %index: I64) -> V
 require K: typename, V: typename
-    block entry:
+    block entry():
         %old: V := #self.values[%index]
         %length: I64 := #self.length
         #self.keys.shift_left(%index, %length)
@@ -500,7 +481,7 @@ require K: typename, V: typename
 
 routine BTreeMapNode<K, V>.borrow_from_left(#self: Ptr<BTreeMapNode<K, V>>, %i: I64) -> Void
 require K: typename, V: typename
-    block entry:
+    block entry():
         %i_m1: I64 = %i.sub(1)
         #left: Ptr<BTreeMapNode<K, V>> := #self.children[%i_m1]
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
@@ -512,9 +493,8 @@ require K: typename, V: typename
         %pivot_value: V := #self.values[%i_m1]
         #child.keys[0] = %pivot_key
         #child.values[0] = %pivot_value
-        %left_length_m1: I64 = %left_length.sub(1)
-        %new_pivot_key: K := #left.keys[%left_length_m1]
-        %new_pivot_value: V := #left.values[%left_length_m1]
+        %new_pivot_key: K := #left.keys[%left_length.sub(1)]
+        %new_pivot_value: V := #left.values[%left_length.sub(1)]
         #self.keys[%i_m1] = %new_pivot_key
         #self.values[%i_m1] = %new_pivot_value
         %leaf: Bool := #child.leaf
@@ -537,10 +517,9 @@ require K: typename, V: typename
 
 routine BTreeMapNode<K, V>.borrow_from_right(#self: Ptr<BTreeMapNode<K, V>>, %i: I64) -> Void
 require K: typename, V: typename
-    block entry:
-        %i_p1: I64 = %i.add(1)
+    block entry():
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
-        #right: Ptr<BTreeMapNode<K, V>> := #self.children[%i_p1]
+        #right: Ptr<BTreeMapNode<K, V>> := #self.children[%i.add(1)]
         %child_length: I64 := #child.length
         %right_length: I64 := #right.length
         %pivot_key: K := #self.keys[%i]
@@ -558,10 +537,8 @@ require K: typename, V: typename
 
     block move_child(#child: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %child_length: I64, %right_length: I64):
         #moved: Ptr<BTreeMapNode<K, V>> := #right.children[0]
-        %child_length_p1: I64 = %child_length.add(1)
-        #child.children[%child_length_p1] = #moved
-        %right_child_count: I64 = %right_length.add(1)
-        #right.children.shift_left(0, %right_child_count)
+        #child.children[%child_length.add(1)] = #moved
+        #right.children.shift_left(0, %right_length.add(1))
         jump finalize(#child, #right, %child_length, %right_length)
 
     block finalize(#child: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %child_length: I64, %right_length: I64):
@@ -574,7 +551,7 @@ require K: typename, V: typename
 
 routine BTreeMapNode<K, V>.merge_children(#self: Ptr<BTreeMapNode<K, V>>, %i: I64, #alloc: Ptr<Allocator>) -> Void
 require K: typename, V: typename
-    block entry:
+    block entry():
         %i_p1: I64 = %i.add(1)
         #left: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
         #right: Ptr<BTreeMapNode<K, V>> := #self.children[%i_p1]
@@ -591,23 +568,17 @@ require K: typename, V: typename
         branch %leaf ? finalize(#left, #right, %left_length, %right_length) : copy_children(#left, #right, %left_length, %right_length)
 
     block copy_children(#left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %left_length: I64, %right_length: I64):
-        %right_child_count: I64 = %right_length.add(1)
-        %dst_start: I64 = %left_length.add(1)
-        #left.children.copy(%dst_start, #right.children, 0, %right_child_count)
+        #left.children.copy(%left_length.add(1), #right.children, 0, %right_length.add(1))
         jump finalize(#left, #right, %left_length, %right_length)
 
     block finalize(#left: Ptr<BTreeMapNode<K, V>>, #right: Ptr<BTreeMapNode<K, V>>, %left_length: I64, %right_length: I64):
-        %left_p1: I64 = %left_length.add(1)
-        %merged_length: I64 = %left_p1.add(%right_length)
-        #left.length = %merged_length
+        #left.length = %left_length.add(1).add(%right_length)
         %parent_length: I64 := #self.length
         #self.keys.shift_left(%i, %parent_length)
         #self.values.shift_left(%i, %parent_length)
-        %parent_child_count: I64 = %parent_length.add(1)
         %i_p1: I64 = %i.add(1)
-        #self.children.shift_left(%i_p1, %parent_child_count)
-        %parent_length_m1: I64 = %parent_length.sub(1)
-        #self.length = %parent_length_m1
+        #self.children.shift_left(%i_p1, %parent_length.add(1))
+        #self.length = %parent_length.sub(1)
         free<BTreeMapNode<K, V>>(#alloc, #right)
         #left.recount()
         #self.recount()
@@ -615,7 +586,7 @@ require K: typename, V: typename
 
 routine BTreeMapNode<K, V>.ensure_min(#self: Ptr<BTreeMapNode<K, V>>, %i: I64, #alloc: Ptr<Allocator>) -> I64
 require K: typename, V: typename
-    block entry:
+    block entry():
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
         %child_length: I64 := #child.length
         %ok: Bool = %child_length.sge(NODE_MIN_KEYS)
@@ -626,8 +597,7 @@ require K: typename, V: typename
         branch %has_left ? check_left() : try_right(false)
 
     block check_left():
-        %i_m1: I64 = %i.sub(1)
-        #left: Ptr<BTreeMapNode<K, V>> := #self.children[%i_m1]
+        #left: Ptr<BTreeMapNode<K, V>> := #self.children[%i.sub(1)]
         %left_length: I64 := #left.length
         %left_ok: Bool = %left_length.sge(NODE_MIN_KEYS)
         branch %left_ok ? do_borrow_left() : try_right(true)
@@ -642,8 +612,7 @@ require K: typename, V: typename
         branch %has_right ? check_right(%has_left) : pick_merge_no_right(%has_left)
 
     block check_right(%has_left: Bool):
-        %i_p1: I64 = %i.add(1)
-        #right: Ptr<BTreeMapNode<K, V>> := #self.children[%i_p1]
+        #right: Ptr<BTreeMapNode<K, V>> := #self.children[%i.add(1)]
         %right_length: I64 := #right.length
         %right_ok: Bool = %right_length.sge(NODE_MIN_KEYS)
         branch %right_ok ? do_borrow_right() : pick_merge(%has_left)
@@ -669,7 +638,7 @@ require K: typename, V: typename
 
 routine BTreeMapNode<K, V>.take_max_key(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, #out_value: Ptr<V>) -> K
 require K: typename, V: typename
-    block entry:
+    block entry():
         %leaf: Bool := #self.leaf
         branch %leaf ? leaf_take() : descend()
 
@@ -692,7 +661,7 @@ require K: typename, V: typename
 
 routine BTreeMapNode<K, V>.take_min_key(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, #out_value: Ptr<V>) -> K
 require K: typename, V: typename
-    block entry:
+    block entry():
         %leaf: Bool := #self.leaf
         branch %leaf ? leaf_take() : descend()
 
@@ -712,7 +681,7 @@ require K: typename, V: typename
 
 routine BTreeMapNode<K, V>.remove(#self: Ptr<BTreeMapNode<K, V>>, #map: Ptr<BTreeMap<K, V>>, %key: K) -> Bool
 require K: typename, V: typename
-    block entry:
+    block entry():
         %slot: I64 = #map.find_index(#self, %key)
         %length: I64 := #self.length
         %inside: Bool = %slot.slt(%length)
@@ -720,7 +689,7 @@ require K: typename, V: typename
 
     block maybe_match(%slot: I64):
         %node_key: K := #self.keys[%slot]
-        %cmp: I32 = K.compare(%key, %node_key)
+        %cmp: I32 = %key.compare(%node_key)
         %equal: Bool = %cmp.eq(0)
         branch %equal ? remove_here(%slot) : descend_or_missing(%slot)
 
@@ -749,16 +718,14 @@ require K: typename, V: typename
         return(true)
 
     block try_succ(%slot: I64):
-        %slot_p1: I64 = %slot.add(1)
-        #right: Ptr<BTreeMapNode<K, V>> := #self.children[%slot_p1]
+        #right: Ptr<BTreeMapNode<K, V>> := #self.children[%slot.add(1)]
         %right_length: I64 := #right.length
         %right_ok: Bool = %right_length.sge(NODE_MIN_KEYS)
         branch %right_ok ? take_succ(%slot) : merge_and_recurse(%slot)
 
     block take_succ(%slot: I64):
         #out: Ptr<V> = alloca<V>
-        %slot_p1: I64 = %slot.add(1)
-        #right: Ptr<BTreeMapNode<K, V>> := #self.children[%slot_p1]
+        #right: Ptr<BTreeMapNode<K, V>> := #self.children[%slot.add(1)]
         %replacement_key: K = #right.take_min_key(#map, #out)
         %replacement_value: V := #out
         #self.keys[%slot] = %replacement_key
@@ -788,7 +755,7 @@ require K: typename, V: typename
 
 routine BTreeMap<K, V>.remove(#self: Ptr<BTreeMap<K, V>>, %key: K) -> Bool
 require K: typename, V: typename
-    block entry:
+    block entry():
         #root: Ptr<BTreeMapNode<K, V>> := #self.root
         %empty: Bool = #root.is_null()
         branch %empty ? return(false) : remove_root(#root)
@@ -799,8 +766,7 @@ require K: typename, V: typename
 
     block after_remove(#root: Ptr<BTreeMapNode<K, V>>):
         %length: I64 := #self.length
-        %new_length: I64 = %length.sub(1)
-        #self.length = %new_length
+        #self.length = %length.sub(1)
         %root_length: I64 := #root.length
         %empty_root: Bool = %root_length.eq(0)
         branch %empty_root ? maybe_shrink(#root) : return(true)
@@ -825,14 +791,13 @@ require K: typename, V: typename
 ; Internal nodes store `length` separator keys and `length + 1` children.
 routine BTreeMapNode<K, V>.free_recursive(#self: Ptr<BTreeMapNode<K, V>>, #alloc: Ptr<Allocator>) -> Void
 require K: typename, V: typename
-    block entry:
+    block entry():
         %leaf: Bool := #self.leaf
         branch %leaf ? free_self() : free_children()
 
     block free_children():
         %length: I64 := #self.length
-        %child_count: I64 = %length.add(1)
-        jump child_loop(0, %child_count)
+        jump child_loop(0, %length.add(1))
 
     block child_loop(%i: I64, %child_count: I64):
         %done: Bool = %i.sge(%child_count)
@@ -841,8 +806,7 @@ require K: typename, V: typename
     block free_child(%i: I64, %child_count: I64):
         #child: Ptr<BTreeMapNode<K, V>> := #self.children[%i]
         #child.free_recursive(#alloc)
-        %i_next: I64 = %i.add(1)
-        jump child_loop(%i_next, %child_count)
+        jump child_loop(%i.add(1), %child_count)
 
     block free_self():
         free<BTreeMapNode<K, V>>(#alloc, #self)
@@ -850,7 +814,7 @@ require K: typename, V: typename
 
 routine BTreeMap<K, V>.free(#self: Ptr<BTreeMap<K, V>>) -> Void
 require K: typename, V: typename
-    block entry:
+    block entry():
         #root: Ptr<BTreeMapNode<K, V>> := #self.root
         %empty: Bool = #root.is_null()
         branch %empty ? reset() : free_root(#root)

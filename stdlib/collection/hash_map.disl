@@ -69,9 +69,7 @@ require K: typename, V: typename
         %seen: Bool = %first_tombstone.sge(0)
         %next_tombstone: I64 = %seen ? %first_tombstone : %index
         %capacity: I64 := #self.capacity
-        %capacity_m1: I64 = %capacity.sub(1)
-        %index_p1: I64 = %index.add(1)
-        %next: I64 = %index_p1.bitand(%capacity_m1)
+        %next: I64 = %index.add(1).bitand(%capacity.sub(1))
         jump probe(%next, %next_tombstone)
 
     block occupied_slot(%index: I64, %first_tombstone: I64):
@@ -83,14 +81,12 @@ require K: typename, V: typename
     block maybe_equal(%index: I64, %first_tombstone: I64):
         #keys: Ptr<K> := #self.keys
         %entry_key: K := #keys[%index]
-        %equal: Bool = K.eq(%entry_key, %key)
+        %equal: Bool = %entry_key.eq(%key)
         branch %equal ? return(%index): next(%index, %first_tombstone)
 
     block next(%index: I64, %first_tombstone: I64):
         %capacity: I64 := #self.capacity
-        %capacity_m1: I64 = %capacity.sub(1)
-        %index_p1: I64 = %index.add(1)
-        %next: I64 = %index_p1.bitand(%capacity_m1)
+        %next: I64 = %index.add(1).bitand(%capacity.sub(1))
         jump probe(%next, %first_tombstone)
 
 routine HashMap<K, V>.find(#self: Ptr<HashMap<K, V>>, %key: K) -> I64
@@ -111,8 +107,7 @@ require K: typename, V: typename
 routine HashMap<K, V>.contains(#self: Ptr<HashMap<K, V>>, %key: K) -> Bool
 require K: typename, V: typename
     block entry():
-        %slot: I64 = #self.find(%key)
-        %found: Bool = %slot.sge(0)
+        %found: Bool = #self.find(%key).sge(0)
         return(%found)
 
 ; Two HashMaps are equal when they hold the same key→value pairs, regardless
@@ -138,8 +133,7 @@ require K: typename, V: typename, HashEqual<K>, Equal<V>
         #states: Ptr<I8> := #a.states
         %state: I8 := #states[%i]
         %occupied: Bool = %state.eq(1)
-        %i_next: I64 = %i.add(1)
-        branch %occupied ? probe(%i, %i_next, %cap) : loop(%i_next, %cap)
+        branch %occupied ? probe(%i, %i.add(1), %cap) : loop(%i.add(1), %cap)
 
     block probe(%i: I64, %i_next: I64, %cap: I64):
         #keys: Ptr<K> := #a.keys
@@ -153,7 +147,7 @@ require K: typename, V: typename, HashEqual<K>, Equal<V>
         #values_b: Ptr<V> := #b.values
         %va: V := #values_a[%i]
         %vb: V := #values_b[%slot_b]
-        %eq: Bool = V.eq(%va, %vb)
+        %eq: Bool = %va.eq(%vb)
         branch %eq ? loop(%i_next, %cap) : return(false)
 
 routine HashMap<K, V>.rehash(#self: Ptr<HashMap<K, V>>, %new_capacity: I64) -> Void
@@ -184,8 +178,7 @@ require K: typename, V: typename
 
     block clear_one(%i: I64, #old_keys: Ptr<K>, #old_values: Ptr<V>, #old_hashes: Ptr<I64>, #old_states: Ptr<I8>, %old_capacity: I64, #new_keys: Ptr<K>, #new_values: Ptr<V>, #new_hashes: Ptr<I64>, #new_states: Ptr<I8>, %new_capacity: I64, #alloc: Ptr<Allocator>):
         #new_states[%i] = 0
-        %i_next: I64 = %i.add(1)
-        jump clear_loop(%i_next, #old_keys, #old_values, #old_hashes, #old_states, %old_capacity, #new_keys, #new_values, #new_hashes, #new_states, %new_capacity, #alloc)
+        jump clear_loop(%i.add(1), #old_keys, #old_values, #old_hashes, #old_states, %old_capacity, #new_keys, #new_values, #new_hashes, #new_states, %new_capacity, #alloc)
 
     block install(#old_keys: Ptr<K>, #old_values: Ptr<V>, #old_hashes: Ptr<I64>, #old_states: Ptr<I8>, %old_capacity: I64, #new_keys: Ptr<K>, #new_values: Ptr<V>, #new_hashes: Ptr<I64>, #new_states: Ptr<I8>, %new_capacity: I64, #alloc: Ptr<Allocator>):
         #self.keys = #new_keys
@@ -204,15 +197,13 @@ require K: typename, V: typename
     block move_one(%i: I64, #old_keys: Ptr<K>, #old_values: Ptr<V>, #old_hashes: Ptr<I64>, #old_states: Ptr<i8>, %old_capacity: I64, #alloc: Ptr<Allocator>):
         %state: i8 := #old_states[%i]
         %occupied: Bool = %state.eq(1)
-        %i_next: I64 = %i.add(1)
-        branch %occupied ? insert_old(%i, #old_keys, #old_values, #old_hashes, #old_states, %old_capacity, #alloc) : move_loop(%i_next, #old_keys, #old_values, #old_hashes, #old_states, %old_capacity, #alloc)
+        branch %occupied ? insert_old(%i, #old_keys, #old_values, #old_hashes, #old_states, %old_capacity, #alloc) : move_loop(%i.add(1), #old_keys, #old_values, #old_hashes, #old_states, %old_capacity, #alloc)
 
     block insert_old(%i: I64, #old_keys: Ptr<K>, #old_values: Ptr<V>, #old_hashes: Ptr<I64>, #old_states: Ptr<i8>, %old_capacity: I64, #alloc: Ptr<Allocator>):
         %key: K := #old_keys[%i]
         %value: V := #old_values[%i]
         #self.put_direct(%key, %value)
-        %i_next: I64 = %i.add(1)
-        jump move_loop(%i_next, #old_keys, #old_values, #old_hashes, #old_states, %old_capacity, #alloc)
+        jump move_loop(%i.add(1), #old_keys, #old_values, #old_hashes, #old_states, %old_capacity, #alloc)
 
     block release_old(#old_keys: Ptr<K>, #old_values: Ptr<V>, #old_hashes: Ptr<I64>, #old_states: Ptr<i8>, #alloc: Ptr<Allocator>):
         %has_old: Bool = #old_states.is_not_null()
@@ -240,10 +231,8 @@ require K: typename, V: typename
         %length: I64 := #self.length
         %tombstones: I64 := #self.tombstones
         %used: I64 = %length.add(%tombstones)
-        %capacity_x3: I64 = %capacity.mul(3)
-        %limit: I64 = %capacity_x3.sdiv(4)
-        %used_p1: I64 = %used.add(1)
-        %full: Bool = %used_p1.sge(%limit)
+        %limit: I64 = %capacity.mul(3).sdiv(4)
+        %full: Bool = %used.add(1).sge(%limit)
         branch %full ? grow(%capacity) : return()
 
     block grow(%capacity: I64):

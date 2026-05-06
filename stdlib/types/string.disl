@@ -44,9 +44,7 @@ routine String.is_empty(#self: Ptr<String>) -> Bool
 routine String.byte_at(#self: Ptr<String>, %index: I64) -> I8
     block entry():
         %length: I64 := #self.length
-        %not_negative: Bool = %index.sge(0)
-        %before_end:   Bool = %index.slt(%length)
-        %in_bounds:    Bool = %not_negative.bitand(%before_end)
+        %in_bounds: Bool = %index.sge(0).bitand(%index.slt(%length))
         branch %in_bounds ? load(%index) : trap()
 
     block load(%index: I64):
@@ -63,8 +61,7 @@ routine String.slice(#self: Ptr<String>, %start: I64, %end: I64) -> String
         %valid_start: Bool = %start.sge(0)
         %valid_end:   Bool = %end.sle(%length)
         %valid_order: Bool = %start.sle(%end)
-        %valid_se:    Bool = %valid_start.bitand(%valid_end)
-        %valid:       Bool = %valid_se.bitand(%valid_order)
+        %valid:       Bool = %valid_start.bitand(%valid_end).bitand(%valid_order)
         branch %valid ? make(%start, %end) : trap()
 
     block make(%start: I64, %end: I64):
@@ -84,8 +81,7 @@ routine String.concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> String
         %la: I64 = %a.length
         %lb: I64 = %b.length
         %length: I64 = %la.add(%lb)
-        %buf_size: I64 = %length.add(1)
-        #data: Ptr<I8> = alloc<I8>(#alloc, %buf_size)
+        #data: Ptr<I8> = alloc<I8>(#alloc, %length.add(1))
         %failed: Bool = #data.is_null()
         branch %failed ? trap() : copy_a(#data)
 
@@ -127,8 +123,7 @@ routine String.eq(%self: String, %other: String) -> Bool
         %ba: I8 := #pa[%i]
         %bb: I8 := #pb[%i]
         %eq: Bool = %ba.eq(%bb)
-        %i_next: I64 = %i.add(1)
-        branch %eq ? loop(%i_next, %len, #pa, #pb) : return(false)
+        branch %eq ? loop(%i.add(1), %len, #pa, #pb) : return(false)
 
 ; Lexicographic byte-wise compare. Returns -1, 0, 1.
 ; Bytes are compared as unsigned, so this matches `memcmp` ordering.
@@ -156,8 +151,7 @@ routine String.compare(%self: String, %other: String) -> I32
 
     block maybe_gt(%i: I64, %min: I64, %la: I64, %lb: I64, %ua: I64, %ub: I64, #pa: Ptr<I8>, #pb: Ptr<I8>):
         %gt: Bool = %ua.sgt(%ub)
-        %i_next: I64 = %i.add(1)
-        branch %gt ? return(1) : loop(%i_next, %min, %la, %lb, #pa, #pb)
+        branch %gt ? return(1) : loop(%i.add(1), %min, %la, %lb, #pa, #pb)
 
     block lengths(%la: I64, %lb: I64):
         %lt: Bool = %la.slt(%lb)
@@ -197,8 +191,7 @@ routine String.starts_with(#self: Ptr<String>, %prefix: String) -> Bool
         %a: I8 := #sd[%i]
         %b: I8 := #pd[%i]
         %eq: Bool = %a.eq(%b)
-        %i_next: I64 = %i.add(1)
-        branch %eq ? loop(%i_next, %pl, #sd, #pd) : return(false)
+        branch %eq ? loop(%i.add(1), %pl, #sd, #pd) : return(false)
 
 routine String.ends_with(#self: Ptr<String>, %suffix: String) -> Bool
     block entry():
@@ -222,8 +215,7 @@ routine String.ends_with(#self: Ptr<String>, %suffix: String) -> Bool
         %a: I8 := #sd[%idx]
         %b: I8 := #fd[%i]
         %eq: Bool = %a.eq(%b)
-        %i_next: I64 = %i.add(1)
-        branch %eq ? loop(%i_next, %fl, %off, #sd, #fd) : return(false)
+        branch %eq ? loop(%i.add(1), %fl, %off, #sd, #fd) : return(false)
 
 ; Naive O(n*m) substring search. Returns the byte index of the first match,
 ; or Option<I64>.none() when not found. An empty needle matches at 0.
@@ -265,9 +257,7 @@ routine String.find(#self: Ptr<String>, %needle: String) -> Option<I64>
         %a: I8 := #sd[%idx]
         %b: I8 := #nd[%j]
         %eq: Bool = %a.eq(%b)
-        %j_next: I64 = %j.add(1)
-        %i_next: I64 = %i.add(1)
-        branch %eq ? inner(%i, %j_next, %last, %nlen, #sd, #nd) : outer(%i_next, %last, %nlen, #sd, #nd)
+        branch %eq ? inner(%i, %j.add(1), %last, %nlen, #sd, #nd) : outer(%i.add(1), %last, %nlen, #sd, #nd)
 
 routine String.contains(#self: Ptr<String>, %needle: String) -> Bool
     block entry():

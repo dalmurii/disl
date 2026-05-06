@@ -87,8 +87,7 @@ require T: typename
         %has_key: Bool = %i.slt(%length)
         %with_child_p1: I64 = %with_child.add(1)
         %next_sum: I64 = %has_key ? %with_child_p1 : %with_child
-        %i_next: I64 = %i.add(1)
-        jump loop(%i_next, %next_sum, %length)
+        jump loop(%i.add(1), %next_sum, %length)
 
     block finish(%sum: I64):
         #self.subtree_count = %sum
@@ -108,8 +107,7 @@ require T: typename
         %node_key: T := #node.keys[%i]
         %cmp: I32 = %key.compare(%node_key)
         %before_or_equal: Bool = %cmp.sle(0)
-        %i_next: I64 = %i.add(1)
-        branch %before_or_equal ? return(%i): loop(%i_next)
+        branch %before_or_equal ? return(%i): loop(%i.add(1))
 
 ; BTreeSets are sorted, so structural in-order comparison gives set equality
 ; without an extra contains() lookup per element.
@@ -130,8 +128,7 @@ require T: typename, Compare<T>
         %y: T = #b.get_order(%i)
         %cmp: I32 = %x.compare(%y)
         %eq: Bool = %cmp.eq(0)
-        %i_next: I64 = %i.add(1)
-        branch %eq ? loop(%i_next, %len) : return(false)
+        branch %eq ? loop(%i.add(1), %len) : return(false)
 
 routine BTreeSet<T>.contains(#self: Ptr<BTreeSet<T>>, %key: T) -> Bool
 require T: typename
@@ -163,10 +160,8 @@ require T: typename
 routine BTreeSet<T>.get_order(#self: Ptr<BTreeSet<T>>, %order: I64) -> T
 require T: typename
     block entry():
-        %not_negative: Bool = %order.sge(0)
         %length: I64 := #self.length
-        %before_end: Bool = %order.slt(%length)
-        %in_bounds: Bool = %not_negative.bitand(%before_end)
+        %in_bounds: Bool = %order.sge(0).bitand(%order.slt(%length))
         branch %in_bounds ? select_root(%order) : trap()
 
     block select_root(%order: I64):
@@ -187,8 +182,7 @@ require T: typename
 
     block leaf_key(#node: Ptr<BTreeSetNode<T>>, %order: I64, %i: I64):
         %match: Bool = %order.eq(%i)
-        %i_next: I64 = %i.add(1)
-        branch %match ? load_key(#node, %i) : scan(#node, %order, %i_next)
+        branch %match ? load_key(#node, %i) : scan(#node, %order, %i.add(1))
 
     block internal_child(#node: Ptr<BTreeSetNode<T>>, %order: I64, %i: I64):
         #child: Ptr<BTreeSetNode<T>> := #node.children[%i]
@@ -199,9 +193,7 @@ require T: typename
     block check_key(#node: Ptr<BTreeSetNode<T>>, %order: I64, %i: I64, %child_count: I64):
         %after_child: I64 = %order.sub(%child_count)
         %is_key: Bool = %after_child.eq(0)
-        %after_child_m1: I64 = %after_child.sub(1)
-        %i_next: I64 = %i.add(1)
-        branch %is_key ? load_key(#node, %i) : scan(#node, %after_child_m1, %i_next)
+        branch %is_key ? load_key(#node, %i) : scan(#node, %after_child.sub(1), %i.add(1))
 
     block last_child(#node: Ptr<BTreeSetNode<T>>, %order: I64, %i: I64):
         %leaf: Bool := #node.leaf
@@ -237,12 +229,10 @@ require T: typename
         branch %done ? promote(#left, #right, %mid) : child_copy(%i, #left, #right, %mid, %right_count)
 
     block child_copy(%i: I64, #left: Ptr<BTreeSetNode<T>>, #right: Ptr<BTreeSetNode<T>>, %mid: I64, %right_count: I64):
-        %mid_p1: I64 = %mid.add(1)
-        %src: I64 = %mid_p1.add(%i)
+        %src: I64 = %mid.add(1).add(%i)
         #child: Ptr<BTreeSetNode<T>> := #left.children[%src]
         #right.children[%i] = #child
-        %i_next: I64 = %i.add(1)
-        jump child_loop(%i_next, #left, #right, %mid, %right_count)
+        jump child_loop(%i.add(1), #left, #right, %mid, %right_count)
 
     block promote(#left: Ptr<BTreeSetNode<T>>, #right: Ptr<BTreeSetNode<T>>, %mid: I64):
         %parent_length: I64 := #self.length
@@ -256,16 +246,13 @@ require T: typename
 
     block move_child(%i: I64, #left: Ptr<BTreeSetNode<T>>, #right: Ptr<BTreeSetNode<T>>, %mid: I64):
         #child: Ptr<BTreeSetNode<T>> := #self.children[%i]
-        %i_p1: I64 = %i.add(1)
-        #self.children[%i_p1] = #child
-        %i_m1: I64 = %i.sub(1)
-        jump shift_children(%i_m1, #left, #right, %mid)
+        #self.children[%i.add(1)] = #child
+        jump shift_children(%i.sub(1), #left, #right, %mid)
 
     block install(#left: Ptr<BTreeSetNode<T>>, #right: Ptr<BTreeSetNode<T>>, %mid: I64):
         %middle_key: T := #left.keys[%mid]
         #self.keys[%index] = %middle_key
-        %index_p1: I64 = %index.add(1)
-        #self.children[%index_p1] = #right
+        #self.children[%index.add(1)] = #right
         #left.length = %mid
         %parent_length: I64 := #self.length
         #self.length = %parent_length.add(1)
@@ -378,8 +365,7 @@ require T: typename
         #child.keys.shift_right(0, %child_length)
         %pivot: T := #self.keys[%i_m1]
         #child.keys[0] = %pivot
-        %left_length_m1: I64 = %left_length.sub(1)
-        %new_pivot: T := #left.keys[%left_length_m1]
+        %new_pivot: T := #left.keys[%left_length.sub(1)]
         #self.keys[%i_m1] = %new_pivot
         %leaf: Bool := #child.leaf
         branch %leaf ? finalize(#left, #child, %left_length, %child_length) : move_child(#left, #child, %left_length, %child_length)
@@ -401,10 +387,9 @@ require T: typename
 
 routine BTreeSetNode<T>.borrow_from_right(#self: Ptr<BTreeSetNode<T>>, %i: I64) -> Void
 require T: typename
-    block entry:
-        %i_p1: I64 = %i.add(1)
+    block entry():
         #child: Ptr<BTreeSetNode<T>> := #self.children[%i]
-        #right: Ptr<BTreeSetNode<T>> := #self.children[%i_p1]
+        #right: Ptr<BTreeSetNode<T>> := #self.children[%i.add(1)]
         %child_length: I64 := #child.length
         %right_length: I64 := #right.length
         %pivot: T := #self.keys[%i]
@@ -417,10 +402,8 @@ require T: typename
 
     block move_child(#child: Ptr<BTreeSetNode<T>>, #right: Ptr<BTreeSetNode<T>>, %child_length: I64, %right_length: I64):
         #moved: Ptr<BTreeSetNode<T>> := #right.children[0]
-        %child_length_p1: I64 = %child_length.add(1)
-        #child.children[%child_length_p1] = #moved
-        %right_child_count: I64 = %right_length.add(1)
-        #right.children.shift_left(0, %right_child_count)
+        #child.children[%child_length.add(1)] = #moved
+        #right.children.shift_left(0, %right_length.add(1))
         jump finalize(#child, #right, %child_length, %right_length)
 
     block finalize(#child: Ptr<BTreeSetNode<T>>, #right: Ptr<BTreeSetNode<T>>, %child_length: I64, %right_length: I64):
@@ -433,7 +416,7 @@ require T: typename
 
 routine BTreeSetNode<T>.merge_children(#self: Ptr<BTreeSetNode<T>>, %i: I64, #alloc: Ptr<Allocator>) -> Void
 require T: typename
-    block entry:
+    block entry():
         %i_p1: I64 = %i.add(1)
         #left: Ptr<BTreeSetNode<T>> := #self.children[%i]
         #right: Ptr<BTreeSetNode<T>> := #self.children[%i_p1]
@@ -447,20 +430,15 @@ require T: typename
         branch %leaf ? finalize(#left, #right, %left_length, %right_length) : copy_children(#left, #right, %left_length, %right_length)
 
     block copy_children(#left: Ptr<BTreeSetNode<T>>, #right: Ptr<BTreeSetNode<T>>, %left_length: I64, %right_length: I64):
-        %right_child_count: I64 = %right_length.add(1)
-        %dst_start: I64 = %left_length.add(1)
-        #left.children.copy(%dst_start, #right.children, 0, %right_child_count)
+        #left.children.copy(%left_length.add(1), #right.children, 0, %right_length.add(1))
         jump finalize(#left, #right, %left_length, %right_length)
 
     block finalize(#left: Ptr<BTreeSetNode<T>>, #right: Ptr<BTreeSetNode<T>>, %left_length: I64, %right_length: I64):
-        %left_p1: I64 = %left_length.add(1)
-        %merged_length: I64 = %left_p1.add(%right_length)
-        #left.length = %merged_length
+        #left.length = %left_length.add(1).add(%right_length)
         %parent_length: I64 := #self.length
         #self.keys.shift_left(%i, %parent_length)
-        %parent_child_count: I64 = %parent_length.add(1)
         %i_p1: I64 = %i.add(1)
-        #self.children.shift_left(%i_p1, %parent_child_count)
+        #self.children.shift_left(%i_p1, %parent_length.add(1))
         #self.length = %parent_length.sub(1)
         free<BTreeSetNode<T>>(#alloc, #right)
         #left.recount()
@@ -469,7 +447,7 @@ require T: typename
 
 routine BTreeSetNode<T>.ensure_min(#self: Ptr<BTreeSetNode<T>>, %i: I64, #alloc: Ptr<Allocator>) -> I64
 require T: typename
-    block entry:
+    block entry():
         #child: Ptr<BTreeSetNode<T>> := #self.children[%i]
         %child_length: I64 := #child.length
         %ok: Bool = %child_length.sge(NODE_MIN_KEYS)
@@ -480,8 +458,7 @@ require T: typename
         branch %has_left ? check_left() : try_right(false)
 
     block check_left():
-        %i_m1: I64 = %i.sub(1)
-        #left: Ptr<BTreeSetNode<T>> := #self.children[%i_m1]
+        #left: Ptr<BTreeSetNode<T>> := #self.children[%i.sub(1)]
         %left_length: I64 := #left.length
         %left_ok: Bool = %left_length.sge(NODE_MIN_KEYS)
         branch %left_ok ? do_borrow_left() : try_right(true)
@@ -496,8 +473,7 @@ require T: typename
         branch %has_right ? check_right(%has_left) : pick_merge_no_right(%has_left)
 
     block check_right(%has_left: Bool):
-        %i_p1: I64 = %i.add(1)
-        #right: Ptr<BTreeSetNode<T>> := #self.children[%i_p1]
+        #right: Ptr<BTreeSetNode<T>> := #self.children[%i.add(1)]
         %right_length: I64 := #right.length
         %right_ok: Bool = %right_length.sge(NODE_MIN_KEYS)
         branch %right_ok ? do_borrow_right() : pick_merge(%has_left)
@@ -523,7 +499,7 @@ require T: typename
 
 routine BTreeSetNode<T>.take_max(#self: Ptr<BTreeSetNode<T>>, #set: Ptr<BTreeSet<T>>) -> T
 require T: typename
-    block entry:
+    block entry():
         %leaf: Bool := #self.leaf
         branch %leaf ? leaf_take() : descend()
 
@@ -544,7 +520,7 @@ require T: typename
 
 routine BTreeSetNode<T>.take_min(#self: Ptr<BTreeSetNode<T>>, #set: Ptr<BTreeSet<T>>) -> T
 require T: typename
-    block entry:
+    block entry():
         %leaf: Bool := #self.leaf
         branch %leaf ? leaf_take() : descend()
 
@@ -562,7 +538,7 @@ require T: typename
 
 routine BTreeSetNode<T>.remove(#self: Ptr<BTreeSetNode<T>>, #set: Ptr<BTreeSet<T>>, %key: T) -> Bool
 require T: typename
-    block entry:
+    block entry():
         %slot: I64 = #set.find_index(#self, %key)
         %length: I64 := #self.length
         %inside: Bool = %slot.slt(%length)
@@ -596,15 +572,13 @@ require T: typename
         return(true)
 
     block try_succ(%slot: I64):
-        %slot_p1: I64 = %slot.add(1)
-        #right: Ptr<BTreeSetNode<T>> := #self.children[%slot_p1]
+        #right: Ptr<BTreeSetNode<T>> := #self.children[%slot.add(1)]
         %right_length: I64 := #right.length
         %right_ok: Bool = %right_length.sge(NODE_MIN_KEYS)
         branch %right_ok ? take_succ(%slot) : merge_and_recurse(%slot)
 
     block take_succ(%slot: I64):
-        %slot_p1: I64 = %slot.add(1)
-        #right: Ptr<BTreeSetNode<T>> := #self.children[%slot_p1]
+        #right: Ptr<BTreeSetNode<T>> := #self.children[%slot.add(1)]
         %replacement: T = #right.take_min(#set)
         #self.keys[%slot] = %replacement
         #self.recount()
@@ -632,7 +606,7 @@ require T: typename
 
 routine BTreeSet<T>.remove(#self: Ptr<BTreeSet<T>>, %key: T) -> Bool
 require T: typename
-    block entry:
+    block entry():
         #root: Ptr<BTreeSetNode<T>> := #self.root
         %empty: Bool = #root.is_null()
         branch %empty ? return(false) : remove_root(#root)
@@ -668,14 +642,13 @@ require T: typename
 ; Internal nodes store `length` separator keys and `length + 1` children.
 routine BTreeSetNode<T>.free_recursive(#self: Ptr<BTreeSetNode<T>>, #alloc: Ptr<Allocator>) -> Void
 require T: typename
-    block entry:
+    block entry():
         %leaf: Bool := #self.leaf
         branch %leaf ? free_self() : free_children()
 
     block free_children():
         %length: I64 := #self.length
-        %child_count: I64 = %length.add(1)
-        jump child_loop(0, %child_count)
+        jump child_loop(0, %length.add(1))
 
     block child_loop(%i: I64, %child_count: I64):
         %done: Bool = %i.sge(%child_count)
@@ -684,8 +657,7 @@ require T: typename
     block free_child(%i: I64, %child_count: I64):
         #child: Ptr<BTreeSetNode<T>> := #self.children[%i]
         #child.free_recursive(#alloc)
-        %i_next: I64 = %i.add(1)
-        jump child_loop(%i_next, %child_count)
+        jump child_loop(%i.add(1), %child_count)
 
     block free_self():
         free<BTreeSetNode<T>>(#alloc, #self)
@@ -693,7 +665,7 @@ require T: typename
 
 routine BTreeSet<T>.free(#self: Ptr<BTreeSet<T>>) -> Void
 require T: typename
-    block entry:
+    block entry():
         #root: Ptr<BTreeSetNode<T>> := #self.root
         %empty: Bool = #root.is_null()
         branch %empty ? reset() : free_root(#root)
