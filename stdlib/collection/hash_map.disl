@@ -113,16 +113,16 @@ require K: typename, V: typename
 ; Two HashMaps are equal when they hold the same key→value pairs, regardless
 ; of insertion order or internal slot layout. With matching length, "every
 ; key in A is in B and maps to an equal value" is sufficient.
-routine HashMap<K, V>.eq(#a: Ptr<HashMap<K, V>>, #b: Ptr<HashMap<K, V>>) -> Bool
+routine HashMap<K, V>.eq(#self: Ptr<Self>, #other: Ptr<Self>) -> Bool
 require K: typename, V: typename, HashEqual<K>, Equal<V>
     block entry():
-        %la: I64 := #a.length
-        %lb: I64 := #b.length
+        %la: I64 := #self.length
+        %lb: I64 := #other.length
         %same_len: Bool = %la.eq(%lb)
         branch %same_len ? scan(%la) : return(false)
 
     block scan(%len: I64):
-        %cap: I64 := #a.capacity
+        %cap: I64 := #self.capacity
         jump loop(0, %cap)
 
     block loop(%i: I64, %cap: I64):
@@ -130,21 +130,21 @@ require K: typename, V: typename, HashEqual<K>, Equal<V>
         branch %done ? return(true) : check(%i, %cap)
 
     block check(%i: I64, %cap: I64):
-        #states: Ptr<I8> := #a.states
+        #states: Ptr<I8> := #self.states
         %state: I8 := #states[%i]
         %occupied: Bool = %state.eq(1)
         branch %occupied ? probe(%i, %i.add(1), %cap) : loop(%i.add(1), %cap)
 
     block probe(%i: I64, %i_next: I64, %cap: I64):
-        #keys: Ptr<K> := #a.keys
+        #keys: Ptr<K> := #self.keys
         %key: K := #keys[%i]
-        %slot_b: I64 = #b.find(%key)
+        %slot_b: I64 = #other.find(%key)
         %found: Bool = %slot_b.sge(0)
         branch %found ? compare_value(%i, %i_next, %cap, %slot_b) : return(false)
 
     block compare_value(%i: I64, %i_next: I64, %cap: I64, %slot_b: I64):
-        #values_a: Ptr<V> := #a.values
-        #values_b: Ptr<V> := #b.values
+        #values_a: Ptr<V> := #self.values
+        #values_b: Ptr<V> := #other.values
         %va: V := #values_a[%i]
         %vb: V := #values_b[%slot_b]
         %eq: Bool = %va.eq(%vb)

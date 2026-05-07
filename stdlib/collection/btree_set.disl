@@ -111,11 +111,11 @@ require T: typename
 
 ; BTreeSets are sorted, so structural in-order comparison gives set equality
 ; without an extra contains() lookup per element.
-routine BTreeSet<T>.eq(#a: Ptr<BTreeSet<T>>, #b: Ptr<BTreeSet<T>>) -> Bool
+routine BTreeSet<T>.eq(#self: Ptr<Self>, #other: Ptr<Self>) -> Bool
 require T: typename, Compare<T>
     block entry():
-        %la: I64 := #a.length
-        %lb: I64 := #b.length
+        %la: I64 := #self.length
+        %lb: I64 := #other.length
         %same_len: Bool = %la.eq(%lb)
         branch %same_len ? loop(0, %la) : return(false)
 
@@ -124,8 +124,8 @@ require T: typename, Compare<T>
         branch %done ? return(true) : step(%i, %len)
 
     block step(%i: I64, %len: I64):
-        %x: T = #a.get_order(%i)
-        %y: T = #b.get_order(%i)
+        %x: T = #self.get_order(%i)
+        %y: T = #other.get_order(%i)
         %cmp: I32 = %x.compare(%y)
         %eq: Bool = %cmp.eq(0)
         branch %eq ? loop(%i.add(1), %len) : return(false)

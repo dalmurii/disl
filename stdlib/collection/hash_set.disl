@@ -105,16 +105,16 @@ require T: typename
 ; Two HashSets are equal when they hold the same elements, regardless of
 ; insertion order or internal slot layout. With matching length, "every
 ; element of A is in B" is sufficient.
-routine HashSet<T>.eq(#a: Ptr<HashSet<T>>, #b: Ptr<HashSet<T>>) -> Bool
+routine HashSet<T>.eq(#self: Ptr<Self>, #other: Ptr<Self>) -> Bool
 require T: typename, HashEqual<T>
     block entry():
-        %la: I64 := #a.length
-        %lb: I64 := #b.length
+        %la: I64 := #self.length
+        %lb: I64 := #other.length
         %same_len: Bool = %la.eq(%lb)
         branch %same_len ? scan(%la) : return(false)
 
     block scan(%len: I64):
-        %cap: I64 := #a.capacity
+        %cap: I64 := #self.capacity
         jump loop(0, %cap)
 
     block loop(%i: I64, %cap: I64):
@@ -122,15 +122,15 @@ require T: typename, HashEqual<T>
         branch %done ? return(true) : check(%i, %cap)
 
     block check(%i: I64, %cap: I64):
-        #states: Ptr<I8> := #a.states
+        #states: Ptr<I8> := #self.states
         %state: I8 := #states[%i]
         %occupied: Bool = %state.eq(1)
         branch %occupied ? probe(%i, %i.add(1), %cap) : loop(%i.add(1), %cap)
 
     block probe(%i: I64, %i_next: I64, %cap: I64):
-        #keys: Ptr<T> := #a.keys
+        #keys: Ptr<T> := #self.keys
         %key: T := #keys[%i]
-        %has: Bool = #b.contains(%key)
+        %has: Bool = #other.contains(%key)
         branch %has ? loop(%i_next, %cap) : return(false)
 
 routine HashSet<T>.rehash(#self: Ptr<Self>, %new_capacity: I64) -> Void

@@ -49,11 +49,11 @@ require T: typename, N: I64
 
 ; ── equality ──────────────────────────────────────────────────────────────────
 
-routine Array<T, N>.eq(#a: Ptr<Array<T, N>>, #b: Ptr<Array<T, N>>) -> Bool
+routine Array<T, N>.eq(#self: Ptr<Self>, #other: Ptr<Self>) -> Bool
 require T: typename, N: I64, Equal<T>
     block entry():
-        #pa: Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#a)
-        #pb: Ptr<T> = bitcast<Ptr<Array<T, N>>, Ptr<T>>(#b)
+        #pa: Ptr<T> = bitcast<Ptr<Self>, Ptr<T>>(#self)
+        #pb: Ptr<T> = bitcast<Ptr<Self>, Ptr<T>>(#other)
         jump loop(0, #pa, #pb)
 
     block loop(%i: I64, #pa: Ptr<T>, #pb: Ptr<T>):

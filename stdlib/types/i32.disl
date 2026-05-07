@@ -13,243 +13,243 @@ const I32.MAX: I32 =  2147483647
 
 ; ── bit operations ────────────────────────────────────────────────────────────
 
-routine I32.count_ones(%self: I32) -> Self
+routine I32.count_ones(%self: Self) -> Self
     block entry():
-        %result: I32 = popcount<I32>(%self)
+        %result: Self = popcount<Self>(%self)
         return(%result)
 
-routine I32.leading_zeros(%self: I32) -> Self
+routine I32.leading_zeros(%self: Self) -> Self
     block entry():
-        %result: I32 = clz<I32>(%self, false)
+        %result: Self = clz<Self>(%self, false)
         return(%result)
 
-routine I32.trailing_zeros(%self: I32) -> Self
+routine I32.trailing_zeros(%self: Self) -> Self
     block entry():
-        %result: I32 = ctz<I32>(%self, false)
+        %result: Self = ctz<Self>(%self, false)
         return(%result)
 
-routine I32.swap_bytes(%self: I32) -> Self
+routine I32.swap_bytes(%self: Self) -> Self
     block entry():
-        %result: I32 = bswap<I32>(%self)
+        %result: Self = bswap<Self>(%self)
         return(%result)
 
 ; ── arithmetic ────────────────────────────────────────────────────────────────
 
-routine I32.abs(%self: I32) -> Self
+routine I32.abs(%self: Self) -> Self
     block entry():
         %is_neg: Bool = %self.slt(0)
-        %neg: I32 = 0.sub(%self)
-        %result: I32 = %is_neg ? %neg : %self
+        %neg: Self = 0.sub(%self)
+        %result: Self = %is_neg ? %neg : %self
         return(%result)
 
-routine I32.min(%self: I32, %other: I32) -> Self
+routine I32.min(%self: Self, %other: Self) -> Self
     block entry():
         %less: Bool = %self.slt(%other)
-        %result: I32 = %less ? %self : %other
+        %result: Self = %less ? %self : %other
         return(%result)
 
-routine I32.max(%self: I32, %other: I32) -> Self
+routine I32.max(%self: Self, %other: Self) -> Self
     block entry():
         %more: Bool = %self.sgt(%other)
-        %result: I32 = %more ? %self : %other
+        %result: Self = %more ? %self : %other
         return(%result)
 
-routine I32.add(%self: I32, %other: I32) -> Self
+routine I32.add(%self: Self, %other: Self) -> Self
     block entry():
-        %r: I32 = add<I32>(%self, %other)
+        %r: Self = add<Self>(%self, %other)
         return(%r)
 
-routine I32.sub(%self: I32, %other: I32) -> Self
+routine I32.sub(%self: Self, %other: Self) -> Self
     block entry():
-        %r: I32 = sub<I32>(%self, %other)
+        %r: Self = sub<Self>(%self, %other)
         return(%r)
 
-routine I32.mul(%self: I32, %other: I32) -> Self
+routine I32.mul(%self: Self, %other: Self) -> Self
     block entry():
-        %r: I32 = mul<I32>(%self, %other)
+        %r: Self = mul<Self>(%self, %other)
         return(%r)
 
 ; ── bit shifts ────────────────────────────────────────────────────────────────
 
-routine I32.shl(%self: I32, %n: I32) -> Self
+routine I32.shl(%self: Self, %n: Self) -> Self
     block entry():
-        %r: I32 = shl<I32>(%self, %n)
+        %r: Self = shl<Self>(%self, %n)
         return(%r)
 
-routine I32.lshr(%self: I32, %n: I32) -> Self
+routine I32.lshr(%self: Self, %n: Self) -> Self
     block entry():
-        %r: I32 = lshr<I32>(%self, %n)
+        %r: Self = lshr<Self>(%self, %n)
         return(%r)
 
-routine I32.ashr(%self: I32, %n: I32) -> Self
+routine I32.ashr(%self: Self, %n: Self) -> Self
     block entry():
-        %r: I32 = ashr<I32>(%self, %n)
+        %r: Self = ashr<Self>(%self, %n)
         return(%r)
 
-routine I32.rotl(%self: I32, %n: I32) -> Self
+routine I32.rotl(%self: Self, %n: Self) -> Self
     block entry():
-        %left: I32 = shl<I32>(%self, %n)
-        %width: I32 = 32
-        %comp: I32 = %width.sub(%n)
-        %right: I32 = lshr<I32>(%self, %comp)
-        %r: I32 = %left.bitor(%right)
+        %left: Self = shl<Self>(%self, %n)
+        %width: Self = 32
+        %comp: Self = %width.sub(%n)
+        %right: Self = lshr<Self>(%self, %comp)
+        %r: Self = %left.bitor(%right)
         return(%r)
 
-routine I32.rotr(%self: I32, %n: I32) -> Self
+routine I32.rotr(%self: Self, %n: Self) -> Self
     block entry():
-        %right: I32 = lshr<I32>(%self, %n)
-        %width: I32 = 32
-        %comp: I32 = %width.sub(%n)
-        %left: I32 = shl<I32>(%self, %comp)
-        %r: I32 = %left.bitor(%right)
+        %right: Self = lshr<Self>(%self, %n)
+        %width: Self = 32
+        %comp: Self = %width.sub(%n)
+        %left: Self = shl<Self>(%self, %comp)
+        %r: Self = %left.bitor(%right)
         return(%r)
 
 ; ── bitwise operations ────────────────────────────────────────────────────────
 
-routine I32.bitand(%self: I32, %other: I32) -> Self
+routine I32.bitand(%self: Self, %other: Self) -> Self
     block entry():
-        %r: I32 = band<I32>(%self, %other)
+        %r: Self = band<Self>(%self, %other)
         return(%r)
 
-routine I32.bitor(%self: I32, %other: I32) -> Self
+routine I32.bitor(%self: Self, %other: Self) -> Self
     block entry():
-        %r: I32 = bor<I32>(%self, %other)
+        %r: Self = bor<Self>(%self, %other)
         return(%r)
 
-routine I32.bitxor(%self: I32, %other: I32) -> Self
+routine I32.bitxor(%self: Self, %other: Self) -> Self
     block entry():
-        %r: I32 = bxor<I32>(%self, %other)
+        %r: Self = bxor<Self>(%self, %other)
         return(%r)
 
-routine I32.bitnot(%self: I32) -> Self
+routine I32.bitnot(%self: Self) -> Self
     block entry():
-        %r: I32 = bnot<I32>(%self)
+        %r: Self = bnot<Self>(%self)
         return(%r)
 
 ; ── signed comparisons ────────────────────────────────────────────────────────
 
-routine I32.slt(%self: I32, %other: I32) -> Bool
+routine I32.slt(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = slt<I32>(%self, %other)
+        %r: Bool = slt<Self>(%self, %other)
         return(%r)
 
-routine I32.sle(%self: I32, %other: I32) -> Bool
+routine I32.sle(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = sle<I32>(%self, %other)
+        %r: Bool = sle<Self>(%self, %other)
         return(%r)
 
-routine I32.sgt(%self: I32, %other: I32) -> Bool
+routine I32.sgt(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = sgt<I32>(%self, %other)
+        %r: Bool = sgt<Self>(%self, %other)
         return(%r)
 
-routine I32.sge(%self: I32, %other: I32) -> Bool
+routine I32.sge(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = sge<I32>(%self, %other)
+        %r: Bool = sge<Self>(%self, %other)
         return(%r)
 
 ; ── unsigned comparisons ──────────────────────────────────────────────────────
 
-routine I32.ult(%self: I32, %other: I32) -> Bool
+routine I32.ult(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = ult<I32>(%self, %other)
+        %r: Bool = ult<Self>(%self, %other)
         return(%r)
 
-routine I32.ule(%self: I32, %other: I32) -> Bool
+routine I32.ule(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = ule<I32>(%self, %other)
+        %r: Bool = ule<Self>(%self, %other)
         return(%r)
 
-routine I32.ugt(%self: I32, %other: I32) -> Bool
+routine I32.ugt(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = ugt<I32>(%self, %other)
+        %r: Bool = ugt<Self>(%self, %other)
         return(%r)
 
-routine I32.uge(%self: I32, %other: I32) -> Bool
+routine I32.uge(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = uge<I32>(%self, %other)
+        %r: Bool = uge<Self>(%self, %other)
         return(%r)
 
 ; ── integer division and remainder ────────────────────────────────────────────
 
-routine I32.sdiv(%self: I32, %other: I32) -> Self
+routine I32.sdiv(%self: Self, %other: Self) -> Self
     block entry():
-        %r: I32 = sdiv<I32>(%self, %other)
+        %r: Self = sdiv<Self>(%self, %other)
         return(%r)
 
-routine I32.udiv(%self: I32, %other: I32) -> Self
+routine I32.udiv(%self: Self, %other: Self) -> Self
     block entry():
-        %r: I32 = udiv<I32>(%self, %other)
+        %r: Self = udiv<Self>(%self, %other)
         return(%r)
 
-routine I32.srem(%self: I32, %other: I32) -> Self
+routine I32.srem(%self: Self, %other: Self) -> Self
     block entry():
-        %r: I32 = srem<I32>(%self, %other)
+        %r: Self = srem<Self>(%self, %other)
         return(%r)
 
-routine I32.urem(%self: I32, %other: I32) -> Self
+routine I32.urem(%self: Self, %other: Self) -> Self
     block entry():
-        %r: I32 = urem<I32>(%self, %other)
+        %r: Self = urem<Self>(%self, %other)
         return(%r)
 
 ; ── equality, ordering, hashing ───────────────────────────────────────────────
 
-routine I32.eq(%self: I32, %other: I32) -> Bool
+routine I32.eq(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = ieq<I32>(%self, %other)
+        %r: Bool = ieq<Self>(%self, %other)
         return(%r)
 
-routine I32.ne(%self: I32, %other: I32) -> Bool
+routine I32.ne(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = ine<I32>(%self, %other)
+        %r: Bool = ine<Self>(%self, %other)
         return(%r)
 
-routine I32.compare(%self: I32, %other: I32) -> Self
+routine I32.compare(%self: Self, %other: Self) -> Self
     block entry():
         %lt: Bool = %self.slt(%other)
         branch %lt ? return(-1) : maybe_gt(%self, %other)
 
-    block maybe_gt(%self: I32, %other: I32):
+    block maybe_gt(%self: Self, %other: Self):
         %gt: Bool = %self.sgt(%other)
         branch %gt ? return(1) : return(0)
 
-routine I32.hash(%self: I32) -> I64
+routine I32.hash(%self: Self) -> I64
     block entry():
         %h: I64 = xxh64_hash_i64(%self.zext<I64>(), 0)
         return(%h)
 
 ; ── narrowing conversions ─────────────────────────────────────────────────────
 
-routine I32.to_i8(%self: I32) -> I8
+routine I32.to_i8(%self: Self) -> I8
     block entry():
-        %result: I8 = trunc<I32, I8>(%self)
+        %result: I8 = trunc<Self, I8>(%self)
         return(%result)
 
-routine I32.to_i16(%self: I32) -> I16
+routine I32.to_i16(%self: Self) -> I16
     block entry():
-        %result: I16 = trunc<I32, I16>(%self)
+        %result: I16 = trunc<Self, I16>(%self)
         return(%result)
 
 ; ── widening conversions (sign-extending) ─────────────────────────────────────
 
-routine I32.to_i64(%self: I32) -> I64
+routine I32.to_i64(%self: Self) -> I64
     block entry():
-        %result: I64 = sext<I32, I64>(%self)
+        %result: I64 = sext<Self, I64>(%self)
         return(%result)
 
-routine I32.to_u64(%self: I32) -> I64
+routine I32.to_u64(%self: Self) -> I64
     block entry():
-        %result: I64 = zext<I32, I64>(%self)
+        %result: I64 = zext<Self, I64>(%self)
         return(%result)
 
 ; ── float conversions ─────────────────────────────────────────────────────────
 
-routine I32.to_f32(%self: I32) -> F32
+routine I32.to_f32(%self: Self) -> F32
     block entry():
-        %result: F32 = sitofp<I32, F32>(%self)
+        %result: F32 = sitofp<Self, F32>(%self)
         return(%result)
 
-routine I32.to_f64(%self: I32) -> F64
+routine I32.to_f64(%self: Self) -> F64
     block entry():
-        %result: F64 = sitofp<I32, F64>(%self)
+        %result: F64 = sitofp<Self, F64>(%self)
         return(%result)

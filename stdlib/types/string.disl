@@ -76,7 +76,7 @@ routine String.slice(#self: Ptr<Self>, %start: I64, %end: I64) -> Self
 
 ; Allocates a new buffer containing a followed by b.
 ; Caller must free the returned String's data pointer via free<I8>.
-routine String.concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> Self
+routine String.concat(%a: Self, %b: Self, #alloc: Ptr<Allocator>) -> Self
     block entry():
         %la: I64 = %a.length
         %lb: I64 = %b.length
@@ -103,14 +103,14 @@ routine String.concat(%a: String, %b: String, #alloc: Ptr<Allocator>) -> Self
 
 ; ── equality, ordering, hashing ───────────────────────────────────────────────
 
-routine String.eq(%self: String, %other: String) -> Bool
+routine String.eq(%self: Self, %other: Self) -> Bool
     block entry():
         %la: I64 = %self.length
         %lb: I64 = %other.length
         %same_len: Bool = %la.eq(%lb)
         branch %same_len ? scan(%self, %other, %la) : return(false)
 
-    block scan(%self: String, %other: String, %len: I64):
+    block scan(%self: Self, %other: Self, %len: I64):
         #pa: Ptr<I8> = %self.data
         #pb: Ptr<I8> = %other.data
         jump loop(0, %len, #pa, #pb)
@@ -127,7 +127,7 @@ routine String.eq(%self: String, %other: String) -> Bool
 
 ; Lexicographic byte-wise compare. Returns -1, 0, 1.
 ; Bytes are compared as unsigned, so this matches `memcmp` ordering.
-routine String.compare(%self: String, %other: String) -> I32
+routine String.compare(%self: Self, %other: Self) -> I32
     block entry():
         %la: I64 = %self.length
         %lb: I64 = %other.length
@@ -164,7 +164,7 @@ routine String.compare(%self: String, %other: String) -> I32
         branch %gt ? return(1) : return(0)
 
 ; xxHash64 of the byte contents, seeded with 0.
-routine String.hash(%self: String) -> I64
+routine String.hash(%self: Self) -> I64
     block entry():
         #data: Ptr<I8> = %self.data
         %len: I64 = %self.length

@@ -204,19 +204,19 @@ require T: typename
         %value: T := #data[%start.add(%index)]
         return(%value)
 
-routine Deque<T>.eq(#a: Ptr<Deque<T>>, #b: Ptr<Deque<T>>) -> Bool
+routine Deque<T>.eq(#self: Ptr<Self>, #other: Ptr<Self>) -> Bool
 require T: typename, Equal<T>
     block entry():
-        %la: I64 := #a.length
-        %lb: I64 := #b.length
+        %la: I64 := #self.length
+        %lb: I64 := #other.length
         %same_len: Bool = %la.eq(%lb)
         branch %same_len ? scan(%la) : return(false)
 
     block scan(%len: I64):
-        %sa: I64 := #a.start
-        %sb: I64 := #b.start
-        #pa: Ptr<T> := #a.data
-        #pb: Ptr<T> := #b.data
+        %sa: I64 := #self.start
+        %sb: I64 := #other.start
+        #pa: Ptr<T> := #self.data
+        #pb: Ptr<T> := #other.data
         jump loop(0, %len, %sa, %sb, #pa, #pb)
 
     block loop(%i: I64, %len: I64, %sa: I64, %sb: I64, #pa: Ptr<T>, #pb: Ptr<T>):

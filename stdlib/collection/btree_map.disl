@@ -144,11 +144,11 @@ require K: typename, V: typename
 
 ; BTreeMaps are sorted by key, so structural in-order comparison of both
 ; keys and values gives map equality.
-routine BTreeMap<K, V>.eq(#a: Ptr<BTreeMap<K, V>>, #b: Ptr<BTreeMap<K, V>>) -> Bool
+routine BTreeMap<K, V>.eq(#self: Ptr<Self>, #other: Ptr<Self>) -> Bool
 require K: typename, V: typename, Compare<K>, Equal<V>
     block entry():
-        %la: I64 := #a.length
-        %lb: I64 := #b.length
+        %la: I64 := #self.length
+        %lb: I64 := #other.length
         %same_len: Bool = %la.eq(%lb)
         branch %same_len ? loop(0, %la) : return(false)
 
@@ -157,15 +157,15 @@ require K: typename, V: typename, Compare<K>, Equal<V>
         branch %done ? return(true) : step(%i, %len)
 
     block step(%i: I64, %len: I64):
-        %ka: K = #a.key_order(%i)
-        %kb: K = #b.key_order(%i)
+        %ka: K = #self.key_order(%i)
+        %kb: K = #other.key_order(%i)
         %cmp: I32 = %ka.compare(%kb)
         %k_eq: Bool = %cmp.eq(0)
         branch %k_eq ? compare_value(%i, %len) : return(false)
 
     block compare_value(%i: I64, %len: I64):
-        %va: V = #a.get_order(%i)
-        %vb: V = #b.get_order(%i)
+        %va: V = #self.get_order(%i)
+        %vb: V = #other.get_order(%i)
         %v_eq: Bool = %va.eq(%vb)
         branch %v_eq ? loop(%i.add(1), %len) : return(false)
 

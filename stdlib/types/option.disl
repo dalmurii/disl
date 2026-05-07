@@ -21,18 +21,18 @@ require T: typename
 routine Option<T>.none() -> Self
 require T: typename
     block entry():
-        #buf: Ptr<Option<T>> = alloca<Option<T>>
-        zero<Option<T>>(#buf, 1)
-        %opt: Option<T> := #buf
+        #buf: Ptr<Self> = alloca<Self>
+        zero<Self>(#buf, 1)
+        %opt: Self := #buf
         return(%opt)
 
 routine Option<T>.some(%value: T) -> Self
 require T: typename
     block entry():
-        #buf: Ptr<Option<T>> = alloca<Option<T>>
+        #buf: Ptr<Self> = alloca<Self>
         #buf.tag = true
         #buf.value = %value
-        %opt: Option<T> := #buf
+        %opt: Self := #buf
         return(%opt)
 
 routine Option<T>.is_some(#self: Ptr<Self>) -> Bool
@@ -62,24 +62,24 @@ require T: typename
 
 ; ── Option: equality, hashing ─────────────────────────────────────────────────
 
-routine Option<T>.eq(%a: Option<T>, %b: Option<T>) -> Bool
+routine Option<T>.eq(%self: Self, %other: Self) -> Bool
 require T: typename, Equal<T>
     block entry():
-        %ta: Bool = %a.tag
-        %tb: Bool = %b.tag
+        %ta: Bool = %self.tag
+        %tb: Bool = %other.tag
         %tags_eq: Bool = %ta.eq(%tb)
-        branch %tags_eq ? maybe_compare(%a, %b, %ta) : return(false)
+        branch %tags_eq ? maybe_compare(%self, %other, %ta) : return(false)
 
-    block maybe_compare(%a: Option<T>, %b: Option<T>, %tag: Bool):
-        branch %tag ? compare_values(%a, %b) : return(true)
+    block maybe_compare(%self: Self, %other: Self, %tag: Bool):
+        branch %tag ? compare_values(%self, %other) : return(true)
 
-    block compare_values(%a: Option<T>, %b: Option<T>):
-        %va: T = %a.value
-        %vb: T = %b.value
+    block compare_values(%self: Self, %other: Self):
+        %va: T = %self.value
+        %vb: T = %other.value
         %eq: Bool = %va.eq(%vb)
         return(%eq)
 
-routine Option<T>.hash(%self: Option<T>) -> I64
+routine Option<T>.hash(%self: Self) -> I64
 require T: typename, Hash<T>
     block entry():
         %tag: Bool = %self.tag
@@ -93,7 +93,7 @@ require T: typename, Hash<T>
 
     ; Combine a "1" tag with the inner value's hash so Some(0) and None
     ; live in different buckets.
-    block hash_some(%self: Option<T>):
+    block hash_some(%self: Self):
         %v: T = %self.value
         %hv: I64 = %v.hash()
         %h: I64 = xxh64_combine2(1, %hv, 0)
@@ -109,21 +109,21 @@ require K: typename, V: typename
     key:   K
     value: V
 
-routine KVPair<K, V>.eq(%a: KVPair<K, V>, %b: KVPair<K, V>) -> Bool
+routine KVPair<K, V>.eq(%self: Self, %other: Self) -> Bool
 require K: typename, V: typename, Equal<K>, Equal<V>
     block entry():
-        %ka: K = %a.key
-        %kb: K = %b.key
+        %ka: K = %self.key
+        %kb: K = %other.key
         %k_eq: Bool = %ka.eq(%kb)
-        branch %k_eq ? compare_values(%a, %b) : return(false)
+        branch %k_eq ? compare_values(%self, %other) : return(false)
 
-    block compare_values(%a: KVPair<K, V>, %b: KVPair<K, V>):
-        %va: V = %a.value
-        %vb: V = %b.value
+    block compare_values(%self: Self, %other: Self):
+        %va: V = %self.value
+        %vb: V = %other.value
         %v_eq: Bool = %va.eq(%vb)
         return(%v_eq)
 
-routine KVPair<K, V>.hash(%self: KVPair<K, V>) -> I64
+routine KVPair<K, V>.hash(%self: Self) -> I64
 require K: typename, V: typename, Hash<K>, Hash<V>
     block entry():
         %k: K = %self.key

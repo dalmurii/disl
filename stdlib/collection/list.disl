@@ -140,17 +140,17 @@ require T: typename
         #self.length = 0
         return()
 
-routine List<T>.eq(%a: List<T>, %b: List<T>) -> Bool
+routine List<T>.eq(%self: Self, %other: Self) -> Bool
 require T: typename, Equal<T>
     block entry():
-        %la: I64 = %a.length
-        %lb: I64 = %b.length
+        %la: I64 = %self.length
+        %lb: I64 = %other.length
         %same_len: Bool = %la.eq(%lb)
-        branch %same_len ? scan(%a, %b, %la) : return(false)
+        branch %same_len ? scan(%self, %other, %la) : return(false)
 
-    block scan(%a: List<T>, %b: List<T>, %len: I64):
-        #pa: Ptr<T> = %a.data
-        #pb: Ptr<T> = %b.data
+    block scan(%self: Self, %other: Self, %len: I64):
+        #pa: Ptr<T> = %self.data
+        #pb: Ptr<T> = %other.data
         jump loop(0, %len, #pa, #pb)
 
     block loop(%i: I64, %len: I64, #pa: Ptr<T>, #pb: Ptr<T>):

@@ -92,11 +92,11 @@ require T: typename
         #self.subtree_count = %sum
         return()
 
-routine BTreeList<T>.eq(#a: Ptr<BTreeList<T>>, #b: Ptr<BTreeList<T>>) -> Bool
+routine BTreeList<T>.eq(#self: Ptr<Self>, #other: Ptr<Self>) -> Bool
 require T: typename, Equal<T>
     block entry():
-        %la: I64 := #a.length
-        %lb: I64 := #b.length
+        %la: I64 := #self.length
+        %lb: I64 := #other.length
         %same_len: Bool = %la.eq(%lb)
         branch %same_len ? loop(0, %la) : return(false)
 
@@ -105,8 +105,8 @@ require T: typename, Equal<T>
         branch %done ? return(true) : step(%i, %len)
 
     block step(%i: I64, %len: I64):
-        %x: T = #a.get(%i)
-        %y: T = #b.get(%i)
+        %x: T = #self.get(%i)
+        %y: T = #other.get(%i)
         %eq: Bool = %x.eq(%y)
         branch %eq ? loop(%i.add(1), %len) : return(false)
 

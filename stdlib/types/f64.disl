@@ -14,126 +14,126 @@ const F64.NAN:          F64 = 0x7FF8000000000000  ; canonical quiet NaN bits
 
 ; ── arithmetic ────────────────────────────────────────────────────────────────
 
-routine F64.abs(%self: F64) -> Self
+routine F64.abs(%self: Self) -> Self
     block entry():
-        %zero: F64 = 0.0
+        %zero: Self = 0.0
         %is_neg: Bool = %self.flt(%zero)
-        %neg: F64 = fsub<F64>(%zero, %self)
-        %result: F64 = %is_neg ? %neg : %self
+        %neg: Self = fsub<Self>(%zero, %self)
+        %result: Self = %is_neg ? %neg : %self
         return(%result)
 
-routine F64.min(%self: F64, %other: F64) -> Self
+routine F64.min(%self: Self, %other: Self) -> Self
     block entry():
         %self_less: Bool = %self.flt(%other)
-        %result: F64 = %self_less ? %self : %other
+        %result: Self = %self_less ? %self : %other
         return(%result)
 
-routine F64.max(%self: F64, %other: F64) -> Self
+routine F64.max(%self: Self, %other: Self) -> Self
     block entry():
         %self_more: Bool = %self.fgt(%other)
-        %result: F64 = %self_more ? %self : %other
+        %result: Self = %self_more ? %self : %other
         return(%result)
 
-routine F64.add(%self: F64, %other: F64) -> Self
+routine F64.add(%self: Self, %other: Self) -> Self
     block entry():
-        %r: F64 = fadd<F64>(%self, %other)
+        %r: Self = fadd<Self>(%self, %other)
         return(%r)
 
-routine F64.sub(%self: F64, %other: F64) -> Self
+routine F64.sub(%self: Self, %other: Self) -> Self
     block entry():
-        %r: F64 = fsub<F64>(%self, %other)
+        %r: Self = fsub<Self>(%self, %other)
         return(%r)
 
-routine F64.mul(%self: F64, %other: F64) -> Self
+routine F64.mul(%self: Self, %other: Self) -> Self
     block entry():
-        %r: F64 = fmul<F64>(%self, %other)
+        %r: Self = fmul<Self>(%self, %other)
         return(%r)
 
 ; ── comparisons ───────────────────────────────────────────────────────────────
 
-routine F64.lt(%self: F64, %other: F64) -> Bool
+routine F64.lt(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = flt<F64>(%self, %other)
+        %r: Bool = flt<Self>(%self, %other)
         return(%r)
 
-routine F64.le(%self: F64, %other: F64) -> Bool
+routine F64.le(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = fle<F64>(%self, %other)
+        %r: Bool = fle<Self>(%self, %other)
         return(%r)
 
-routine F64.gt(%self: F64, %other: F64) -> Bool
+routine F64.gt(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = fgt<F64>(%self, %other)
+        %r: Bool = fgt<Self>(%self, %other)
         return(%r)
 
-routine F64.ge(%self: F64, %other: F64) -> Bool
+routine F64.ge(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = fge<F64>(%self, %other)
+        %r: Bool = fge<Self>(%self, %other)
         return(%r)
 
 ; ── division ──────────────────────────────────────────────────────────────────
 
-routine F64.fdiv(%self: F64, %other: F64) -> Self
+routine F64.fdiv(%self: Self, %other: Self) -> Self
     block entry():
-        %r: F64 = fdiv<F64>(%self, %other)
+        %r: Self = fdiv<Self>(%self, %other)
         return(%r)
 
 ; ── equality, ordering, hashing ───────────────────────────────────────────────
 
-routine F64.eq(%self: F64, %other: F64) -> Bool
+routine F64.eq(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = feq<F64>(%self, %other)
+        %r: Bool = feq<Self>(%self, %other)
         return(%r)
 
-routine F64.ne(%self: F64, %other: F64) -> Bool
+routine F64.ne(%self: Self, %other: Self) -> Bool
     block entry():
-        %r: Bool = fne<F64>(%self, %other)
+        %r: Bool = fne<Self>(%self, %other)
         return(%r)
 
-routine F64.compare(%self: F64, %other: F64) -> I32
+routine F64.compare(%self: Self, %other: Self) -> I32
     block entry():
         %lt: Bool = %self.flt(%other)
         branch %lt ? return(-1) : maybe_gt(%self, %other)
 
-    block maybe_gt(%self: F64, %other: F64):
+    block maybe_gt(%self: Self, %other: Self):
         %gt: Bool = %self.fgt(%other)
         branch %gt ? return(1) : return(0)
 
-routine F64.hash(%self: F64) -> I64
+routine F64.hash(%self: Self) -> I64
     block entry():
-        %bits: I64 = bitcast<F64, I64>(%self)
+        %bits: I64 = bitcast<Self, I64>(%self)
         %h: I64 = xxh64_hash_i64(%bits, 0)
         return(%h)
 
 ; ── generic conversions ───────────────────────────────────────────────────────
 
-routine F64.fptrunc<To>(%self: F64) -> To
+routine F64.fptrunc<To>(%self: Self) -> To
 require To: typename
     block entry():
-        %r: To = fptrunc<F64, To>(%self)
+        %r: To = fptrunc<Self, To>(%self)
         return(%r)
 
-routine F64.fptosi<To>(%self: F64) -> To
+routine F64.fptosi<To>(%self: Self) -> To
 require To: typename
     block entry():
-        %r: To = fptosi<F64, To>(%self)
+        %r: To = fptosi<Self, To>(%self)
         return(%r)
 
 ; ── named narrowing conversion ────────────────────────────────────────────────
 
-routine F64.to_f32(%self: F64) -> F32
+routine F64.to_f32(%self: Self) -> F32
     block entry():
-        %result: F32 = fptrunc<F64, F32>(%self)
+        %result: F32 = fptrunc<Self, F32>(%self)
         return(%result)
 
 ; ── float-to-int conversions (truncates toward zero) ─────────────────────────
 
-routine F64.to_i32(%self: F64) -> I32
+routine F64.to_i32(%self: Self) -> I32
     block entry():
-        %result: I32 = fptosi<F64, I32>(%self)
+        %result: I32 = fptosi<Self, I32>(%self)
         return(%result)
 
-routine F64.to_i64(%self: F64) -> I64
+routine F64.to_i64(%self: Self) -> I64
     block entry():
-        %result: I64 = fptosi<F64, I64>(%self)
+        %result: I64 = fptosi<Self, I64>(%self)
         return(%result)
