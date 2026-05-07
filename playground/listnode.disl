@@ -54,8 +54,7 @@ routine LinkedList<T>.length(#self: Ptr<Self>) -> I64
 routine LinkedList<T>.is_empty(#self: Ptr<Self>) -> Bool
     block entry():
         %len: I64 := #self.length
-        %zero: I64 = 0
-        %empty: Bool = %len.eq(%zero)
+        %empty: Bool = %len.eq(0)
         return(%empty)
 
 routine LinkedList<T>.peek_front(#self: Ptr<Self>) -> Option<T>
@@ -92,8 +91,7 @@ routine LinkedList<T>.peek_back(#self: Ptr<Self>) -> Option<T>
 
 routine LinkedList<T>.push_front(#self: Ptr<Self>, %val: T, #alloc: Ptr<Allocator>) -> Void
     block entry():
-        %one: I64 = 1
-        #node: Ptr<ListNode<T>> = alloc<ListNode<T>>(#alloc, %one)
+        #node: Ptr<ListNode<T>> = alloc<ListNode<T>>(#alloc, 1)
         %alloc_failed: Bool = #node.is_null()
         branch %alloc_failed ? trap() : init(#node, %val)
 
@@ -116,15 +114,13 @@ routine LinkedList<T>.push_front(#self: Ptr<Self>, %val: T, #alloc: Ptr<Allocato
     block finish(#node: Ptr<ListNode<T>>):
         #self.head = #node
         %len: I64 := #self.length
-        %one: I64 = 1
-        %next_len: I64 = %len.add(%one)
+        %next_len: I64 = %len.add(1)
         #self.length = %next_len
         return()
 
 routine LinkedList<T>.push_back(#self: Ptr<Self>, %val: T, #alloc: Ptr<Allocator>) -> Void
     block entry():
-        %one: I64 = 1
-        #node: Ptr<ListNode<T>> = alloc<ListNode<T>>(#alloc, %one)
+        #node: Ptr<ListNode<T>> = alloc<ListNode<T>>(#alloc, 1)
         %alloc_failed: Bool = #node.is_null()
         branch %alloc_failed ? trap() : init(#node, %val)
 
@@ -147,8 +143,7 @@ routine LinkedList<T>.push_back(#self: Ptr<Self>, %val: T, #alloc: Ptr<Allocator
     block finish(#node: Ptr<ListNode<T>>):
         #self.tail = #node
         %len: I64 := #self.length
-        %one: I64 = 1
-        %next_len: I64 = %len.add(%one)
+        %next_len: I64 = %len.add(1)
         #self.length = %next_len
         return()
 
@@ -181,8 +176,7 @@ routine LinkedList<T>.pop_front(#self: Ptr<Self>, #alloc: Ptr<Allocator>) -> Opt
 
     block finish(#head: Ptr<ListNode<T>>, %val: T):
         %len: I64 := #self.length
-        %one: I64 = 1
-        %next_len: I64 = %len.sub(%one)
+        %next_len: I64 = %len.sub(1)
         #self.length = %next_len
         free<ListNode<T>>(#alloc, #head)
         %some: Option<T> = Option<T>.some(%val)
@@ -215,8 +209,7 @@ routine LinkedList<T>.pop_back(#self: Ptr<Self>, #alloc: Ptr<Allocator>) -> Opti
 
     block finish(#tail: Ptr<ListNode<T>>, %val: T):
         %len: I64 := #self.length
-        %one: I64 = 1
-        %next_len: I64 = %len.sub(%one)
+        %next_len: I64 = %len.sub(1)
         #self.length = %next_len
         free<ListNode<T>>(#alloc, #tail)
         %some: Option<T> = Option<T>.some(%val)

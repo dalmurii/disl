@@ -27,6 +27,7 @@
         <dict><key>include</key><string>#keywords-declaration</string></dict>
         <dict><key>include</key><string>#keywords-other</string></dict>
         <dict><key>include</key><string>#builtin-types</string></dict>
+        <dict><key>include</key><string>#sigil-self</string></dict>
         <dict><key>include</key><string>#sigil-ssa</string></dict>
         <dict><key>include</key><string>#sigil-ptr</string></dict>
         <dict><key>include</key><string>#operators</string></dict>
@@ -104,13 +105,13 @@
             </array>
         </dict>
 
-        <!-- 'A' '\n' '\xFF' '\u{D55C}' char/I8 literals -->
+        <!-- b'A' b'\xFF' (I8) and 'A' '\u{…}' (I32) char literals -->
         <key>char</key>
         <dict>
             <key>name</key>
             <string>string.quoted.single.disl</string>
             <key>match</key>
-            <string>'(\\(n|t|r|0|\\|'|x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]+\})|[^\\'])'</string>
+            <string>b?'(\\(n|t|r|0|\\|'|x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]+\})|[^\\'])'</string>
         </dict>
 
         <!-- numeric literals: 0xFF 0b1010 0o17 3.14 1.5e10 42 -->
@@ -270,6 +271,15 @@
             <key>match</key>
             <string>\b(I8|I16|I32|I64|F32|F64|Bool|Void|CAddr|CLong|CSize|CWChar|Ptr|Array)
             \b</string>
+        </dict>
+
+        <!-- %self / #self — the special self parameter -->
+        <key>sigil-self</key>
+        <dict>
+            <key>name</key>
+            <string>variable.language.self.disl</string>
+            <key>match</key>
+            <string>[%#]self\b</string>
         </dict>
 
         <!-- %ssa_value -->
