@@ -6,12 +6,12 @@
 struct I8
 conform Equal<I8>, Compare<I8>, Hash<I8>
 
-; ── constants ─────────────────────────────────────────────────────────────────
+; -- constants -----------------------------------------------------------------
 
 const I8.MIN: I8 = -128
 const I8.MAX: I8 =  127
 
-; ── bit operations ────────────────────────────────────────────────────────────
+; -- bit operations ------------------------------------------------------------
 
 routine I8.count_ones(%self: Self) -> Self
     block entry():
@@ -28,7 +28,7 @@ routine I8.trailing_zeros(%self: Self) -> Self
         %result: Self = ctz<Self>(%self, false)
         return(%result)
 
-; ── arithmetic ────────────────────────────────────────────────────────────────
+; -- arithmetic ----------------------------------------------------------------
 
 routine I8.abs(%self: Self) -> Self
     block entry():
@@ -65,7 +65,7 @@ routine I8.mul(%self: Self, %other: Self) -> Self
         %r: Self = mul<Self>(%self, %other)
         return(%r)
 
-; ── bit shifts ────────────────────────────────────────────────────────────────
+; -- bit shifts ----------------------------------------------------------------
 
 routine I8.shl(%self: Self, %n: Self) -> Self
     block entry():
@@ -100,7 +100,7 @@ routine I8.rotr(%self: Self, %n: Self) -> Self
         %r: Self = %left.bitor(%right)
         return(%r)
 
-; ── bitwise operations ────────────────────────────────────────────────────────
+; -- bitwise operations --------------------------------------------------------
 
 routine I8.bitand(%self: Self, %other: Self) -> Self
     block entry():
@@ -122,7 +122,7 @@ routine I8.bitnot(%self: Self) -> Self
         %r: Self = bnot<Self>(%self)
         return(%r)
 
-; ── signed comparisons ────────────────────────────────────────────────────────
+; -- signed comparisons --------------------------------------------------------
 
 routine I8.slt(%self: Self, %other: Self) -> Bool
     block entry():
@@ -144,7 +144,7 @@ routine I8.sge(%self: Self, %other: Self) -> Bool
         %r: Bool = sge<Self>(%self, %other)
         return(%r)
 
-; ── unsigned comparisons ──────────────────────────────────────────────────────
+; -- unsigned comparisons ------------------------------------------------------
 
 routine I8.ult(%self: Self, %other: Self) -> Bool
     block entry():
@@ -166,7 +166,7 @@ routine I8.uge(%self: Self, %other: Self) -> Bool
         %r: Bool = uge<Self>(%self, %other)
         return(%r)
 
-; ── integer division and remainder ────────────────────────────────────────────
+; -- integer division and remainder --------------------------------------------
 
 routine I8.sdiv(%self: Self, %other: Self) -> Self
     block entry():
@@ -188,7 +188,7 @@ routine I8.urem(%self: Self, %other: Self) -> Self
         %r: Self = urem<Self>(%self, %other)
         return(%r)
 
-; ── equality, ordering, hashing ───────────────────────────────────────────────
+; -- equality, ordering, hashing -----------------------------------------------
 
 routine I8.eq(%self: Self, %other: Self) -> Bool
     block entry():
@@ -214,7 +214,7 @@ routine I8.hash(%self: Self) -> I64
         %h: I64 = xxh64_hash_i64(%self.zext<I64>(), 0)
         return(%h)
 
-; ── widening conversions (sign-extending) ─────────────────────────────────────
+; -- widening conversions (sign-extending) -------------------------------------
 
 routine I8.to_i16(%self: Self) -> I16
     block entry():

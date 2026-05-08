@@ -6,13 +6,13 @@
 struct F64
 conform Equal<F64>, Compare<F64>, Hash<F64>
 
-; ── constants ─────────────────────────────────────────────────────────────────
+; -- constants -----------------------------------------------------------------
 
 const F64.INFINITY:     F64 = 0x7FF0000000000000  ; +inf bits
 const F64.NEG_INFINITY: F64 = 0xFFF0000000000000  ; -inf bits
 const F64.NAN:          F64 = 0x7FF8000000000000  ; canonical quiet NaN bits
 
-; ── arithmetic ────────────────────────────────────────────────────────────────
+; -- arithmetic ----------------------------------------------------------------
 
 routine F64.abs(%self: Self) -> Self
     block entry():
@@ -49,7 +49,7 @@ routine F64.mul(%self: Self, %other: Self) -> Self
         %r: Self = fmul<Self>(%self, %other)
         return(%r)
 
-; ── comparisons ───────────────────────────────────────────────────────────────
+; -- comparisons ---------------------------------------------------------------
 
 routine F64.lt(%self: Self, %other: Self) -> Bool
     block entry():
@@ -71,14 +71,14 @@ routine F64.ge(%self: Self, %other: Self) -> Bool
         %r: Bool = fge<Self>(%self, %other)
         return(%r)
 
-; ── division ──────────────────────────────────────────────────────────────────
+; -- division ------------------------------------------------------------------
 
 routine F64.fdiv(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = fdiv<Self>(%self, %other)
         return(%r)
 
-; ── equality, ordering, hashing ───────────────────────────────────────────────
+; -- equality, ordering, hashing -----------------------------------------------
 
 routine F64.eq(%self: Self, %other: Self) -> Bool
     block entry():
@@ -105,7 +105,7 @@ routine F64.hash(%self: Self) -> I64
         %h: I64 = xxh64_hash_i64(%bits, 0)
         return(%h)
 
-; ── generic conversions ───────────────────────────────────────────────────────
+; -- generic conversions -------------------------------------------------------
 
 routine F64.fptrunc<To>(%self: Self) -> To
 require To: typename
@@ -119,14 +119,14 @@ require To: typename
         %r: To = fptosi<Self, To>(%self)
         return(%r)
 
-; ── named narrowing conversion ────────────────────────────────────────────────
+; -- named narrowing conversion ------------------------------------------------
 
 routine F64.to_f32(%self: Self) -> F32
     block entry():
         %result: F32 = fptrunc<Self, F32>(%self)
         return(%result)
 
-; ── float-to-int conversions (truncates toward zero) ─────────────────────────
+; -- float-to-int conversions (truncates toward zero) -------------------------
 
 routine F64.to_i32(%self: Self) -> I32
     block entry():

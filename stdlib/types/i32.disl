@@ -6,12 +6,12 @@
 struct I32
 conform Equal<I32>, Compare<I32>, Hash<I32>
 
-; ── constants ─────────────────────────────────────────────────────────────────
+; -- constants -----------------------------------------------------------------
 
 const I32.MIN: I32 = -2147483648
 const I32.MAX: I32 =  2147483647
 
-; ── bit operations ────────────────────────────────────────────────────────────
+; -- bit operations ------------------------------------------------------------
 
 routine I32.count_ones(%self: Self) -> Self
     block entry():
@@ -33,7 +33,7 @@ routine I32.swap_bytes(%self: Self) -> Self
         %result: Self = bswap<Self>(%self)
         return(%result)
 
-; ── arithmetic ────────────────────────────────────────────────────────────────
+; -- arithmetic ----------------------------------------------------------------
 
 routine I32.abs(%self: Self) -> Self
     block entry():
@@ -69,7 +69,7 @@ routine I32.mul(%self: Self, %other: Self) -> Self
         %r: Self = mul<Self>(%self, %other)
         return(%r)
 
-; ── bit shifts ────────────────────────────────────────────────────────────────
+; -- bit shifts ----------------------------------------------------------------
 
 routine I32.shl(%self: Self, %n: Self) -> Self
     block entry():
@@ -104,7 +104,7 @@ routine I32.rotr(%self: Self, %n: Self) -> Self
         %r: Self = %left.bitor(%right)
         return(%r)
 
-; ── bitwise operations ────────────────────────────────────────────────────────
+; -- bitwise operations --------------------------------------------------------
 
 routine I32.bitand(%self: Self, %other: Self) -> Self
     block entry():
@@ -126,7 +126,7 @@ routine I32.bitnot(%self: Self) -> Self
         %r: Self = bnot<Self>(%self)
         return(%r)
 
-; ── signed comparisons ────────────────────────────────────────────────────────
+; -- signed comparisons --------------------------------------------------------
 
 routine I32.slt(%self: Self, %other: Self) -> Bool
     block entry():
@@ -148,7 +148,7 @@ routine I32.sge(%self: Self, %other: Self) -> Bool
         %r: Bool = sge<Self>(%self, %other)
         return(%r)
 
-; ── unsigned comparisons ──────────────────────────────────────────────────────
+; -- unsigned comparisons ------------------------------------------------------
 
 routine I32.ult(%self: Self, %other: Self) -> Bool
     block entry():
@@ -170,7 +170,7 @@ routine I32.uge(%self: Self, %other: Self) -> Bool
         %r: Bool = uge<Self>(%self, %other)
         return(%r)
 
-; ── integer division and remainder ────────────────────────────────────────────
+; -- integer division and remainder --------------------------------------------
 
 routine I32.sdiv(%self: Self, %other: Self) -> Self
     block entry():
@@ -192,7 +192,7 @@ routine I32.urem(%self: Self, %other: Self) -> Self
         %r: Self = urem<Self>(%self, %other)
         return(%r)
 
-; ── equality, ordering, hashing ───────────────────────────────────────────────
+; -- equality, ordering, hashing -----------------------------------------------
 
 routine I32.eq(%self: Self, %other: Self) -> Bool
     block entry():
@@ -218,7 +218,7 @@ routine I32.hash(%self: Self) -> I64
         %h: I64 = xxh64_hash_i64(%self.zext<I64>(), 0)
         return(%h)
 
-; ── narrowing conversions ─────────────────────────────────────────────────────
+; -- narrowing conversions -----------------------------------------------------
 
 routine I32.to_i8(%self: Self) -> I8
     block entry():
@@ -230,7 +230,7 @@ routine I32.to_i16(%self: Self) -> I16
         %result: I16 = trunc<Self, I16>(%self)
         return(%result)
 
-; ── widening conversions (sign-extending) ─────────────────────────────────────
+; -- widening conversions (sign-extending) -------------------------------------
 
 routine I32.to_i64(%self: Self) -> I64
     block entry():
@@ -242,7 +242,7 @@ routine I32.to_u64(%self: Self) -> I64
         %result: I64 = zext<Self, I64>(%self)
         return(%result)
 
-; ── float conversions ─────────────────────────────────────────────────────────
+; -- float conversions ---------------------------------------------------------
 
 routine I32.to_f32(%self: Self) -> F32
     block entry():

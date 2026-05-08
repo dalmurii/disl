@@ -12,14 +12,14 @@ struct Array<T, N>
 conform Equal<Array<T, N>>
 require T: typename, N: I64, Equal<T>
 
-; ── metadata ──────────────────────────────────────────────────────────────────
+; -- metadata ------------------------------------------------------------------
 
 routine Array<T, N>.length() -> I64
 require T: typename, N: I64
     block entry():
         return(N)
 
-; ── element access ────────────────────────────────────────────────────────────
+; -- element access ------------------------------------------------------------
 
 routine Array<T, N>.get(#self: Ptr<Self>, %index: I64) -> T
 require T: typename, N: I64
@@ -47,7 +47,7 @@ require T: typename, N: I64
         #base[%index] = %value
         return()
 
-; ── equality ──────────────────────────────────────────────────────────────────
+; -- equality ------------------------------------------------------------------
 
 routine Array<T, N>.eq(#self: Ptr<Self>, #other: Ptr<Self>) -> Bool
 require T: typename, N: I64, Equal<T>
@@ -67,7 +67,7 @@ require T: typename, N: I64, Equal<T>
         %i_next: I64 = %i.add(1)
         branch %eq ? loop(%i_next, #pa, #pb) : return(false)
 
-; ── pointer to first element ──────────────────────────────────────────────────
+; -- pointer to first element --------------------------------------------------
 
 routine Array<T, N>.as_ptr(#self: Ptr<Self>) -> Ptr<T>
 require T: typename, N: I64

@@ -6,12 +6,12 @@
 struct I16
 conform Equal<I16>, Compare<I16>, Hash<I16>
 
-; ── constants ─────────────────────────────────────────────────────────────────
+; -- constants -----------------------------------------------------------------
 
 const I16.MIN: I16 = -32768
 const I16.MAX: I16 =  32767
 
-; ── bit operations ────────────────────────────────────────────────────────────
+; -- bit operations ------------------------------------------------------------
 
 routine I16.count_ones(%self: Self) -> Self
     block entry():
@@ -33,7 +33,7 @@ routine I16.swap_bytes(%self: Self) -> Self
         %result: Self = bswap<Self>(%self)
         return(%result)
 
-; ── arithmetic ────────────────────────────────────────────────────────────────
+; -- arithmetic ----------------------------------------------------------------
 
 routine I16.abs(%self: Self) -> Self
     block entry():
@@ -70,7 +70,7 @@ routine I16.mul(%self: Self, %other: Self) -> Self
         %r: Self = mul<Self>(%self, %other)
         return(%r)
 
-; ── bit shifts ────────────────────────────────────────────────────────────────
+; -- bit shifts ----------------------------------------------------------------
 
 routine I16.shl(%self: Self, %n: Self) -> Self
     block entry():
@@ -105,7 +105,7 @@ routine I16.rotr(%self: Self, %n: Self) -> Self
         %r: Self = %left.bitor(%right)
         return(%r)
 
-; ── bitwise operations ────────────────────────────────────────────────────────
+; -- bitwise operations --------------------------------------------------------
 
 routine I16.bitand(%self: Self, %other: Self) -> Self
     block entry():
@@ -127,7 +127,7 @@ routine I16.bitnot(%self: Self) -> Self
         %r: Self = bnot<Self>(%self)
         return(%r)
 
-; ── signed comparisons ────────────────────────────────────────────────────────
+; -- signed comparisons --------------------------------------------------------
 
 routine I16.slt(%self: Self, %other: Self) -> Bool
     block entry():
@@ -149,7 +149,7 @@ routine I16.sge(%self: Self, %other: Self) -> Bool
         %r: Bool = sge<Self>(%self, %other)
         return(%r)
 
-; ── unsigned comparisons ──────────────────────────────────────────────────────
+; -- unsigned comparisons ------------------------------------------------------
 
 routine I16.ult(%self: Self, %other: Self) -> Bool
     block entry():
@@ -171,7 +171,7 @@ routine I16.uge(%self: Self, %other: Self) -> Bool
         %r: Bool = uge<Self>(%self, %other)
         return(%r)
 
-; ── integer division and remainder ────────────────────────────────────────────
+; -- integer division and remainder --------------------------------------------
 
 routine I16.sdiv(%self: Self, %other: Self) -> Self
     block entry():
@@ -193,7 +193,7 @@ routine I16.urem(%self: Self, %other: Self) -> Self
         %r: Self = urem<Self>(%self, %other)
         return(%r)
 
-; ── equality, ordering, hashing ───────────────────────────────────────────────
+; -- equality, ordering, hashing -----------------------------------------------
 
 routine I16.eq(%self: Self, %other: Self) -> Bool
     block entry():
@@ -219,14 +219,14 @@ routine I16.hash(%self: Self) -> I64
         %h: I64 = xxh64_hash_i64(%self.zext<I64>(), 0)
         return(%h)
 
-; ── narrowing conversions ─────────────────────────────────────────────────────
+; -- narrowing conversions -----------------------------------------------------
 
 routine I16.to_i8(%self: Self) -> I8
     block entry():
         %result: I8 = trunc<Self, I8>(%self)
         return(%result)
 
-; ── widening conversions (sign-extending) ─────────────────────────────────────
+; -- widening conversions (sign-extending) -------------------------------------
 
 routine I16.to_i32(%self: Self) -> I32
     block entry():

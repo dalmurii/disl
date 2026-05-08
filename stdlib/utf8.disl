@@ -9,13 +9,13 @@
 ; utf8_encode writes one codepoint into #out (caller must ensure 4 bytes
 ; of space) and returns the number of bytes written, or 0 on invalid codepoint.
 
-; ── Utf8Decoded ───────────────────────────────────────────────────────────────
+; -- Utf8Decoded ---------------------------------------------------------------
 
 struct Utf8Decoded
     codepoint: I32
     next_pos:  I64
 
-; ── decode ────────────────────────────────────────────────────────────────────
+; -- decode --------------------------------------------------------------------
 
 routine utf8_decode(#bytes: Ptr<I8>, %pos: I64, %len: I64) -> Utf8Decoded
     block entry():
@@ -115,7 +115,7 @@ routine utf8_decode(#bytes: Ptr<I8>, %pos: I64, %len: I64) -> Utf8Decoded
         %result: Utf8Decoded = Utf8Decoded { codepoint: -1, next_pos: %pos }
         return(%result)
 
-; ── encode ────────────────────────────────────────────────────────────────────
+; -- encode --------------------------------------------------------------------
 
 ; Writes 1–4 bytes into #out.  Caller must have >= 4 bytes available.
 ; Returns byte count written, or 0 on invalid codepoint.

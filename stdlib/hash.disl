@@ -11,7 +11,7 @@
 ; Both routines treat I64 bit patterns as unsigned: LLVM add/sub/mul are
 ; bitwise, so signed-overflow wrap matches the reference exactly.
 
-; ── primes ────────────────────────────────────────────────────────────────────
+; -- primes --------------------------------------------------------------------
 ;
 ; Upstream values; >2^63 primes are written as their two's-complement I64
 ; equivalents. The bit pattern is what matters — every multiplication here
@@ -29,7 +29,7 @@ const XXH64_P3: I64 =  1609587929392839161
 const XXH64_P4: I64 = -8796714831421723037
 const XXH64_P5: I64 =  2870177450012600261
 
-; ── little-endian byte readers ────────────────────────────────────────────────
+; -- little-endian byte readers ------------------------------------------------
 
 ; Read 8 bytes starting at #data[%off] as a little-endian I64.
 ; Byte-by-byte so we don't depend on host endianness or alignment.
@@ -61,7 +61,7 @@ routine xxh64_read_i32(#data: Ptr<I8>, %off: I64) -> I32
         %next: I32 = %acc.bitor(%b.zext<I32>().shl(%shift))
         jump loop(%i.add(1), %next, %shift.add(4))
 
-; ── xxh64 internal mixers ─────────────────────────────────────────────────────
+; -- xxh64 internal mixers -----------------------------------------------------
 
 routine xxh64_round(%acc: I64, %input: I64) -> I64
     block entry():
@@ -85,7 +85,7 @@ routine xxh64_finalize(%h: I64) -> I64
         %result: I64 = %m2.bitxor(%s3)
         return(%result)
 
-; ── one-shot byte hash ────────────────────────────────────────────────────────
+; -- one-shot byte hash --------------------------------------------------------
 ;
 ; Layout follows the spec exactly:
 ;   1. If len >= 32, run the 32-byte stripe loop with four 64-bit lanes.
@@ -181,7 +181,7 @@ routine xxh64(#data: Ptr<I8>, %len: I64, %seed: I64) -> I64
         %result: I64 = xxh64_finalize(%h)
         return(%result)
 
-; ── 8-byte fast path (used by integer primitives) ─────────────────────────────
+; -- 8-byte fast path (used by integer primitives) -----------------------------
 ;
 ; Equivalent to xxh64 with len=8: skip the big-block path, add 8, run one
 ; iteration of the 8-byte tail loop, finalize. Primitives smaller than 8 bytes
@@ -198,7 +198,7 @@ routine xxh64_hash_i64(%v: I64, %seed: I64) -> I64
         %result: I64 = xxh64_finalize(%h2)
         return(%result)
 
-; ── 16-byte combiner (used by composite types) ────────────────────────────────
+; -- 16-byte combiner (used by composite types) --------------------------------
 ;
 ; Folds two precomputed sub-hashes into one. Equivalent to running xxh64
 ; with len=16 over the concatenation h1 || h2 — two iterations of the

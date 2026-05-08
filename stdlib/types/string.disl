@@ -19,7 +19,7 @@ conform Equal<String>, Compare<String>, Hash<String>
     data:   Ptr<I8>
     length: I64
 
-; ── construction ──────────────────────────────────────────────────────────────
+; -- construction --------------------------------------------------------------
 
 routine String.empty() -> Self
     block entry():
@@ -31,7 +31,7 @@ routine String.from_ptr(#data: Ptr<I8>, %length: I64) -> Self
         %str: Self = Self { data: #data, length: %length }
         return(%str)
 
-; ── predicates ────────────────────────────────────────────────────────────────
+; -- predicates ----------------------------------------------------------------
 
 routine String.is_empty(#self: Ptr<Self>) -> Bool
     block entry():
@@ -39,7 +39,7 @@ routine String.is_empty(#self: Ptr<Self>) -> Bool
         %result: Bool = %length.eq(0)
         return(%result)
 
-; ── element access ────────────────────────────────────────────────────────────
+; -- element access ------------------------------------------------------------
 
 routine String.byte_at(#self: Ptr<Self>, %index: I64) -> I8
     block entry():
@@ -52,7 +52,7 @@ routine String.byte_at(#self: Ptr<Self>, %index: I64) -> I8
         %byte: I8 := #data[%index]
         return(%byte)
 
-; ── slicing ───────────────────────────────────────────────────────────────────
+; -- slicing -------------------------------------------------------------------
 
 ; Returns a sub-view [start, end).  Traps if range is out of bounds.
 routine String.slice(#self: Ptr<Self>, %start: I64, %end: I64) -> Self
@@ -72,7 +72,7 @@ routine String.slice(#self: Ptr<Self>, %start: I64, %end: I64) -> Self
         %result: Self = Self { data: #from, length: %slice_len }
         return(%result)
 
-; ── heap-allocating operations ────────────────────────────────────────────────
+; -- heap-allocating operations ------------------------------------------------
 
 ; Allocates a new buffer containing a followed by b.
 ; Caller must free the returned String's data pointer via free<I8>.
@@ -101,7 +101,7 @@ routine String.concat(%a: Self, %b: Self, #alloc: Ptr<Allocator>) -> Self
         %result: Self = Self { data: #data, length: %length }
         return(%result)
 
-; ── equality, ordering, hashing ───────────────────────────────────────────────
+; -- equality, ordering, hashing -----------------------------------------------
 
 routine String.eq(%self: Self, %other: Self) -> Bool
     block entry():
@@ -171,7 +171,7 @@ routine String.hash(%self: Self) -> I64
         %h: I64 = xxh64(#data, %len, 0)
         return(%h)
 
-; ── search ────────────────────────────────────────────────────────────────────
+; -- search --------------------------------------------------------------------
 
 routine String.starts_with(#self: Ptr<Self>, %prefix: String) -> Bool
     block entry():
@@ -269,7 +269,7 @@ routine String.contains(#self: Ptr<Self>, %needle: String) -> Bool
         %tag: Bool = %r.tag
         return(%tag)
 
-; ── iterators ─────────────────────────────────────────────────────────────────
+; -- iterators -----------------------------------------------------------------
 
 routine String.bytes(#self: Ptr<Self>) -> StringBytesIter
     block entry():

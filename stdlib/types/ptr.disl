@@ -7,7 +7,7 @@
 struct Ptr<T>
 require T: typename
 
-; ── pointer identity ──────────────────────────────────────────────────────────
+; -- pointer identity ----------------------------------------------------------
 
 routine Ptr<T>.ptr_eq(#self: Self, #other: Self) -> Bool
 require T: typename
@@ -25,7 +25,7 @@ require T: typename
         %r: Bool = ine<I64>(%a, %b)
         return(%r)
 
-; ── predicates ────────────────────────────────────────────────────────────────
+; -- predicates ----------------------------------------------------------------
 
 routine Ptr<T>.is_null(#self: Self) -> Bool
 require T: typename
@@ -41,7 +41,7 @@ require T: typename
         %r: Bool = ine<I64>(%a, 0)
         return(%r)
 
-; ── pointer arithmetic ────────────────────────────────────────────────────────
+; -- pointer arithmetic --------------------------------------------------------
 
 ; Returns a pointer offset by %bytes bytes.
 ; No bounds checking — caller is responsible for staying in-bounds.
@@ -53,7 +53,7 @@ require T: typename
         #result: Self = inttoptr<I64, Self>(%new_addr)
         return(#result)
 
-; ── casting ───────────────────────────────────────────────────────────────────
+; -- casting -------------------------------------------------------------------
 
 ; Reinterprets this pointer as a pointer to a different type.
 ; No-op at the IR level — only changes the static type.

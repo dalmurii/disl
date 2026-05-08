@@ -9,7 +9,7 @@
 ;
 ; KVPair<K, V> is a plain value pair used by HashMap and BTreeMap iterators.
 
-; ── Option ────────────────────────────────────────────────────────────────────
+; -- Option --------------------------------------------------------------------
 
 struct Option<T>
 conform Equal<Option<T>> require T: typename, Equal<T>
@@ -60,7 +60,7 @@ require T: typename
         %value: T := #self.value
         return(%value)
 
-; ── Option: equality, hashing ─────────────────────────────────────────────────
+; -- Option: equality, hashing -------------------------------------------------
 
 routine Option<T>.eq(%self: Self, %other: Self) -> Bool
 require T: typename, Equal<T>
@@ -99,7 +99,7 @@ require T: typename, Hash<T>
         %h: I64 = xxh64_combine2(1, %hv, 0)
         return(%h)
 
-; ── KVPair ────────────────────────────────────────────────────────────────────
+; -- KVPair --------------------------------------------------------------------
 
 ; Yielded by HashMap and BTreeMap iterators.
 struct KVPair<K, V>
