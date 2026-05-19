@@ -1,9 +1,8 @@
-﻿; Disl stdlib collection: HashSetIter<T>
+; Disl stdlib collection: HashSetIter<T>
 ;
-; Slot-scanning iterator over HashSet<T>.  Visits every occupied slot in
-; arbitrary (hash) order.  Skips empty (0) and tombstone (2) slots.
+; Walks HashSet<T> in insertion order. Visits each live entry in the entries
+; arrays, skipping entries marked dead by `remove`.
 ;
-; Iteration order is unspecified and depends on the hash function and load.
 ; Mutating the set during iteration produces undefined behaviour.
 ;
 ; Satisfies concept Iterator<T, HashSetIter<T>>.
@@ -11,42 +10,42 @@
 struct HashSetIter<T>
 conform Iterator<T, HashSetIter<T>>
 require T: typename
-    set:  Ptr<HashSet<T>>
-    slot: I64
+    set:   Ptr<HashSet<T>>
+    index: I64
 
 routine HashSetIter<T>.new(#set: Ptr<HashSet<T>>) -> Self
 require T: typename
     block entry():
-        %iter: Self = Self { set: #set, slot: 0 }
+        %iter: Self = Self { set: #set, index: 0 }
         return(%iter)
 
 routine HashSetIter<T>.next(#self: Ptr<Self>) -> Option<T>
 require T: typename
     block entry():
-        #set:     Ptr<HashSet<T>> := #self.set
-        %capacity: I64            := #set.capacity
-        %slot:     I64            := #self.slot
-        jump scan(%slot, %capacity, #set)
+        #set:   Ptr<HashSet<T>> := #self.set
+        %count: I64             := #set.entries_count
+        %index: I64             := #self.index
+        jump scan(%index, %count, #set)
 
-    ; Advance until we hit an occupied slot or exhaust the table.
-    ; sge(slot, 0) is true when capacity==0, so an empty set returns None safely.
-    block scan(%slot: I64, %capacity: I64, #set: Ptr<HashSet<T>>):
-        %exhausted: Bool = %slot.sge(%capacity)
-        branch %exhausted ? return_none() : check(%slot, %capacity, #set)
+    ; Advance until we hit a live entry or exhaust the array.
+    ; sge(index, 0) is true when count==0, so an empty set returns None safely.
+    block scan(%index: I64, %count: I64, #set: Ptr<HashSet<T>>):
+        %exhausted: Bool = %index.sge(%count)
+        branch %exhausted ? return_none() : check(%index, %count, #set)
 
-    block check(%slot: I64, %capacity: I64, #set: Ptr<HashSet<T>>):
-        #states:   Ptr<I8> := #set.states
-        %state:    I8      := #states[%slot]
-        %occupied: Bool    = %state.eq(1)
-        branch %occupied ? yield(%slot, #set) : scan(%slot.add(1), %capacity, #set)
+    block check(%index: I64, %count: I64, #set: Ptr<HashSet<T>>):
+        #entry_states: Ptr<I8> := #set.entry_states
+        %state: I8             := #entry_states[%index]
+        %live:  Bool           = %state.eq(1)
+        branch %live ? yield(%index, #set) : scan(%index.add(1), %count, #set)
 
     block return_none():
         %none: Option<T> = Option<T>.none()
         return(%none)
 
-    block yield(%slot: I64, #set: Ptr<HashSet<T>>):
-        #keys:  Ptr<T> := #set.keys
-        %key:   T      := #keys[%slot]
-        #self.slot = %slot.add(1)
+    block yield(%index: I64, #set: Ptr<HashSet<T>>):
+        #keys: Ptr<T> := #set.keys
+        %key:  T      := #keys[%index]
+        #self.index = %index.add(1)
         %some: Option<T> = Option<T>.some(%key)
         return(%some)
