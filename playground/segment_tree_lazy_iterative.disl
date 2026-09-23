@@ -12,14 +12,19 @@
 ; purpose, but callers use names that describe the tree operation.
 
 concept Monoid<T>
-    routine T.identity() -> Self
-    routine T.combine(%self: Self, %right: Self) -> Self
+require T: typename
+    routine Self.identity() -> Self
+    routine Self.combine(%self: Self, %right: Self) -> Self
 
 concept Group<T>
-require Monoid<T>
-    routine T.inverse(%self: Self) -> Self
+conform Monoid<T>
+require T: typename
+    routine Self.inverse(%self: Self) -> Self
 
+; Constrains two types at once, so there is no single conforming Self —
+; required routines name their owner (T or L) explicitly.
 concept LazySegmentOps<T, L>
+require T: typename, L: typename
     ; Aggregate two child values.
     routine T.combine(%self: Self, %right: Self) -> Self
 

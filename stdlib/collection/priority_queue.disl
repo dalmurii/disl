@@ -1,7 +1,8 @@
 ﻿; Disl stdlib collection: PriorityQueue<T>
 ;
-; Binary min-heap. compare_fn(a, b) returns < 0 when a has higher priority
-; than b. The allocator is stored in the struct.
+; Binary min-heap ordered by Priority<T>: a.less(b) returns true when a has
+; higher priority than b (sits closer to the top). The allocator is stored in
+; the struct.
 
 struct PriorityQueue<T>
 require T: typename, Priority<T>

@@ -17,20 +17,20 @@ const F32.NAN:          F32 = 0x7FC00000  ; canonical quiet NaN bits
 routine F32.abs(%self: Self) -> Self
     block entry():
         %zero: Self = 0.0
-        %is_neg: Bool = %self.flt(%zero)
+        %is_neg: Bool = %self.lt(%zero)
         %neg: Self = fsub<Self>(%zero, %self)
         %result: Self = %is_neg ? %neg : %self
         return(%result)
 
 routine F32.min(%self: Self, %other: Self) -> Self
     block entry():
-        %self_less: Bool = %self.flt(%other)
+        %self_less: Bool = %self.lt(%other)
         %result: Self = %self_less ? %self : %other
         return(%result)
 
 routine F32.max(%self: Self, %other: Self) -> Self
     block entry():
-        %self_more: Bool = %self.fgt(%other)
+        %self_more: Bool = %self.gt(%other)
         %result: Self = %self_more ? %self : %other
         return(%result)
 
@@ -92,16 +92,16 @@ routine F32.ne(%self: Self, %other: Self) -> Bool
 
 routine F32.compare(%self: Self, %other: Self) -> I32
     block entry():
-        %lt: Bool = %self.flt(%other)
+        %lt: Bool = %self.lt(%other)
         branch %lt ? return(-1) : maybe_gt(%self, %other)
 
     block maybe_gt(%self: Self, %other: Self):
-        %gt: Bool = %self.fgt(%other)
+        %gt: Bool = %self.gt(%other)
         branch %gt ? return(1) : return(0)
 
 routine F32.hash(%self: Self) -> I64
     block entry():
-        %h: I64 = xxh64_hash_i64(bitcast<Self, I32>(%self).zext<I64>(), 0)
+        %h: I64 = xxh64_hash_i64(bitcast<Self, I32>(%self).to_u64(), 0)
         return(%h)
 
 ; -- named widening conversion -------------------------------------------------

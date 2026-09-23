@@ -7,16 +7,16 @@
 ;
 ;     struct N
 ;         @aligned(max(alignof<A>(), alignof<B>()))
-;         storage: array<i8, max(sizeof<A>(), sizeof<B>())>
+;         storage: Array<I8, max(sizeof<A>(), sizeof<B>())>
 ;
 ; Access is always an explicit bitcast through the storage field. Whoever
 ; owns the data is responsible for knowing which view is currently active.
 
 @[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_int(%fmt: ptr<I8>, %x: I64) -> I32
+routine c_printf_int(#fmt: Ptr<I8>, %x: I64) -> I32
 
 @[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_float(%fmt: ptr<I8>, %x: F64) -> I32
+routine c_printf_float(#fmt: Ptr<I8>, %x: F64) -> I32
 
 ; ============================================================
 ; A generic two-way overlay. Stdlib could ship UnionTwo / UnionThree, or
@@ -25,7 +25,7 @@ routine c_printf_float(%fmt: ptr<I8>, %x: F64) -> I32
 
 struct UnionTwo<A, B>
     @aligned(max(alignof<A>(), alignof<B>()))
-    storage: array<I8, max(sizeof<A>(), sizeof<B>())>
+    storage: Array<I8, max(sizeof<A>(), sizeof<B>())>
 
 ; ============================================================
 ; Section 1: Manual tagged sum type
@@ -44,8 +44,8 @@ struct Result
 
 routine Result.ok(%value: I64) -> Self
     block entry():
-        #payload_buf: ptr<UnionTwo<I64, I32>> = alloca<UnionTwo<I64, I32>>
-        #ok_view: ptr<I64> = bitcast<ptr<UnionTwo<I64, I32>>, ptr<I64>>(#payload_buf)
+        #payload_buf: Ptr<UnionTwo<I64, I32>> = alloca<UnionTwo<I64, I32>>
+        #ok_view: Ptr<I64> = bitcast<Ptr<UnionTwo<I64, I32>>, Ptr<I64>>(#payload_buf)
         #ok_view = %value
         %payload: UnionTwo<I64, I32> := #payload_buf
         %r: Self = Self {
@@ -56,8 +56,8 @@ routine Result.ok(%value: I64) -> Self
 
 routine Result.err(%code: I32) -> Self
     block entry():
-        #payload_buf: ptr<UnionTwo<I64, I32>> = alloca<UnionTwo<I64, I32>>
-        #err_view: ptr<I32> = bitcast<ptr<UnionTwo<I64, I32>>, ptr<I32>>(#payload_buf)
+        #payload_buf: Ptr<UnionTwo<I64, I32>> = alloca<UnionTwo<I64, I32>>
+        #err_view: Ptr<I32> = bitcast<Ptr<UnionTwo<I64, I32>>, Ptr<I32>>(#payload_buf)
         #err_view = %code
         %payload: UnionTwo<I64, I32> := #payload_buf
         %r: Self = Self {
@@ -67,7 +67,7 @@ routine Result.err(%code: I32) -> Self
         return(%r)
 
 ; Caller checks the tag explicitly, then bitcasts to the active view.
-routine Result.print(#self: ptr<Self>) -> void
+routine Result.print(#self: Ptr<Self>) -> Void
     block entry():
         %tag: ResultTag := #self.tag
         switch %tag:
@@ -76,15 +76,15 @@ routine Result.print(#self: ptr<Self>) -> void
             _ -> unreachable
 
     block print_ok():
-        #payload: ptr<UnionTwo<I64, I32>> = #self.payload
-        #ok_view: ptr<I64> = bitcast<ptr<UnionTwo<I64, I32>>, ptr<I64>>(#payload)
+        #payload: Ptr<UnionTwo<I64, I32>> = #self.payload
+        #ok_view: Ptr<I64> = bitcast<Ptr<UnionTwo<I64, I32>>, Ptr<I64>>(#payload)
         %v: I64 := #ok_view
         c_printf_int("Ok(%lld)\n", %v)
         return()
 
     block print_err():
-        #payload: ptr<UnionTwo<I64, I32>> = #self.payload
-        #err_view: ptr<I32> = bitcast<ptr<UnionTwo<I64, I32>>, ptr<I32>>(#payload)
+        #payload: Ptr<UnionTwo<I64, I32>> = #self.payload
+        #err_view: Ptr<I32> = bitcast<Ptr<UnionTwo<I64, I32>>, Ptr<I32>>(#payload)
         %code: I32 := #err_view
         %code64: I64 = sext<I32, I64>(%code)
         c_printf_int("Err(%lld)\n", %code64)
@@ -100,33 +100,33 @@ routine Result.print(#self: ptr<Self>) -> void
 
 struct Number
     @aligned(max(alignof<I64>(), alignof<F64>()))
-    storage: array<i8, max(sizeof<I64>(), sizeof<F64>())>
+    storage: Array<I8, max(sizeof<I64>(), sizeof<F64>())>
 
 routine Number.from_int(%n: I64) -> Self
     block entry():
-        #buf: ptr<Number> = alloca<Number>
-        #int_view: ptr<I64> = bitcast<ptr<Number>, ptr<I64>>(#buf)
+        #buf: Ptr<Number> = alloca<Number>
+        #int_view: Ptr<I64> = bitcast<Ptr<Number>, Ptr<I64>>(#buf)
         #int_view = %n
         %u: Number := #buf
         return(%u)
 
 routine Number.from_float(%f: F64) -> Self
     block entry():
-        #buf: ptr<Number> = alloca<Number>
-        #float_view: ptr<F64> = bitcast<ptr<Number>, ptr<F64>>(#buf)
+        #buf: Ptr<Number> = alloca<Number>
+        #float_view: Ptr<F64> = bitcast<Ptr<Number>, Ptr<F64>>(#buf)
         #float_view = %f
         %u: Number := #buf
         return(%u)
 
-routine Number.as_int(#self: ptr<Self>) -> I64
+routine Number.as_int(#self: Ptr<Self>) -> I64
     block entry():
-        #view: ptr<I64> = bitcast<ptr<Number>, ptr<I64>>(#self)
+        #view: Ptr<I64> = bitcast<Ptr<Number>, Ptr<I64>>(#self)
         %n: I64 := #view
         return(%n)
 
-routine Number.as_float(#self: ptr<Self>) -> F64
+routine Number.as_float(#self: Ptr<Self>) -> F64
     block entry():
-        #view: ptr<F64> = bitcast<ptr<Number>, ptr<F64>>(#self)
+        #view: Ptr<F64> = bitcast<Ptr<Number>, Ptr<F64>>(#self)
         %f: F64 := #view
         return(%f)
 
@@ -140,8 +140,8 @@ routine main() -> I32
         %ok: Result = Result.ok(42)
         %err: Result = Result.err(-5)
 
-        #ok_ptr: ptr<Result> = alloca<Result>([%ok])
-        #err_ptr: ptr<Result> = alloca<Result>([%err])
+        #ok_ptr: Ptr<Result> = alloca<Result>([%ok])
+        #err_ptr: Ptr<Result> = alloca<Result>([%err])
         #ok_ptr.print()
         #err_ptr.print()
 
@@ -149,8 +149,8 @@ routine main() -> I32
         %as_int: Number = Number.from_int(7)
         %as_float: Number = Number.from_float(3.14)
 
-        #int_ptr: ptr<Number> = alloca<Number>([%as_int])
-        #flt_ptr: ptr<Number> = alloca<Number>([%as_float])
+        #int_ptr: Ptr<Number> = alloca<Number>([%as_int])
+        #flt_ptr: Ptr<Number> = alloca<Number>([%as_float])
 
         c_printf_int("Number int view: %lld\n", #int_ptr.as_int())
         c_printf_float("Number float view: %f\n", #flt_ptr.as_float())

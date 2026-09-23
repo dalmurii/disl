@@ -9,9 +9,10 @@
 ;
 ; String never owns its bytes.  The caller is responsible for ensuring the
 ; pointed-to data outlives the String.  For heap-owned byte buffers, use
-; List<I8>; call List<I8>.as_ptr() and List<I8>.length() to get a String.
+; List<I8>; load its data and length fields and pass them to
+; String.from_ptr to get a String view.
 ;
-; Factory routines (concat, repeat) take an explicit Ptr<Allocator> and
+; Factory routines (concat) take an explicit Ptr<Allocator> and
 ; return a String whose data must be freed by the caller via free<I8>.
 
 struct String
@@ -144,8 +145,8 @@ routine String.compare(%self: Self, %other: Self) -> I32
     block step(%i: I64, %min: I64, %la: I64, %lb: I64, #pa: Ptr<I8>, #pb: Ptr<I8>):
         %ba: I8 := #pa[%i]
         %bb: I8 := #pb[%i]
-        %ua: I64 = %ba.zext<I64>()
-        %ub: I64 = %bb.zext<I64>()
+        %ua: I64 = %ba.to_u64()
+        %ub: I64 = %bb.to_u64()
         %lt: Bool = %ua.slt(%ub)
         branch %lt ? return(-1) : maybe_gt(%i, %min, %la, %lb, %ua, %ub, #pa, #pb)
 

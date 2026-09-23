@@ -1,8 +1,8 @@
 ; Disl stdlib: I64 — 64-bit signed integer
 ;
-; Maps to LLVM IR I64.
+; Maps to LLVM IR i64.
 
-@llvm("I64")
+@llvm("i64")
 struct I64
 conform Equal<I64>, Compare<I64>, Hash<I64>
 
@@ -240,10 +240,10 @@ routine I64.to_i32(%self: Self) -> I32
 
 routine I64.to_f32(%self: Self) -> F32
     block entry():
-        %result: F32 = %self.sitofp<F32>()
+        %result: F32 = sitofp<Self, F32>(%self)
         return(%result)
 
 routine I64.to_f64(%self: Self) -> F64
     block entry():
-        %result: F64 = %self.sitofp<F64>()
+        %result: F64 = sitofp<Self, F64>(%self)
         return(%result)

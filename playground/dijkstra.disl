@@ -14,10 +14,10 @@
 ; ── C FFI ─────────────────────────────────────────────────────────────────────
 
 @[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_s(%fmt: Ptr<I8>) -> I32
+routine c_printf_s(#fmt: Ptr<I8>) -> I32
 
 @[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_nd(%fmt: Ptr<I8>, %node: I64, %dist: I64) -> I32
+routine c_printf_nd(#fmt: Ptr<I8>, %node: I64, %dist: I64) -> I32
 
 ; ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,6 +35,7 @@ struct Graph
     num_nodes: I64
 
 struct DijkstraEntry
+conform Priority<DijkstraEntry>
     dist: I64
     node: I64
 

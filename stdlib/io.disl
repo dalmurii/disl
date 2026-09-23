@@ -28,7 +28,7 @@ routine println(#str: Ptr<I8>, %len: I64) -> Void
         c_write(1, #newline, i64_to_csize(1))
         return()
 
-routine print_slice(%slice: StringSlice) -> Void
+routine print_slice(%slice: String) -> Void
     block entry():
         #data:  Ptr<I8> = %slice.data
         %len:   I64     = %slice.length
@@ -36,7 +36,7 @@ routine print_slice(%slice: StringSlice) -> Void
         c_write(1, #data, %len_c)
         return()
 
-routine println_slice(%slice: StringSlice) -> Void
+routine println_slice(%slice: String) -> Void
     block entry():
         #data:  Ptr<I8> = %slice.data
         %len:   I64     = %slice.length

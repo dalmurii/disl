@@ -3,8 +3,9 @@
 ; Codepoints are I32 (Unicode scalar values, 0..=0x10FFFF).
 ; Bytes are I8 (raw octets in Ptr<I8> buffers).
 ;
-; utf8_decode reads one codepoint starting at byte %pos and returns
-; the codepoint and the new byte position.  Returns (-1, %pos) on error.
+; utf8_decode reads one codepoint starting at byte %pos (never reading at or
+; past %len) and returns a Utf8Decoded { codepoint, next_pos }.  On error it
+; returns { codepoint: -1, next_pos: %pos }.
 ;
 ; utf8_encode writes one codepoint into #out (caller must ensure 4 bytes
 ; of space) and returns the number of bytes written, or 0 on invalid codepoint.

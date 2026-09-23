@@ -1,11 +1,10 @@
-﻿; Disl stdlib collection: fixed array helpers
-;
-; These helpers operate on Array<T, N> fields inside larger structures. The
-; range convention is half-open: [start, end).
-; Disl stdlib: Array<T, N> — fixed-size inline array
+﻿; Disl stdlib collection: Array<T, N> — fixed-size inline array
 ;
 ; Maps to LLVM IR [N x T].  Stored entirely inline — no heap allocation,
 ; no pointer indirection.  N is a compile-time constant I64.
+;
+; The helpers below also operate on Array<T, N> fields inside larger
+; structures. The range convention is half-open: [start, end).
 
 @llvm("[{N} x {T}]")
 struct Array<T, N>

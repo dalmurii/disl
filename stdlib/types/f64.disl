@@ -17,20 +17,20 @@ const F64.NAN:          F64 = 0x7FF8000000000000  ; canonical quiet NaN bits
 routine F64.abs(%self: Self) -> Self
     block entry():
         %zero: Self = 0.0
-        %is_neg: Bool = %self.flt(%zero)
+        %is_neg: Bool = %self.lt(%zero)
         %neg: Self = fsub<Self>(%zero, %self)
         %result: Self = %is_neg ? %neg : %self
         return(%result)
 
 routine F64.min(%self: Self, %other: Self) -> Self
     block entry():
-        %self_less: Bool = %self.flt(%other)
+        %self_less: Bool = %self.lt(%other)
         %result: Self = %self_less ? %self : %other
         return(%result)
 
 routine F64.max(%self: Self, %other: Self) -> Self
     block entry():
-        %self_more: Bool = %self.fgt(%other)
+        %self_more: Bool = %self.gt(%other)
         %result: Self = %self_more ? %self : %other
         return(%result)
 
@@ -92,11 +92,11 @@ routine F64.ne(%self: Self, %other: Self) -> Bool
 
 routine F64.compare(%self: Self, %other: Self) -> I32
     block entry():
-        %lt: Bool = %self.flt(%other)
+        %lt: Bool = %self.lt(%other)
         branch %lt ? return(-1) : maybe_gt(%self, %other)
 
     block maybe_gt(%self: Self, %other: Self):
-        %gt: Bool = %self.fgt(%other)
+        %gt: Bool = %self.gt(%other)
         branch %gt ? return(1) : return(0)
 
 routine F64.hash(%self: Self) -> I64

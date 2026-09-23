@@ -44,7 +44,7 @@ routine xxh64_read_i64(#data: Ptr<I8>, %off: I64) -> I64
     block step(%i: I64, %acc: I64, %shift: I64):
         %idx: I64 = %off.add(%i)
         %b: I8 := #data[%idx]
-        %next: I64 = %acc.bitor(%b.zext<I64>().shl(%shift))
+        %next: I64 = %acc.bitor(%b.to_u64().shl(%shift))
         jump loop(%i.add(1), %next, %shift.add(8))
 
 routine xxh64_read_i32(#data: Ptr<I8>, %off: I64) -> I32
@@ -58,8 +58,8 @@ routine xxh64_read_i32(#data: Ptr<I8>, %off: I64) -> I32
     block step(%i: I64, %acc: I32, %shift: I32):
         %idx: I64 = %off.add(%i)
         %b: I8 := #data[%idx]
-        %next: I32 = %acc.bitor(%b.zext<I32>().shl(%shift))
-        jump loop(%i.add(1), %next, %shift.add(4))
+        %next: I32 = %acc.bitor(%b.to_u32().shl(%shift))
+        jump loop(%i.add(1), %next, %shift.add(8))
 
 ; -- xxh64 internal mixers -----------------------------------------------------
 
@@ -162,7 +162,7 @@ routine xxh64(#data: Ptr<I8>, %len: I64, %seed: I64) -> I64
 
     block tail4_step(%h: I64, %off: I64):
         %k32: I32 = xxh64_read_i32(#data, %off)
-        %ku: I64 = %k32.zext<I64>()
+        %ku: I64 = %k32.to_u64()
         %h2: I64 = %h.bitxor(%ku.mul(XXH64_P1)).rotl(23).mul(XXH64_P2).add(XXH64_P3)
         jump tail1_loop(%h2, %off.add(4))
 
@@ -173,7 +173,7 @@ routine xxh64(#data: Ptr<I8>, %len: I64, %seed: I64) -> I64
 
     block tail1_step(%h: I64, %off: I64):
         %b: I8 := #data[%off]
-        %bu: I64 = %b.zext<I64>()
+        %bu: I64 = %b.to_u64()
         %h2: I64 = %h.bitxor(%bu.mul(XXH64_P5)).rotl(11).mul(XXH64_P1)
         jump tail1_loop(%h2, %off.add(1))
 
