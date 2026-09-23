@@ -30,3 +30,6 @@ Thumbs.db
 disl.wiki/
 scripts/
 .claude/
+# Claude
+CLAUDE.md
+claude-memory/
