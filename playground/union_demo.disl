@@ -9,8 +9,15 @@
 ;         @aligned(max(alignof<A>(), alignof<B>()))
 ;         storage: Array<I8, max(sizeof<A>(), sizeof<B>())>
 ;
-; Access is always an explicit bitcast through the storage field. Whoever
-; owns the data is responsible for knowing which view is currently active.
+; Access is always an explicit pointer cast to the active view. Whoever owns
+; the data is responsible for knowing which view is currently active.
+;
+; Trade-off: an overlay value can only be read through memory (cast + load),
+; so a value-held overlay needs a stack slot before it can be inspected.
+; That is the right cost for C ABI unions (Section 2). For everyday tagged
+; results, prefer stdlib Result<T, E>, whose separate fields are readable by
+; plain extraction (%r.value) — Section 1 exists to show the mechanism, not as
+; the recommended Result.
 
 @[external("c"), callconv("c"), symbol("printf")]
 routine c_printf_int(#fmt: Ptr<I8>, %x: I64) -> I32
@@ -24,70 +31,76 @@ routine c_printf_float(#fmt: Ptr<I8>, %x: F64) -> I32
 ; ============================================================
 
 struct UnionTwo<A, B>
+require A: typename, B: typename
     @aligned(max(alignof<A>(), alignof<B>()))
     storage: Array<I8, max(sizeof<A>(), sizeof<B>())>
 
 ; ============================================================
 ; Section 1: Manual tagged sum type
 ;
-; Result<I64, I32> — either an Ok value or an error code. The tag lives
-; in the wrapping struct; the overlay carries the payload bytes.
+; IntResult — either an Ok I64 or an I32 error code. The tag lives in the
+; wrapping struct; the overlay carries the payload bytes.
+;
+; Constructors zero the overlay before writing a view: the Err view is only
+; 4 of the 8 bytes, and loading the whole overlay must not pick up
+; uninitialized bytes.
 ; ============================================================
 
-enum ResultTag: I32
+enum IntResultTag: I32
     Ok:  0
     Err: 1
 
-struct Result
-    tag: ResultTag
+struct IntResult
+    tag: IntResultTag
     payload: UnionTwo<I64, I32>
 
-routine Result.ok(%value: I64) -> Self
+routine IntResult.ok(%value: I64) -> Self
     block entry():
         #payload_buf: Ptr<UnionTwo<I64, I32>> = alloca<UnionTwo<I64, I32>>
-        #ok_view: Ptr<I64> = bitcast<Ptr<UnionTwo<I64, I32>>, Ptr<I64>>(#payload_buf)
+        zero<UnionTwo<I64, I32>>(#payload_buf, 1)
+        #ok_view: Ptr<I64> = #payload_buf.cast<I64>()
         #ok_view = %value
         %payload: UnionTwo<I64, I32> := #payload_buf
         %r: Self = Self {
-            tag: ResultTag.Ok,
+            tag: IntResultTag.Ok,
             payload: %payload
         }
         return(%r)
 
-routine Result.err(%code: I32) -> Self
+routine IntResult.err(%code: I32) -> Self
     block entry():
         #payload_buf: Ptr<UnionTwo<I64, I32>> = alloca<UnionTwo<I64, I32>>
-        #err_view: Ptr<I32> = bitcast<Ptr<UnionTwo<I64, I32>>, Ptr<I32>>(#payload_buf)
+        zero<UnionTwo<I64, I32>>(#payload_buf, 1)
+        #err_view: Ptr<I32> = #payload_buf.cast<I32>()
         #err_view = %code
         %payload: UnionTwo<I64, I32> := #payload_buf
         %r: Self = Self {
-            tag: ResultTag.Err,
+            tag: IntResultTag.Err,
             payload: %payload
         }
         return(%r)
 
-; Caller checks the tag explicitly, then bitcasts to the active view.
-routine Result.print(#self: Ptr<Self>) -> Void
+; Caller checks the tag explicitly, then casts to the active view.
+routine IntResult.print(#self: Ptr<Self>) -> Void
     block entry():
-        %tag: ResultTag := #self.tag
+        %tag: IntResultTag := #self.tag
         switch %tag:
-            ResultTag.Ok -> print_ok()
-            ResultTag.Err -> print_err()
+            IntResultTag.Ok -> print_ok()
+            IntResultTag.Err -> print_err()
             _ -> unreachable
 
     block print_ok():
         #payload: Ptr<UnionTwo<I64, I32>> = #self.payload
-        #ok_view: Ptr<I64> = bitcast<Ptr<UnionTwo<I64, I32>>, Ptr<I64>>(#payload)
+        #ok_view: Ptr<I64> = #payload.cast<I64>()
         %v: I64 := #ok_view
         c_printf_int("Ok(%lld)\n", %v)
         return()
 
     block print_err():
         #payload: Ptr<UnionTwo<I64, I32>> = #self.payload
-        #err_view: Ptr<I32> = bitcast<Ptr<UnionTwo<I64, I32>>, Ptr<I32>>(#payload)
+        #err_view: Ptr<I32> = #payload.cast<I32>()
         %code: I32 := #err_view
-        %code64: I64 = sext<I32, I64>(%code)
-        c_printf_int("Err(%lld)\n", %code64)
+        c_printf_int("Err(%lld)\n", %code.to_i64())
         return()
 
 ; ============================================================
@@ -95,7 +108,8 @@ routine Result.print(#self: Ptr<Self>) -> Void
 ;
 ; This is the pattern for `union sigval`, sockaddr families, or any C API
 ; that hands you a union by value. Disl declares the storage struct; thin
-; wrappers name the views so callers don't sprinkle bitcasts at every site.
+; wrappers name the views so callers don't sprinkle casts at every site.
+; Both views are the full 8 bytes, so no zeroing is needed.
 ; ============================================================
 
 struct Number
@@ -104,29 +118,29 @@ struct Number
 
 routine Number.from_int(%n: I64) -> Self
     block entry():
-        #buf: Ptr<Number> = alloca<Number>
-        #int_view: Ptr<I64> = bitcast<Ptr<Number>, Ptr<I64>>(#buf)
+        #buf: Ptr<Self> = alloca<Self>
+        #int_view: Ptr<I64> = #buf.cast<I64>()
         #int_view = %n
-        %u: Number := #buf
+        %u: Self := #buf
         return(%u)
 
 routine Number.from_float(%f: F64) -> Self
     block entry():
-        #buf: Ptr<Number> = alloca<Number>
-        #float_view: Ptr<F64> = bitcast<Ptr<Number>, Ptr<F64>>(#buf)
+        #buf: Ptr<Self> = alloca<Self>
+        #float_view: Ptr<F64> = #buf.cast<F64>()
         #float_view = %f
-        %u: Number := #buf
+        %u: Self := #buf
         return(%u)
 
 routine Number.as_int(#self: Ptr<Self>) -> I64
     block entry():
-        #view: Ptr<I64> = bitcast<Ptr<Number>, Ptr<I64>>(#self)
+        #view: Ptr<I64> = #self.cast<I64>()
         %n: I64 := #view
         return(%n)
 
 routine Number.as_float(#self: Ptr<Self>) -> F64
     block entry():
-        #view: Ptr<F64> = bitcast<Ptr<Number>, Ptr<F64>>(#self)
+        #view: Ptr<F64> = #self.cast<F64>()
         %f: F64 := #view
         return(%f)
 
@@ -137,11 +151,11 @@ routine Number.as_float(#self: Ptr<Self>) -> F64
 routine main() -> I32
     block entry():
         ; --- tagged result ---
-        %ok: Result = Result.ok(42)
-        %err: Result = Result.err(-5)
+        %ok: IntResult = IntResult.ok(42)
+        %err: IntResult = IntResult.err(-5)
 
-        #ok_ptr: Ptr<Result> = alloca<Result>([%ok])
-        #err_ptr: Ptr<Result> = alloca<Result>([%err])
+        #ok_ptr: Ptr<IntResult> = alloca<IntResult>([%ok])
+        #err_ptr: Ptr<IntResult> = alloca<IntResult>([%err])
         #ok_ptr.print()
         #err_ptr.print()
 
