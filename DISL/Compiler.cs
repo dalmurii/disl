@@ -105,6 +105,8 @@ public sealed partial class Compiler
 
     // ── Output ──────────────────────────────────────────────────────────────
 
+    public bool HasMain => _userRoutines.Any(r => r.Owner is null && r.Name == "main" && r.TypeParams.Count == 0);
+
     public string Generate()
     {
         foreach (var r in _userRoutines) CheckRoot(r);

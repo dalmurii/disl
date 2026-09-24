@@ -124,8 +124,18 @@ static class Cli
         }
     }
 
-    public static string Compile(IEnumerable<string> files, BuildTarget target) =>
-        new Compiler(target, LoadDecls(files, target)).Generate();
+    /// Compiles the inputs to LLVM IR. An executable needs `routine main() -> I32`; checking for it here gives a
+    /// clear error instead of the platform linker's (lld-link says "subsystem must be defined").
+    public static string Compile(IEnumerable<string> files, BuildTarget target, bool executable = true)
+    {
+        var inputs = files.ToList();
+        var compiler = new Compiler(target, LoadDecls(inputs, target));
+        string ir = compiler.Generate();
+        if (executable && !compiler.HasMain)
+            throw new CompileError(new Pos(ShownPath(Path.GetFullPath(inputs[0])), 1, 1),
+                "no entry point: an executable needs 'routine main() -> I32' (use 'disl check' to type-check a file without one)");
+        return ir;
+    }
 
     private static List<Decl> LoadDecls(IEnumerable<string> files, BuildTarget target)
     {
@@ -144,10 +154,16 @@ static class Cli
 
     private static List<Decl> ParseFile(string path, bool isLibrary)
     {
-        string shown = Path.GetRelativePath(Directory.GetCurrentDirectory(), path);
-        if (shown.StartsWith("..")) shown = path;
+        string shown = ShownPath(path);
         var tokens = new Lexer(shown, File.ReadAllText(path)).Lex();
         return new Parser(tokens, shown, isLibrary).ParseModule().Decls;
+    }
+
+    /// A path as error messages show it: relative to the working directory when it's inside it.
+    private static string ShownPath(string path)
+    {
+        string shown = Path.GetRelativePath(Directory.GetCurrentDirectory(), path);
+        return shown.StartsWith("..") ? path : shown;
     }
 
     private static string? _stdlib;
@@ -169,7 +185,7 @@ static class Cli
     private static int Build(string[] args)
     {
         var o = ParseOptions(args);
-        string ir = Compile(o.Inputs, o.Target);
+        string ir = Compile(o.Inputs, o.Target, executable: !o.EmitLlvm);
         string stem = Path.ChangeExtension(o.Inputs[0], null);
 
         if (o.EmitLlvm)
