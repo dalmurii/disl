@@ -754,7 +754,6 @@ public sealed class FunctionGen
             candidates.Add((rt, false));
         }
         else candidates.Add((rt, false));
-        if (rt is EnumType et) candidates.Add((et.Underlying, false));
 
         foreach (var (owner, _) in candidates)
         {
@@ -762,9 +761,20 @@ public sealed class FunctionGen
             if (r is null || r.Params.Count == 0) continue;
             var env = BindOwner(r, owner, m.Pos);
             var selfType = _c.ResolveType(r.Params[0].Type, env);
-            if (!Compatible(rt is EnumType && owner is IntType ? owner : rt, selfType)) continue;
+            if (!Compatible(rt, selfType)) continue;
             BindExplicit(r, env, m.TypeArgs, m.Pos);
             InferTypeArgs(r, env, m.Args, expected, 1);
+            return new CallPlan(r, env, m.Receiver, m.Args, m.Pos);
+        }
+
+        // Enums are distinct from their underlying integer, but every enum compares: `eq` / `ne` lower to the
+        // prelude's `ieq` / `ine`.
+        if (rt is EnumType en && m.Name is "eq" or "ne")
+        {
+            var r = _c.FindFree(m.Name == "eq" ? "ieq" : "ine", _env.File, m.Pos)
+                    ?? throw Err(m.Pos, $"the prelude has no '{(m.Name == "eq" ? "ieq" : "ine")}'");
+            var env = new Compiler.TypeEnv(r.File);
+            env.Bind("T", en);
             return new CallPlan(r, env, m.Receiver, m.Args, m.Pos);
         }
         throw Err(m.Pos, $"{rt} has no method '{m.Name}'");
@@ -921,16 +931,7 @@ public sealed class FunctionGen
         };
     }
 
-    private Val EvalReceiver(Expr recv, DType selfType)
-    {
-        // An enum value calls its underlying integer's methods unchanged.
-        if (Infer(recv) is EnumType et && selfType is IntType)
-        {
-            var v = EvalAny(recv);
-            return new Val(v.Op, et.Underlying);
-        }
-        return Eval(recv, selfType);
-    }
+    private Val EvalReceiver(Expr recv, DType selfType) => Eval(recv, selfType);
 
     private Val EmitIndirect(Expr place, CallableType ct, List<Expr> argExprs, Pos pos)
     {
@@ -1074,6 +1075,20 @@ public sealed class FunctionGen
                     if (!long.TryParse(cv.Op, out _)) throw Err(caseExpr.Pos, "switch cases must be constant integers");
                     if (!seen.Add(cv.Op)) throw Err(caseExpr.Pos, $"duplicate switch case {cv.Op}");
                     cases.Add($"{v.Type.Llvm} {cv.Op}, label %{label}");
+                }
+                if (defaultLabel is null && v.Type is EnumType en)
+                {
+                    // Without '_', a switch on an enum must name every member.
+                    var missing = en.Decl.Members
+                        .Where(mem => mem.Value is IntLit lit && !seen.Contains(IntConst(lit.Value, mem.Value.Pos, en).Op))
+                        .Select(mem => mem.Name).ToList();
+                    if (missing.Count > 0)
+                        throw Err(sw.Pos, $"switch on {en.Name} doesn't cover {string.Join(", ", missing)}; add them or a '_' arm");
+                    var saved = _cur;
+                    _cur = NewLBlock("nocase");
+                    defaultLabel = _cur.Label;
+                    Terminate("unreachable");
+                    _cur = saved;
                 }
                 if (defaultLabel is null)
                     throw Err(sw.Pos, "switch needs a '_' arm (write '_ -> unreachable' if every case is covered)");

@@ -1,0 +1,53 @@
+; Enums: implicit member values, the default I32 underlying type, eq / ne, and switches that name every member
+; instead of a '_' arm.
+
+@[external("c"), callconv("c"), symbol("printf")]
+routine c_printf_d(#fmt: Ptr<I8>, %x: I64) -> I32
+
+; Implicit values count up from the previous member.
+enum Level: I8
+    Low
+    Mid
+    High: 10
+    Max
+
+; No underlying type: I32.
+enum Shape
+    Circle
+    Square
+
+routine level_value(%l: Level) -> I64
+    block entry():
+        %raw: I8 = bitcast<Level, I8>(%l)
+        %wide: I64 = %raw.to_i64()
+        return(%wide)
+
+; Every member is named, so no '_' arm is needed.
+routine level_rank(%l: Level) -> I64
+    block entry():
+        switch %l:
+            Level.Low -> return(1)
+            Level.Mid -> return(2)
+            Level.High -> return(3)
+            Level.Max -> return(4)
+
+routine shape_sides(%s: Shape) -> I64
+    block entry():
+        %circle: Bool = %s.eq(Shape.Circle)
+        branch %circle ? return(0) : return(4)
+
+routine main() -> I32
+    block entry():
+        c_printf_d("%lld\n", level_value(Level.Low))
+        c_printf_d("%lld\n", level_value(Level.Mid))
+        c_printf_d("%lld\n", level_value(Level.High))
+        c_printf_d("%lld\n", level_value(Level.Max))
+        c_printf_d("%lld\n", level_rank(Level.High))
+        c_printf_d("%lld\n", shape_sides(Shape.Circle))
+        c_printf_d("%lld\n", shape_sides(Shape.Square))
+        %l: Level = Level.Mid
+        %same: Bool = %l.eq(Level.Mid)
+        %differs: Bool = %l.ne(Level.Mid)
+        c_printf_d("%lld\n", %same.to_i64())
+        c_printf_d("%lld\n", %differs.to_i64())
+        return(0)

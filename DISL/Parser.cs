@@ -229,16 +229,21 @@ public sealed class Parser(List<Token> tokens, string file, bool isLibrary = fal
         var pos = Cur.Pos;
         ExpectIdent("enum");
         var name = Expect(TokenKind.Ident, "an enum name");
-        Expect(TokenKind.Colon, "':' and the underlying integer type");
-        var underlying = ParseType();
+        // The underlying type defaults to I32.
+        var underlying = Accept(TokenKind.Colon) ? ParseType() : new TypeRef("I32", [], name.Pos);
         ExpectLineEnd();
 
         var members = new List<(string, Expr)>();
         while (!AtDeclStart())
         {
             var m = Expect(TokenKind.Ident, "an enum member");
-            Expect(TokenKind.Colon, "':' after the member name");
-            members.Add((m.Text, ParseExpr()));
+            Expr value;
+            if (Accept(TokenKind.Colon)) value = ParseExpr();
+            else if (members.Count == 0) value = new IntLit(0, m.Pos);
+            // A member without a value takes the previous value + 1.
+            else if (members[^1].Item2 is IntLit prev) value = new IntLit(prev.Value + 1, m.Pos);
+            else throw new CompileError(m.Pos, $"enum member '{m.Text}' needs a value: the one before it isn't an integer literal");
+            members.Add((m.Text, value));
             ExpectLineEnd();
         }
         return new EnumDecl(file, attrs, name.Text, underlying, members, pos);
