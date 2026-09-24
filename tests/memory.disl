@@ -1,0 +1,52 @@
+; alloca slots, heap buffers through libc malloc, indexed loads and stores.
+
+@[external("c"), callconv("c"), symbol("malloc")]
+routine c_malloc(%size: CSize) -> Ptr
+
+@[external("c"), callconv("c"), symbol("free")]
+routine c_free(#ptr: Ptr) -> Void
+
+; Fills data[i] = i * i for i in 0..len, then sums it through a stack slot.
+routine sum_of_squares(%len: I64) -> I64
+    block entry():
+        %bytes: I64 = %len.mul(8)
+        #raw: Ptr = c_malloc(%bytes)
+        %failed: Bool = #raw.is_null()
+        branch %failed ? trap() : ready(#raw)
+
+    block ready(#data: Ptr<I64>):
+        jump fill(#data, 0)
+
+    block fill(#data: Ptr<I64>, %i: I64):
+        %done: Bool = %i.sge(%len)
+        branch %done ? start_sum(#data) : store(#data, %i)
+
+    block store(#data: Ptr<I64>, %i: I64):
+        #data[%i] = %i.mul(%i)
+        jump fill(#data, %i.add(1))
+
+    block start_sum(#data: Ptr<I64>):
+        #total: Ptr<I64> = alloca<I64>([0])
+        jump sum(#data, #total, 0)
+
+    block sum(#data: Ptr<I64>, #total: Ptr<I64>, %i: I64):
+        %done: Bool = %i.sge(%len)
+        branch %done ? finish(#data, #total) : add(#data, #total, %i)
+
+    block add(#data: Ptr<I64>, #total: Ptr<I64>, %i: I64):
+        %x: I64 := #data[%i]
+        %cur: I64 := #total
+        #total = %cur.add(%x)
+        jump sum(#data, #total, %i.add(1))
+
+    block finish(#data: Ptr<I64>, #total: Ptr<I64>):
+        c_free(#data)
+        %result: I64 := #total
+        return(%result)
+
+routine main() -> I32
+    block entry():
+        %s: I64 = sum_of_squares(10)
+        %ok: Bool = %s.eq(285)
+        %code: I32 = %ok ? 0 : 1
+        return(%code)

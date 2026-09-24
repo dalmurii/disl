@@ -1,0 +1,4 @@
+; Pointer values must use the # sigil.
+routine f(%p: Ptr<I64>) -> I64
+    block entry():
+        return(0)
