@@ -13,11 +13,8 @@
 
 ; ── C FFI ─────────────────────────────────────────────────────────────────────
 
-@[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_s(#fmt: Ptr<I8>) -> I32
-
-@[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_nd(#fmt: Ptr<I8>, %node: I64, %dist: I64) -> I32
+@[external("c"), callconv("c"), symbol("printf"), variadic]
+routine c_printf(#fmt: Ptr<I8>) -> I32
 
 ; ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -235,7 +232,7 @@ routine main() -> I32
         #dist: Ptr<I64> = alloc<I64>(#alloc, 6)
         dijkstra(#graph, 0, #dist, #alloc)
 
-        c_printf_s("Shortest distances from node 0:\n")
+        c_printf("Shortest distances from node 0:\n")
         jump print_loop(0, #dist, #graph, #alloc)
 
     block print_loop(%i: I64, #dist: Ptr<I64>, #graph: Ptr<Graph>, #alloc: Ptr<Allocator>):
@@ -244,7 +241,7 @@ routine main() -> I32
 
     block print_one(%i: I64, #dist: Ptr<I64>, #graph: Ptr<Graph>, #alloc: Ptr<Allocator>):
         %d: I64 := #dist[%i]
-        c_printf_nd("  node %lld  dist %lld\n", %i, %d)
+        c_printf("  node %lld  dist %lld\n", %i, %d)
         jump print_loop(%i.add(1), #dist, #graph, #alloc)
 
     block cleanup(#dist: Ptr<I64>, #graph: Ptr<Graph>, #alloc: Ptr<Allocator>):
