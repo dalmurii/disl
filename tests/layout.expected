@@ -1,0 +1,19 @@
+I8 ok
+I16 ok
+I32 ok
+I64 ok
+I128 ok
+F16 ok
+BF16 ok
+F32 ok
+F64 ok
+Bool ok
+Ptr ok
+Array ok
+Mixed ok
+Nested ok
+Wide ok
+Level ok
+Aligned32 ok
+FieldAligned ok
+32 32 32 4

@@ -1,0 +1,9 @@
+; @aligned needs a power of two.
+struct Odd
+    @aligned(3)
+    x: I8
+
+routine main() -> I32
+    block entry():
+        %s: I64 = sizeof<Odd>()
+        return(0)

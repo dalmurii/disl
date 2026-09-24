@@ -322,7 +322,8 @@ public sealed class FunctionGen
                     throw Err(f.Pos, $"{baseType} has no fields");
                 var (idx, ft) = FieldOf(s, f.Name, f.Pos);
                 _c.EnsureTypeDefined(s);
-                return (EmitTmp($"getelementptr {s.Llvm}, ptr {baseAddr}, i32 0, i32 {idx}"), ft);
+                int member = _c.Shape(s).FieldIndex[idx];
+                return (EmitTmp($"getelementptr {s.Llvm}, ptr {baseAddr}, i32 0, i32 {member}"), ft);
             }
             case IndexExpr ix:
             {
@@ -490,7 +491,8 @@ public sealed class FunctionGen
         var b = EvalAny(f.Base);
         if (b.Type is not StructType s) throw Err(f.Pos, $"{b.Type} has no fields");
         var (idx, ft) = FieldOf(s, f.Name, f.Pos);
-        return new Val(EmitTmp($"extractvalue {s.Llvm} {b.Op}, {idx}"), ft);
+        int member = _c.Shape(s).FieldIndex[idx];
+        return new Val(EmitTmp($"extractvalue {s.Llvm} {b.Op}, {member}"), ft);
     }
 
     private Val IntConst(Int128 value, Pos pos, DType expected)
@@ -589,10 +591,11 @@ public sealed class FunctionGen
         if (missing.Count > 0) throw Err(lit.Pos, $"{s} literal is missing field(s): {string.Join(", ", missing)}");
 
         string acc = fields.Count == 0 ? "zeroinitializer" : "poison";
+        var shape = _c.Shape(s);
         for (int i = 0; i < fields.Count; i++)
         {
             var v = Eval(given[fields[i].Name], fields[i].Type);
-            acc = EmitTmp($"insertvalue {s.Llvm} {acc}, {fields[i].Type.Llvm} {v.Op}, {i}");
+            acc = EmitTmp($"insertvalue {s.Llvm} {acc}, {fields[i].Type.Llvm} {v.Op}, {shape.FieldIndex[i]}");
         }
         return new Val(acc, s);
     }

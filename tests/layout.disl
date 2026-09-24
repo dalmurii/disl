@@ -1,0 +1,89 @@
+; Compile-time sizeof / alignof must match what LLVM lays out at run time. Probe<T> copies T's layout from the
+; compile-time values (an @aligned field over a byte array); the runtime sizeof / alignof of both must agree.
+
+@[external("c"), callconv("c"), symbol("printf"), variadic]
+routine c_printf(#fmt: Ptr<I8>) -> I32
+
+struct Probe<T>
+require T: typename
+    @aligned(alignof<T>())
+    bytes: Array<I8, sizeof<T>()>
+
+struct Mixed
+    a: I8
+    b: I64
+    c: I16
+
+struct Nested
+    tag: I8
+    inner: Mixed
+
+struct Wide
+    tag: I8
+    value: I128
+
+enum Level: I8
+    Low
+    High
+
+@aligned(32)
+struct Aligned32
+    x: I8
+
+struct FieldAligned
+    a: I8
+    @aligned(16)
+    b: I8
+
+const LARGER: I64 = max(sizeof<I32>(), sizeof<I16>())
+
+routine check<T>(#name: Ptr<I8>) -> Void
+require T: typename
+    block entry():
+        %size:        I64  = sizeof<T>()
+        %align:       I64  = alignof<T>()
+        %probe_size:  I64  = sizeof<Probe<T>>()
+        %probe_align: I64  = alignof<Probe<T>>()
+        %size_ok:     Bool = %size.eq(%probe_size)
+        %align_ok:    Bool = %align.eq(%probe_align)
+        %ok:          Bool = %size_ok.bitand(%align_ok)
+        branch %ok ? same() : differ(%probe_size, %probe_align)
+
+    block same():
+        c_printf("%s ok\n", #name)
+        return()
+
+    block differ(%probe_size: I64, %probe_align: I64):
+        %size:  I64 = sizeof<T>()
+        %align: I64 = alignof<T>()
+        c_printf("%s: runtime %lld/%lld, compile time %lld/%lld\n", #name, %size, %align, %probe_size, %probe_align)
+        return()
+
+routine main() -> I32
+    block entry():
+        check<I8>("I8")
+        check<I16>("I16")
+        check<I32>("I32")
+        check<I64>("I64")
+        check<I128>("I128")
+        check<F16>("F16")
+        check<BF16>("BF16")
+        check<F32>("F32")
+        check<F64>("F64")
+        check<Bool>("Bool")
+        check<Ptr<I8>>("Ptr")
+        check<Array<I16, 3>>("Array")
+        check<Mixed>("Mixed")
+        check<Nested>("Nested")
+        check<Wide>("Wide")
+        check<Level>("Level")
+        check<Aligned32>("Aligned32")
+        check<FieldAligned>("FieldAligned")
+
+        ; @aligned really moves things: Aligned32 is one byte padded to 32, FieldAligned.b sits at offset 16.
+        %a32_size:  I64 = sizeof<Aligned32>()
+        %a32_align: I64 = alignof<Aligned32>()
+        %fa_size:   I64 = sizeof<FieldAligned>()
+        %larger:    I64 = sizeof<Array<I8, LARGER>>()
+        c_printf("%lld %lld %lld %lld\n", %a32_size, %a32_align, %fa_size, %larger)
+        return(0)

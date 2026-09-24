@@ -129,6 +129,11 @@ public sealed class Parser(List<Token> tokens, string file, bool isLibrary = fal
                         Next();
                     }
                     bool negated = Accept(TokenKind.Bang);
+                    if (Is(TokenKind.Ident) && PeekTok(1).Kind is TokenKind.LParen or TokenKind.Lt)
+                    {
+                        args.Add(new AttrArg(key, "", negated, ParseExpr()));
+                        continue;
+                    }
                     var a = Next();
                     if (a.Kind is not (TokenKind.Str or TokenKind.Int or TokenKind.Ident))
                         throw new CompileError(a.Pos, "attribute arguments must be literals");
@@ -214,11 +219,25 @@ public sealed class Parser(List<Token> tokens, string file, bool isLibrary = fal
         var clauses = ParseClauses();
 
         var fields = new List<FieldDecl>();
-        while (!AtDeclStart())
+        while (true)
         {
+            // Attributes belong to the next field when a field follows them, and to the next declaration otherwise.
+            var fieldAttrs = new List<Attribute>();
+            if (Is(TokenKind.At))
+            {
+                int start = _i;
+                fieldAttrs = ParseAttributes();
+                if (!(Is(TokenKind.Ident) && PeekTok(1).Kind == TokenKind.Colon))
+                {
+                    _i = start;
+                    break;
+                }
+            }
+            else if (AtDeclStart()) break;
+
             var f = Expect(TokenKind.Ident, "a field name");
             Expect(TokenKind.Colon, "':' after the field name");
-            fields.Add(new FieldDecl(f.Text, ParseType(), f.Pos));
+            fields.Add(new FieldDecl(f.Text, ParseType(), fieldAttrs, f.Pos));
             ExpectLineEnd();
         }
         return new StructDecl(file, attrs, name.Text, typeParams, clauses, fields, pos);
@@ -337,7 +356,12 @@ public sealed class Parser(List<Token> tokens, string file, bool isLibrary = fal
             Expect(TokenKind.RParen, "')'");
             return new TypeArgTuple(types);
         }
-        return new TypeArgType(ParseType());
+        // `sizeof<T>()` reads like a type until the '(': back up and parse it as an expression.
+        int start = _i;
+        var type = ParseType();
+        if (!Is(TokenKind.LParen)) return new TypeArgType(type);
+        _i = start;
+        return new TypeArgExpr(ParseExpr());
     }
 
     // ── Blocks and statements ───────────────────────────────────────────────

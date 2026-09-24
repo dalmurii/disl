@@ -293,6 +293,7 @@ public sealed partial class Compiler
                 {
                     TypeArgType ta => ResolveTypeInner(ta.Type, env),
                     TypeArgInt ti => new ConstArg(ti.Value),
+                    TypeArgExpr te => new ConstArg(EvalConstInt(te.Expr, env, 0)),
                     _ => throw new CompileError(t.Pos, $"invalid generic argument for '{s.Name}'"),
                 });
             return new StructType(s, args);
@@ -332,6 +333,7 @@ public sealed partial class Compiler
         switch (arg)
         {
             case TypeArgInt i: return i.Value;
+            case TypeArgExpr x: return EvalConstInt(x.Expr, env, 0);
             case TypeArgType { Type: { Args.Count: 0 } tr }:
                 if (env.Get(tr.Name) is ConstArg ca) return ca.Value;
                 if (FindConst("", tr.Name, env.File, pos) is { } c) return EvalConstInt(c.Value, env.Clone(c.File), 0);
@@ -341,7 +343,8 @@ public sealed partial class Compiler
         }
     }
 
-    /// Compile-time integer evaluation for const-sized types: literals, consts, and add / sub / mul chains.
+    /// Compile-time integer evaluation for const-sized types: literals, consts, add / sub / mul chains, max / min,
+    /// and sizeof / alignof.
     private long EvalConstInt(Expr e, TypeEnv env, int depth)
     {
         if (depth > 32) throw new CompileError(e.Pos, "const definitions are circular");
@@ -362,8 +365,19 @@ public sealed partial class Compiler
             }
             case NsCallExpr { Owner.Args.Count: 0, Args.Count: 1 } n when n.Name is "add" or "sub" or "mul":
                 return EvalConstInt(new MethodCallExpr(new ConstRef(null, n.Owner.Name, n.Pos), n.Name, [], n.Args, n.Pos), env, depth);
+            case CallExpr { Name: "max" or "min", Args.Count: > 0 } c:
+            {
+                var values = c.Args.Select(a => EvalConstInt(a, env, depth + 1)).ToList();
+                return c.Name == "max" ? values.Max() : values.Min();
+            }
+            case CallExpr { Name: "sizeof" or "alignof", TypeArgs.Count: 1, Args.Count: 0 } c:
+            {
+                var (size, align) = SizeAlign(ResolveType(c.TypeArgs[0], env), c.Pos);
+                return c.Name == "sizeof" ? size : align;
+            }
             default:
-                throw new CompileError(e.Pos, "this is not a compile-time integer (use a literal, a const, or add/sub/mul of them)");
+                throw new CompileError(e.Pos,
+                    "this is not a compile-time integer (use literals, consts, add/sub/mul, max/min, sizeof/alignof)");
         }
     }
 
@@ -371,9 +385,7 @@ public sealed partial class Compiler
     public List<(string Name, DType Type)> Fields(StructType s)
     {
         if (_fieldCache.TryGetValue(s.Name, out var cached)) return cached;
-        var env = new TypeEnv(s.Decl.File);
-        for (int i = 0; i < s.Decl.TypeParams.Count; i++) env.Bind(s.Decl.TypeParams[i], s.Args[i]);
-        env.Bind("Self", s);
+        var env = StructEnv(s);
         var fields = new List<(string, DType)>();
         _fieldCache[s.Name] = fields; // placed early so self-referencing pointers resolve
         foreach (var f in s.Decl.Fields)
@@ -385,6 +397,15 @@ public sealed partial class Compiler
         return fields;
     }
 
+    /// The struct's type parameters bound to its arguments, plus Self.
+    private TypeEnv StructEnv(StructType s)
+    {
+        var env = new TypeEnv(s.Decl.File);
+        for (int i = 0; i < s.Decl.TypeParams.Count; i++) env.Bind(s.Decl.TypeParams[i], s.Args[i]);
+        env.Bind("Self", s);
+        return env;
+    }
+
     /// Makes sure every struct type used in the IR has a definition.
     public void EnsureTypeDefined(DType t)
     {
@@ -394,7 +415,7 @@ public sealed partial class Compiler
                 if (!_definedTypes.Add(s.Name)) return;
                 var fields = Fields(s);
                 foreach (var (_, ft) in fields) EnsureTypeDefined(ft);
-                _typeDefs.AppendLine($"{s.Llvm} = type {{ {string.Join(", ", fields.Select(f => f.Type.Llvm))} }}");
+                _typeDefs.AppendLine($"{s.Llvm} = type {{ {string.Join(", ", Shape(s).Members.Select(m => m.Llvm))} }}");
                 break;
             case ArrayType a:
                 EnsureTypeDefined(a.Elem);

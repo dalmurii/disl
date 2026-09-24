@@ -19,11 +19,14 @@ public sealed record TypeArgTuple(List<TypeRef> Types) : TypeArg
 }
 /// `@callconv("c")` inside a Callable.
 public sealed record TypeArgAttr(Attribute Attr) : TypeArg { public override string ToString() => $"@{Attr.Name}"; }
+/// A compile-time integer expression as a generic argument: `max(sizeof<A>(), sizeof<B>())` in `Array<I8, …>`.
+public sealed record TypeArgExpr(Expr Expr) : TypeArg { public override string ToString() => "(expr)"; }
 
 // ── Declarations ────────────────────────────────────────────────────────────
 
-/// An attribute argument: `"c"`, `64`, `size: 64`, `os: !"windows"`.
-public sealed record AttrArg(string? Key, string Value, bool Negated);
+/// An attribute argument: `"c"`, `64`, `size: 64`, `os: !"windows"`, or a compile-time expression such as
+/// `max(alignof<A>(), alignof<B>())` (then Expr is set and Value is empty).
+public sealed record AttrArg(string? Key, string Value, bool Negated, Expr? Expr = null);
 
 public sealed record Attribute(string Name, List<AttrArg> Args, Pos Pos)
 {
@@ -57,7 +60,10 @@ public sealed record RoutineDecl(
     public string DisplayName => Owner is null ? Name : $"{Owner}.{Name}";
 }
 
-public sealed record FieldDecl(string Name, TypeRef Type, Pos Pos);
+public sealed record FieldDecl(string Name, TypeRef Type, List<Attribute> Attributes, Pos Pos)
+{
+    public Attribute? Attr(string name) => Attributes.FirstOrDefault(a => a.Name == name);
+}
 
 public sealed record StructDecl(
     string File, List<Attribute> Attributes, string Name, List<string> TypeParams, List<Clause> Clauses,
