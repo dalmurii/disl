@@ -60,6 +60,16 @@ require T: typename
         %value: T := #self.value
         return(%value)
 
+; The value if present, otherwise %default. Takes the Option by value, so it
+; chains directly off a routine that returns one.
+routine Option<T>.unwrap_or(%self: Self, %default: T) -> T
+require T: typename
+    block entry():
+        %tag: Bool = %self.tag
+        %value: T = %self.value
+        %r: T = %tag ? %value : %default
+        return(%r)
+
 ; -- Option: equality, hashing -------------------------------------------------
 
 routine Option<T>.eq(%self: Self, %other: Self) -> Bool

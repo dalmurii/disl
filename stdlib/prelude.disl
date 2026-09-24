@@ -219,6 +219,216 @@ routine bswap<T>(%val: T) -> T
 require T: typename
 
 ; ============================================================
+; Unsigned and saturating conversions
+;
+; uitofp reads the integer as unsigned. The *_sat forms clamp out-of-range
+; floats to the integer range and map NaN to 0 (Rust `as` semantics); the
+; plain fptosi / fptoui give poison for out-of-range input.
+; ============================================================
+
+@[external("llvm"), template("{result} = uitofp {From} {%val} to {To}")]
+routine uitofp<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
+@[external("llvm"), template("{result} = fptoui {From} {%val} to {To}")]
+routine fptoui<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
+@[external("llvm"), template("{result} = call {To} @llvm.fptosi.sat.{To}.{From}({From} {%val})")]
+routine fptosi_sat<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
+@[external("llvm"), template("{result} = call {To} @llvm.fptoui.sat.{To}.{From}({From} {%val})")]
+routine fptoui_sat<From, To>(%val: From) -> To
+    require From: typename
+    require To: typename
+
+; ============================================================
+; Overflow detection
+;
+; Each returns only the overflow flag. The wrapped result is the plain
+; add / sub / mul of the same operands.
+; ============================================================
+
+@[external("llvm"), template("{t0} = call {{ {T}, i1 }} @llvm.sadd.with.overflow.{T}({T} {%a}, {T} {%b})\n{result} = extractvalue {{ {T}, i1 }} {t0}, 1")]
+routine sadd_overflows<T>(%a: T, %b: T) -> Bool
+require T: typename
+@[external("llvm"), template("{t0} = call {{ {T}, i1 }} @llvm.uadd.with.overflow.{T}({T} {%a}, {T} {%b})\n{result} = extractvalue {{ {T}, i1 }} {t0}, 1")]
+routine uadd_overflows<T>(%a: T, %b: T) -> Bool
+require T: typename
+@[external("llvm"), template("{t0} = call {{ {T}, i1 }} @llvm.ssub.with.overflow.{T}({T} {%a}, {T} {%b})\n{result} = extractvalue {{ {T}, i1 }} {t0}, 1")]
+routine ssub_overflows<T>(%a: T, %b: T) -> Bool
+require T: typename
+@[external("llvm"), template("{t0} = call {{ {T}, i1 }} @llvm.usub.with.overflow.{T}({T} {%a}, {T} {%b})\n{result} = extractvalue {{ {T}, i1 }} {t0}, 1")]
+routine usub_overflows<T>(%a: T, %b: T) -> Bool
+require T: typename
+@[external("llvm"), template("{t0} = call {{ {T}, i1 }} @llvm.smul.with.overflow.{T}({T} {%a}, {T} {%b})\n{result} = extractvalue {{ {T}, i1 }} {t0}, 1")]
+routine smul_overflows<T>(%a: T, %b: T) -> Bool
+require T: typename
+@[external("llvm"), template("{t0} = call {{ {T}, i1 }} @llvm.umul.with.overflow.{T}({T} {%a}, {T} {%b})\n{result} = extractvalue {{ {T}, i1 }} {t0}, 1")]
+routine umul_overflows<T>(%a: T, %b: T) -> Bool
+require T: typename
+
+; ============================================================
+; Saturating arithmetic, min / max, funnel shifts, bit reversal
+; ============================================================
+
+@[external("llvm"), template("{result} = call {T} @llvm.sadd.sat.{T}({T} {%a}, {T} {%b})")]
+routine sadd_sat<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.uadd.sat.{T}({T} {%a}, {T} {%b})")]
+routine uadd_sat<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.ssub.sat.{T}({T} {%a}, {T} {%b})")]
+routine ssub_sat<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.usub.sat.{T}({T} {%a}, {T} {%b})")]
+routine usub_sat<T>(%a: T, %b: T) -> T
+require T: typename
+
+@[external("llvm"), template("{result} = call {T} @llvm.smin.{T}({T} {%a}, {T} {%b})")]
+routine smin<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.smax.{T}({T} {%a}, {T} {%b})")]
+routine smax<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.umin.{T}({T} {%a}, {T} {%b})")]
+routine umin<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.umax.{T}({T} {%a}, {T} {%b})")]
+routine umax<T>(%a: T, %b: T) -> T
+require T: typename
+
+; Funnel shifts: concatenate %hi:%lo, shift by %amt modulo the bit width, and
+; keep the high (fshl) or low (fshr) half. fshl(x, x, n) rotates left.
+@[external("llvm"), template("{result} = call {T} @llvm.fshl.{T}({T} {%hi}, {T} {%lo}, {T} {%amt})")]
+routine fshl<T>(%hi: T, %lo: T, %amt: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.fshr.{T}({T} {%hi}, {T} {%lo}, {T} {%amt})")]
+routine fshr<T>(%hi: T, %lo: T, %amt: T) -> T
+require T: typename
+
+@[external("llvm"), template("{result} = call {T} @llvm.bitreverse.{T}({T} {%val})")]
+routine bitreverse<T>(%val: T) -> T
+require T: typename
+
+; ============================================================
+; Floating-point operations
+;
+; Intrinsic names are written with the LLVM type ({T} = double / float);
+; LLVM normalizes them to .f64 / .f32.
+; ============================================================
+
+@[external("llvm"), template("{result} = fneg {T} {%val}")]
+routine fneg<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = frem {T} {%a}, {%b}")]
+routine frem<T>(%a: T, %b: T) -> T
+require T: typename
+; Unordered compare: true if either operand is NaN.
+@[external("llvm"), template("{result} = fcmp uno {T} {%a}, {%b}")]
+routine funo<T>(%a: T, %b: T) -> Bool
+require T: typename
+
+@[external("llvm"), template("{result} = call {T} @llvm.fabs.{T}({T} {%val})")]
+routine fabs<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.copysign.{T}({T} {%mag}, {T} {%sign})")]
+routine copysign<T>(%mag: T, %sign: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.fma.{T}({T} {%a}, {T} {%b}, {T} {%c})")]
+routine fma<T>(%a: T, %b: T, %c: T) -> T
+require T: typename
+
+@[external("llvm"), template("{result} = call {T} @llvm.floor.{T}({T} {%val})")]
+routine floor<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.ceil.{T}({T} {%val})")]
+routine ceil<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.trunc.{T}({T} {%val})")]
+routine ftrunc<T>(%val: T) -> T
+require T: typename
+; Rounds half-way cases away from zero.
+@[external("llvm"), template("{result} = call {T} @llvm.round.{T}({T} {%val})")]
+routine round<T>(%val: T) -> T
+require T: typename
+; Rounds to the nearest integer in the current rounding mode, which is ties to
+; even unless changed. (llvm.roundeven would say so directly, but it lowers to
+; the C23 roundeven, which the Windows C runtime lacks.)
+@[external("llvm"), template("{result} = call {T} @llvm.rint.{T}({T} {%val})")]
+routine rint<T>(%val: T) -> T
+require T: typename
+
+; minnum / maxnum return the other operand when one is NaN; minimum / maximum
+; propagate NaN and order -0.0 below +0.0.
+@[external("llvm"), template("{result} = call {T} @llvm.minnum.{T}({T} {%a}, {T} {%b})")]
+routine minnum<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.maxnum.{T}({T} {%a}, {T} {%b})")]
+routine maxnum<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.minimum.{T}({T} {%a}, {T} {%b})")]
+routine minimum<T>(%a: T, %b: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.maximum.{T}({T} {%a}, {T} {%b})")]
+routine maximum<T>(%a: T, %b: T) -> T
+require T: typename
+
+@[external("llvm"), template("{result} = call {T} @llvm.sqrt.{T}({T} {%val})")]
+routine sqrt<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.pow.{T}({T} {%base}, {T} {%exp})")]
+routine pow<T>(%base: T, %exp: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.exp.{T}({T} {%val})")]
+routine exp<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.exp2.{T}({T} {%val})")]
+routine exp2<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.log.{T}({T} {%val})")]
+routine log<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.log2.{T}({T} {%val})")]
+routine log2<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.log10.{T}({T} {%val})")]
+routine log10<T>(%val: T) -> T
+require T: typename
+
+@[external("llvm"), template("{result} = call {T} @llvm.sin.{T}({T} {%val})")]
+routine sin<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.cos.{T}({T} {%val})")]
+routine cos<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.tan.{T}({T} {%val})")]
+routine tan<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.asin.{T}({T} {%val})")]
+routine asin<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.acos.{T}({T} {%val})")]
+routine acos<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.atan.{T}({T} {%val})")]
+routine atan<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.atan2.{T}({T} {%y}, {T} {%x})")]
+routine atan2<T>(%y: T, %x: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.sinh.{T}({T} {%val})")]
+routine sinh<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.cosh.{T}({T} {%val})")]
+routine cosh<T>(%val: T) -> T
+require T: typename
+@[external("llvm"), template("{result} = call {T} @llvm.tanh.{T}({T} {%val})")]
+routine tanh<T>(%val: T) -> T
+require T: typename
+
+; ============================================================
 ; Misc
 ; ============================================================
 

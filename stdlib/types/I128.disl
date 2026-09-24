@@ -1,41 +1,42 @@
-; Disl stdlib: I64 — 64-bit signed integer
+; Disl stdlib: I128 — 128-bit signed integer
 ;
-; Maps to LLVM IR i64.
+; Maps to LLVM IR i128. Division, remainder and float conversion call
+; compiler-rt routines (__divti3 and friends), which the compiler links.
 
-@llvm("i64")
-struct I64
-conform Equal<I64>, Compare<I64>, Hash<I64>
+@llvm("i128")
+struct I128
+conform Equal<I128>, Compare<I128>, Hash<I128>
 
 ; -- constants -----------------------------------------------------------------
 
-const I64.MIN: I64 = -9223372036854775808
-const I64.MAX: I64 =  9223372036854775807
+const I128.MIN: I128 = -170141183460469231731687303715884105728
+const I128.MAX: I128 =  170141183460469231731687303715884105727
 
 ; -- bit operations ------------------------------------------------------------
 
-routine I64.count_ones(%self: Self) -> Self
+routine I128.count_ones(%self: Self) -> Self
     block entry():
         %result: Self = popcount<Self>(%self)
         return(%result)
 
-routine I64.leading_zeros(%self: Self) -> Self
+routine I128.leading_zeros(%self: Self) -> Self
     block entry():
         %result: Self = clz<Self>(%self, false)
         return(%result)
 
-routine I64.trailing_zeros(%self: Self) -> Self
+routine I128.trailing_zeros(%self: Self) -> Self
     block entry():
         %result: Self = ctz<Self>(%self, false)
         return(%result)
 
-routine I64.swap_bytes(%self: Self) -> Self
+routine I128.swap_bytes(%self: Self) -> Self
     block entry():
         %result: Self = bswap<Self>(%self)
         return(%result)
 
 ; -- arithmetic ----------------------------------------------------------------
 
-routine I64.abs(%self: Self) -> Self
+routine I128.abs(%self: Self) -> Self
     block entry():
         %is_neg: Bool = %self.slt(0)
         %zero: Self = 0
@@ -43,162 +44,162 @@ routine I64.abs(%self: Self) -> Self
         %result: Self = %is_neg ? %neg : %self
         return(%result)
 
-routine I64.min(%self: Self, %other: Self) -> Self
+routine I128.min(%self: Self, %other: Self) -> Self
     block entry():
         %less: Bool = %self.slt(%other)
         %result: Self = %less ? %self : %other
         return(%result)
 
-routine I64.max(%self: Self, %other: Self) -> Self
+routine I128.max(%self: Self, %other: Self) -> Self
     block entry():
         %more: Bool = %self.sgt(%other)
         %result: Self = %more ? %self : %other
         return(%result)
 
-routine I64.add(%self: Self, %other: Self) -> Self
+routine I128.add(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = add<Self>(%self, %other)
         return(%r)
 
-routine I64.sub(%self: Self, %other: Self) -> Self
+routine I128.sub(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = sub<Self>(%self, %other)
         return(%r)
 
-routine I64.mul(%self: Self, %other: Self) -> Self
+routine I128.mul(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = mul<Self>(%self, %other)
         return(%r)
 
 ; -- bit shifts ----------------------------------------------------------------
 
-routine I64.shl(%self: Self, %n: Self) -> Self
+routine I128.shl(%self: Self, %n: Self) -> Self
     block entry():
         %r: Self = shl<Self>(%self, %n)
         return(%r)
 
-routine I64.lshr(%self: Self, %n: Self) -> Self
+routine I128.lshr(%self: Self, %n: Self) -> Self
     block entry():
         %r: Self = lshr<Self>(%self, %n)
         return(%r)
 
-routine I64.ashr(%self: Self, %n: Self) -> Self
+routine I128.ashr(%self: Self, %n: Self) -> Self
     block entry():
         %r: Self = ashr<Self>(%self, %n)
         return(%r)
 
 ; Rotates by %n modulo the bit width.
-routine I64.rotl(%self: Self, %n: Self) -> Self
+routine I128.rotl(%self: Self, %n: Self) -> Self
     block entry():
         %r: Self = fshl<Self>(%self, %self, %n)
         return(%r)
 
-routine I64.rotr(%self: Self, %n: Self) -> Self
+routine I128.rotr(%self: Self, %n: Self) -> Self
     block entry():
         %r: Self = fshr<Self>(%self, %self, %n)
         return(%r)
 
 ; -- bitwise operations --------------------------------------------------------
 
-routine I64.bitand(%self: Self, %other: Self) -> Self
+routine I128.bitand(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = band<Self>(%self, %other)
         return(%r)
 
-routine I64.bitor(%self: Self, %other: Self) -> Self
+routine I128.bitor(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = bor<Self>(%self, %other)
         return(%r)
 
-routine I64.bitxor(%self: Self, %other: Self) -> Self
+routine I128.bitxor(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = bxor<Self>(%self, %other)
         return(%r)
 
-routine I64.bitnot(%self: Self) -> Self
+routine I128.bitnot(%self: Self) -> Self
     block entry():
         %r: Self = bnot<Self>(%self)
         return(%r)
 
 ; -- signed comparisons --------------------------------------------------------
 
-routine I64.slt(%self: Self, %other: Self) -> Bool
+routine I128.slt(%self: Self, %other: Self) -> Bool
     block entry():
         %r: Bool = slt<Self>(%self, %other)
         return(%r)
 
-routine I64.sle(%self: Self, %other: Self) -> Bool
+routine I128.sle(%self: Self, %other: Self) -> Bool
     block entry():
         %r: Bool = sle<Self>(%self, %other)
         return(%r)
 
-routine I64.sgt(%self: Self, %other: Self) -> Bool
+routine I128.sgt(%self: Self, %other: Self) -> Bool
     block entry():
         %r: Bool = sgt<Self>(%self, %other)
         return(%r)
 
-routine I64.sge(%self: Self, %other: Self) -> Bool
+routine I128.sge(%self: Self, %other: Self) -> Bool
     block entry():
         %r: Bool = sge<Self>(%self, %other)
         return(%r)
 
 ; -- unsigned comparisons ------------------------------------------------------
 
-routine I64.ult(%self: Self, %other: Self) -> Bool
+routine I128.ult(%self: Self, %other: Self) -> Bool
     block entry():
         %r: Bool = ult<Self>(%self, %other)
         return(%r)
 
-routine I64.ule(%self: Self, %other: Self) -> Bool
+routine I128.ule(%self: Self, %other: Self) -> Bool
     block entry():
         %r: Bool = ule<Self>(%self, %other)
         return(%r)
 
-routine I64.ugt(%self: Self, %other: Self) -> Bool
+routine I128.ugt(%self: Self, %other: Self) -> Bool
     block entry():
         %r: Bool = ugt<Self>(%self, %other)
         return(%r)
 
-routine I64.uge(%self: Self, %other: Self) -> Bool
+routine I128.uge(%self: Self, %other: Self) -> Bool
     block entry():
         %r: Bool = uge<Self>(%self, %other)
         return(%r)
 
 ; -- integer division and remainder --------------------------------------------
 
-routine I64.sdiv(%self: Self, %other: Self) -> Self
+routine I128.sdiv(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = sdiv<Self>(%self, %other)
         return(%r)
 
-routine I64.udiv(%self: Self, %other: Self) -> Self
+routine I128.udiv(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = udiv<Self>(%self, %other)
         return(%r)
 
-routine I64.srem(%self: Self, %other: Self) -> Self
+routine I128.srem(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = srem<Self>(%self, %other)
         return(%r)
 
-routine I64.urem(%self: Self, %other: Self) -> Self
+routine I128.urem(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = urem<Self>(%self, %other)
         return(%r)
 
 ; -- equality, ordering, hashing -----------------------------------------------
 
-routine I64.eq(%self: Self, %other: Self) -> Bool
+routine I128.eq(%self: Self, %other: Self) -> Bool
     block entry():
         %r: Bool = ieq<Self>(%self, %other)
         return(%r)
 
-routine I64.ne(%self: Self, %other: Self) -> Bool
+routine I128.ne(%self: Self, %other: Self) -> Bool
     block entry():
         %r: Bool = ine<Self>(%self, %other)
         return(%r)
 
-routine I64.compare(%self: Self, %other: Self) -> I32
+routine I128.compare(%self: Self, %other: Self) -> I32
     block entry():
         %lt: Bool = %self.slt(%other)
         branch %lt ? return(-1) : maybe_gt(%self, %other)
@@ -207,36 +208,40 @@ routine I64.compare(%self: Self, %other: Self) -> I32
         %gt: Bool = %self.sgt(%other)
         branch %gt ? return(1) : return(0)
 
-routine I64.hash(%self: Self) -> Self
+routine I128.hash(%self: Self) -> I64
     block entry():
-        %h: Self = xxh64_hash_i64(%self, 0)
+        %lo: I64 = trunc<Self, I64>(%self)
+        %hi: I64 = trunc<Self, I64>(%self.lshr(64))
+        %h_lo: I64 = xxh64_hash_i64(%lo, 0)
+        %h_hi: I64 = xxh64_hash_i64(%hi, 0)
+        %h: I64 = xxh64_combine2(%h_lo, %h_hi, 0)
         return(%h)
 
 ; -- narrowing conversions -----------------------------------------------------
 
-routine I64.to_i8(%self: Self) -> I8
+routine I128.to_i8(%self: Self) -> I8
     block entry():
         %result: I8 = %self.trunc<I8>()
         return(%result)
 
-routine I64.to_i16(%self: Self) -> I16
+routine I128.to_i16(%self: Self) -> I16
     block entry():
         %result: I16 = %self.trunc<I16>()
         return(%result)
 
-routine I64.to_i32(%self: Self) -> I32
+routine I128.to_i32(%self: Self) -> I32
     block entry():
         %result: I32 = %self.trunc<I32>()
         return(%result)
 
 ; -- float conversions ---------------------------------------------------------
 
-routine I64.to_f32(%self: Self) -> F32
+routine I128.to_f32(%self: Self) -> F32
     block entry():
         %result: F32 = sitofp<Self, F32>(%self)
         return(%result)
 
-routine I64.to_f64(%self: Self) -> F64
+routine I128.to_f64(%self: Self) -> F64
     block entry():
         %result: F64 = sitofp<Self, F64>(%self)
         return(%result)
@@ -250,36 +255,36 @@ routine I64.to_f64(%self: Self) -> F64
 
 ; -- constants ------------------------------------------------------------------
 
-const I64.BITS: I64 = 64
-const I64.UMAX: I64 = -1   ; all bits set: the largest value read as unsigned
+const I128.BITS: I128 = 128
+const I128.UMAX: I128 = -1   ; all bits set: the largest value read as unsigned
 
 ; -- bits ----------------------------------------------------------------------
 
-routine I64.count_zeros(%self: Self) -> Self
+routine I128.count_zeros(%self: Self) -> Self
     block entry():
         %inverted: Self = %self.bitnot()
         %r: Self = popcount<Self>(%inverted)
         return(%r)
 
-routine I64.leading_ones(%self: Self) -> Self
+routine I128.leading_ones(%self: Self) -> Self
     block entry():
         %inverted: Self = %self.bitnot()
         %r: Self = clz<Self>(%inverted, false)
         return(%r)
 
-routine I64.trailing_ones(%self: Self) -> Self
+routine I128.trailing_ones(%self: Self) -> Self
     block entry():
         %inverted: Self = %self.bitnot()
         %r: Self = ctz<Self>(%inverted, false)
         return(%r)
 
-routine I64.reverse_bits(%self: Self) -> Self
+routine I128.reverse_bits(%self: Self) -> Self
     block entry():
         %r: Self = bitreverse<Self>(%self)
         return(%r)
 
 ; True when exactly one bit is set (so I64.MIN counts: it is 2^63 read as unsigned).
-routine I64.is_power_of_two(%self: Self) -> Bool
+routine I128.is_power_of_two(%self: Self) -> Bool
     block entry():
         %ones: Self = popcount<Self>(%self)
         %r: Bool = %ones.eq(1)
@@ -287,34 +292,34 @@ routine I64.is_power_of_two(%self: Self) -> Bool
 
 ; -- byte order ----------------------------------------------------------------
 
-routine I64.to_be(%self: Self) -> Self
+routine I128.to_be(%self: Self) -> Self
     block entry():
         %r: Self = %self.swap_bytes()
         return(%r)
 
-routine I64.from_be(%self: Self) -> Self
+routine I128.from_be(%self: Self) -> Self
     block entry():
         %r: Self = %self.swap_bytes()
         return(%r)
 
-routine I64.to_le(%self: Self) -> Self
+routine I128.to_le(%self: Self) -> Self
     block entry():
         return(%self)
 
-routine I64.from_le(%self: Self) -> Self
+routine I128.from_le(%self: Self) -> Self
     block entry():
         return(%self)
 
 ; -- sign ----------------------------------------------------------------------
 
 ; Wrapping negation: MIN.neg() is MIN.
-routine I64.neg(%self: Self) -> Self
+routine I128.neg(%self: Self) -> Self
     block entry():
         %r: Self = 0.sub(%self)
         return(%r)
 
 ; -1, 0, or 1.
-routine I64.signum(%self: Self) -> Self
+routine I128.signum(%self: Self) -> Self
     block entry():
         %negative: Bool = %self.slt(0)
         %positive: Bool = %self.sgt(0)
@@ -322,30 +327,30 @@ routine I64.signum(%self: Self) -> Self
         %r: Self = %negative ? -1 : %non_negative
         return(%r)
 
-routine I64.is_negative(%self: Self) -> Bool
+routine I128.is_negative(%self: Self) -> Bool
     block entry():
         %r: Bool = %self.slt(0)
         return(%r)
 
-routine I64.is_positive(%self: Self) -> Bool
+routine I128.is_positive(%self: Self) -> Bool
     block entry():
         %r: Bool = %self.sgt(0)
         return(%r)
 
 ; -- ordering ------------------------------------------------------------------
 
-routine I64.umin(%self: Self, %other: Self) -> Self
+routine I128.umin(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = umin<Self>(%self, %other)
         return(%r)
 
-routine I64.umax(%self: Self, %other: Self) -> Self
+routine I128.umax(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = umax<Self>(%self, %other)
         return(%r)
 
 ; Signed. Traps if %lo > %hi.
-routine I64.clamp(%self: Self, %lo: Self, %hi: Self) -> Self
+routine I128.clamp(%self: Self, %lo: Self, %hi: Self) -> Self
     block entry():
         %valid: Bool = %lo.sle(%hi)
         branch %valid ? clamp() : trap()
@@ -356,7 +361,7 @@ routine I64.clamp(%self: Self, %lo: Self, %hi: Self) -> Self
         return(%r)
 
 ; Unsigned. Traps if %lo > %hi.
-routine I64.uclamp(%self: Self, %lo: Self, %hi: Self) -> Self
+routine I128.uclamp(%self: Self, %lo: Self, %hi: Self) -> Self
     block entry():
         %valid: Bool = %lo.ule(%hi)
         branch %valid ? clamp() : trap()
@@ -366,7 +371,7 @@ routine I64.uclamp(%self: Self, %lo: Self, %hi: Self) -> Self
         %r: Self = umin<Self>(%at_least_lo, %hi)
         return(%r)
 
-routine I64.ucompare(%self: Self, %other: Self) -> I32
+routine I128.ucompare(%self: Self, %other: Self) -> I32
     block entry():
         %lt: Bool = %self.ult(%other)
         branch %lt ? return(-1) : maybe_gt()
@@ -377,7 +382,7 @@ routine I64.ucompare(%self: Self, %other: Self) -> I32
 
 ; -- checked -------------------------------------------------------------------
 
-routine I64.checked_sadd(%self: Self, %other: Self) -> Option<Self>
+routine I128.checked_sadd(%self: Self, %other: Self) -> Option<Self>
     block entry():
         %overflow: Bool = sadd_overflows<Self>(%self, %other)
         %fits: Bool = %overflow.bitnot()
@@ -385,7 +390,7 @@ routine I64.checked_sadd(%self: Self, %other: Self) -> Option<Self>
         %r: Option<Self> = %fits.then_some(%result)
         return(%r)
 
-routine I64.checked_uadd(%self: Self, %other: Self) -> Option<Self>
+routine I128.checked_uadd(%self: Self, %other: Self) -> Option<Self>
     block entry():
         %overflow: Bool = uadd_overflows<Self>(%self, %other)
         %fits: Bool = %overflow.bitnot()
@@ -393,7 +398,7 @@ routine I64.checked_uadd(%self: Self, %other: Self) -> Option<Self>
         %r: Option<Self> = %fits.then_some(%result)
         return(%r)
 
-routine I64.checked_ssub(%self: Self, %other: Self) -> Option<Self>
+routine I128.checked_ssub(%self: Self, %other: Self) -> Option<Self>
     block entry():
         %overflow: Bool = ssub_overflows<Self>(%self, %other)
         %fits: Bool = %overflow.bitnot()
@@ -401,7 +406,7 @@ routine I64.checked_ssub(%self: Self, %other: Self) -> Option<Self>
         %r: Option<Self> = %fits.then_some(%result)
         return(%r)
 
-routine I64.checked_usub(%self: Self, %other: Self) -> Option<Self>
+routine I128.checked_usub(%self: Self, %other: Self) -> Option<Self>
     block entry():
         %overflow: Bool = usub_overflows<Self>(%self, %other)
         %fits: Bool = %overflow.bitnot()
@@ -409,7 +414,7 @@ routine I64.checked_usub(%self: Self, %other: Self) -> Option<Self>
         %r: Option<Self> = %fits.then_some(%result)
         return(%r)
 
-routine I64.checked_smul(%self: Self, %other: Self) -> Option<Self>
+routine I128.checked_smul(%self: Self, %other: Self) -> Option<Self>
     block entry():
         %overflow: Bool = smul_overflows<Self>(%self, %other)
         %fits: Bool = %overflow.bitnot()
@@ -417,7 +422,7 @@ routine I64.checked_smul(%self: Self, %other: Self) -> Option<Self>
         %r: Option<Self> = %fits.then_some(%result)
         return(%r)
 
-routine I64.checked_umul(%self: Self, %other: Self) -> Option<Self>
+routine I128.checked_umul(%self: Self, %other: Self) -> Option<Self>
     block entry():
         %overflow: Bool = umul_overflows<Self>(%self, %other)
         %fits: Bool = %overflow.bitnot()
@@ -426,7 +431,7 @@ routine I64.checked_umul(%self: Self, %other: Self) -> Option<Self>
         return(%r)
 
 ; None when %other is 0, or for MIN.sdiv(-1), which overflows.
-routine I64.checked_sdiv(%self: Self, %other: Self) -> Option<Self>
+routine I128.checked_sdiv(%self: Self, %other: Self) -> Option<Self>
     block entry():
         %by_zero: Bool = %other.eq(0)
         %overflows: Bool = %self.eq(Self.MIN).bitand(%other.eq(-1))
@@ -443,7 +448,7 @@ routine I64.checked_sdiv(%self: Self, %other: Self) -> Option<Self>
         return(%r)
 
 ; None when %other is 0, or for MIN.srem(-1), which overflows.
-routine I64.checked_srem(%self: Self, %other: Self) -> Option<Self>
+routine I128.checked_srem(%self: Self, %other: Self) -> Option<Self>
     block entry():
         %by_zero: Bool = %other.eq(0)
         %overflows: Bool = %self.eq(Self.MIN).bitand(%other.eq(-1))
@@ -460,7 +465,7 @@ routine I64.checked_srem(%self: Self, %other: Self) -> Option<Self>
         return(%r)
 
 ; None when %other is 0.
-routine I64.checked_udiv(%self: Self, %other: Self) -> Option<Self>
+routine I128.checked_udiv(%self: Self, %other: Self) -> Option<Self>
     block entry():
         %by_zero: Bool = %other.eq(0)
         branch %by_zero ? none() : divide()
@@ -475,7 +480,7 @@ routine I64.checked_udiv(%self: Self, %other: Self) -> Option<Self>
         return(%r)
 
 ; None when %other is 0.
-routine I64.checked_urem(%self: Self, %other: Self) -> Option<Self>
+routine I128.checked_urem(%self: Self, %other: Self) -> Option<Self>
     block entry():
         %by_zero: Bool = %other.eq(0)
         branch %by_zero ? none() : divide()
@@ -490,7 +495,7 @@ routine I64.checked_urem(%self: Self, %other: Self) -> Option<Self>
         return(%r)
 
 ; None for MIN, whose negation overflows.
-routine I64.checked_sneg(%self: Self) -> Option<Self>
+routine I128.checked_sneg(%self: Self) -> Option<Self>
     block entry():
         %fits: Bool = %self.ne(Self.MIN)
         %result: Self = %self.neg()
@@ -498,14 +503,14 @@ routine I64.checked_sneg(%self: Self) -> Option<Self>
         return(%r)
 
 ; Unsigned negation only fits for 0.
-routine I64.checked_uneg(%self: Self) -> Option<Self>
+routine I128.checked_uneg(%self: Self) -> Option<Self>
     block entry():
         %fits: Bool = %self.eq(0)
         %r: Option<Self> = %fits.then_some(%self)
         return(%r)
 
 ; None for MIN, whose absolute value overflows.
-routine I64.checked_sabs(%self: Self) -> Option<Self>
+routine I128.checked_sabs(%self: Self) -> Option<Self>
     block entry():
         %fits: Bool = %self.ne(Self.MIN)
         %result: Self = %self.abs()
@@ -513,7 +518,7 @@ routine I64.checked_sabs(%self: Self) -> Option<Self>
         return(%r)
 
 ; None when %n is not below the bit width (read as unsigned).
-routine I64.checked_shl(%self: Self, %n: Self) -> Option<Self>
+routine I128.checked_shl(%self: Self, %n: Self) -> Option<Self>
     block entry():
         %in_range: Bool = %n.ult(Self.BITS)
         branch %in_range ? shift() : none()
@@ -528,7 +533,7 @@ routine I64.checked_shl(%self: Self, %n: Self) -> Option<Self>
         return(%r)
 
 ; None when %n is not below the bit width (read as unsigned).
-routine I64.checked_lshr(%self: Self, %n: Self) -> Option<Self>
+routine I128.checked_lshr(%self: Self, %n: Self) -> Option<Self>
     block entry():
         %in_range: Bool = %n.ult(Self.BITS)
         branch %in_range ? shift() : none()
@@ -543,7 +548,7 @@ routine I64.checked_lshr(%self: Self, %n: Self) -> Option<Self>
         return(%r)
 
 ; None when %n is not below the bit width (read as unsigned).
-routine I64.checked_ashr(%self: Self, %n: Self) -> Option<Self>
+routine I128.checked_ashr(%self: Self, %n: Self) -> Option<Self>
     block entry():
         %in_range: Bool = %n.ult(Self.BITS)
         branch %in_range ? shift() : none()
@@ -560,7 +565,7 @@ routine I64.checked_ashr(%self: Self, %n: Self) -> Option<Self>
 ; -- powers --------------------------------------------------------------------
 
 ; Wrapping power by squaring. %exp is read as unsigned.
-routine I64.pow(%self: Self, %exp: I32) -> Self
+routine I128.pow(%self: Self, %exp: I32) -> Self
     block entry():
         jump loop(%self, %exp, 1)
 
@@ -575,7 +580,7 @@ routine I64.pow(%self: Self, %exp: I32) -> Self
         jump loop(%base.mul(%base), %exp.lshr(1), %next_acc)
 
 ; None if any step overflows (signed). %exp is read as unsigned.
-routine I64.checked_spow(%self: Self, %exp: I32) -> Option<Self>
+routine I128.checked_spow(%self: Self, %exp: I32) -> Option<Self>
     block entry():
         jump loop(%self, %exp, 1, false)
 
@@ -602,7 +607,7 @@ routine I64.checked_spow(%self: Self, %exp: I32) -> Option<Self>
         return(%r)
 
 ; None if any step overflows (unsigned). %exp is read as unsigned.
-routine I64.checked_upow(%self: Self, %exp: I32) -> Option<Self>
+routine I128.checked_upow(%self: Self, %exp: I32) -> Option<Self>
     block entry():
         jump loop(%self, %exp, 1, false)
 
@@ -629,7 +634,7 @@ routine I64.checked_upow(%self: Self, %exp: I32) -> Option<Self>
         return(%r)
 
 ; MAX or MIN (by the sign the exact result would have) on overflow.
-routine I64.saturating_spow(%self: Self, %exp: I32) -> Self
+routine I128.saturating_spow(%self: Self, %exp: I32) -> Self
     block entry():
         %odd_exp: Bool = %exp.bitand(1).ne(0)
         %negative_result: Bool = %self.slt(0).bitand(%odd_exp)
@@ -638,7 +643,7 @@ routine I64.saturating_spow(%self: Self, %exp: I32) -> Self
         %r: Self = %checked.unwrap_or(%limit)
         return(%r)
 
-routine I64.saturating_upow(%self: Self, %exp: I32) -> Self
+routine I128.saturating_upow(%self: Self, %exp: I32) -> Self
     block entry():
         %checked: Option<Self> = %self.checked_upow(%exp)
         %r: Self = %checked.unwrap_or(Self.UMAX)
@@ -646,28 +651,28 @@ routine I64.saturating_upow(%self: Self, %exp: I32) -> Self
 
 ; -- saturating ----------------------------------------------------------------
 
-routine I64.saturating_sadd(%self: Self, %other: Self) -> Self
+routine I128.saturating_sadd(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = sadd_sat<Self>(%self, %other)
         return(%r)
 
-routine I64.saturating_uadd(%self: Self, %other: Self) -> Self
+routine I128.saturating_uadd(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = uadd_sat<Self>(%self, %other)
         return(%r)
 
-routine I64.saturating_ssub(%self: Self, %other: Self) -> Self
+routine I128.saturating_ssub(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = ssub_sat<Self>(%self, %other)
         return(%r)
 
-routine I64.saturating_usub(%self: Self, %other: Self) -> Self
+routine I128.saturating_usub(%self: Self, %other: Self) -> Self
     block entry():
         %r: Self = usub_sat<Self>(%self, %other)
         return(%r)
 
 ; MAX or MIN (by the sign of the exact product) on overflow.
-routine I64.saturating_smul(%self: Self, %other: Self) -> Self
+routine I128.saturating_smul(%self: Self, %other: Self) -> Self
     block entry():
         %overflow: Bool = smul_overflows<Self>(%self, %other)
         %negative_result: Bool = %self.bitxor(%other).slt(0)
@@ -676,7 +681,7 @@ routine I64.saturating_smul(%self: Self, %other: Self) -> Self
         %r: Self = %overflow ? %limit : %product
         return(%r)
 
-routine I64.saturating_umul(%self: Self, %other: Self) -> Self
+routine I128.saturating_umul(%self: Self, %other: Self) -> Self
     block entry():
         %overflow: Bool = umul_overflows<Self>(%self, %other)
         %product: Self = %self.mul(%other)
@@ -684,13 +689,13 @@ routine I64.saturating_umul(%self: Self, %other: Self) -> Self
         return(%r)
 
 ; MIN saturates to MAX.
-routine I64.saturating_sneg(%self: Self) -> Self
+routine I128.saturating_sneg(%self: Self) -> Self
     block entry():
         %r: Self = ssub_sat<Self>(0, %self)
         return(%r)
 
 ; MIN saturates to MAX.
-routine I64.saturating_sabs(%self: Self) -> Self
+routine I128.saturating_sabs(%self: Self) -> Self
     block entry():
         %is_min: Bool = %self.eq(Self.MIN)
         %abs: Self = %self.abs()
@@ -700,7 +705,7 @@ routine I64.saturating_sabs(%self: Self) -> Self
 ; -- wrapping ------------------------------------------------------------------
 
 ; MIN.wrapping_sdiv(-1) is MIN. Division by zero is still undefined.
-routine I64.wrapping_sdiv(%self: Self, %other: Self) -> Self
+routine I128.wrapping_sdiv(%self: Self, %other: Self) -> Self
     block entry():
         %overflows: Bool = %self.eq(Self.MIN).bitand(%other.eq(-1))
         branch %overflows ? return(Self.MIN) : divide()
@@ -710,7 +715,7 @@ routine I64.wrapping_sdiv(%self: Self, %other: Self) -> Self
         return(%r)
 
 ; MIN.wrapping_srem(-1) is 0. Division by zero is still undefined.
-routine I64.wrapping_srem(%self: Self, %other: Self) -> Self
+routine I128.wrapping_srem(%self: Self, %other: Self) -> Self
     block entry():
         %overflows: Bool = %self.eq(Self.MIN).bitand(%other.eq(-1))
         branch %overflows ? return(0) : divide()
@@ -720,21 +725,21 @@ routine I64.wrapping_srem(%self: Self, %other: Self) -> Self
         return(%r)
 
 ; Shifts by %n modulo the bit width.
-routine I64.wrapping_shl(%self: Self, %n: Self) -> Self
+routine I128.wrapping_shl(%self: Self, %n: Self) -> Self
     block entry():
         %amount: Self = %n.bitand(Self.BITS.sub(1))
         %r: Self = %self.shl(%amount)
         return(%r)
 
 ; Shifts by %n modulo the bit width.
-routine I64.wrapping_lshr(%self: Self, %n: Self) -> Self
+routine I128.wrapping_lshr(%self: Self, %n: Self) -> Self
     block entry():
         %amount: Self = %n.bitand(Self.BITS.sub(1))
         %r: Self = %self.lshr(%amount)
         return(%r)
 
 ; Shifts by %n modulo the bit width.
-routine I64.wrapping_ashr(%self: Self, %n: Self) -> Self
+routine I128.wrapping_ashr(%self: Self, %n: Self) -> Self
     block entry():
         %amount: Self = %n.bitand(Self.BITS.sub(1))
         %r: Self = %self.ashr(%amount)
@@ -742,42 +747,42 @@ routine I64.wrapping_ashr(%self: Self, %n: Self) -> Self
 
 ; -- overflowing ---------------------------------------------------------------
 
-routine I64.overflowing_sadd(%self: Self, %other: Self) -> Overflowing<Self>
+routine I128.overflowing_sadd(%self: Self, %other: Self) -> Overflowing<Self>
     block entry():
         %value: Self = %self.add(%other)
         %overflow: Bool = sadd_overflows<Self>(%self, %other)
         %r: Overflowing<Self> = Overflowing<Self>.new(%value, %overflow)
         return(%r)
 
-routine I64.overflowing_uadd(%self: Self, %other: Self) -> Overflowing<Self>
+routine I128.overflowing_uadd(%self: Self, %other: Self) -> Overflowing<Self>
     block entry():
         %value: Self = %self.add(%other)
         %overflow: Bool = uadd_overflows<Self>(%self, %other)
         %r: Overflowing<Self> = Overflowing<Self>.new(%value, %overflow)
         return(%r)
 
-routine I64.overflowing_ssub(%self: Self, %other: Self) -> Overflowing<Self>
+routine I128.overflowing_ssub(%self: Self, %other: Self) -> Overflowing<Self>
     block entry():
         %value: Self = %self.sub(%other)
         %overflow: Bool = ssub_overflows<Self>(%self, %other)
         %r: Overflowing<Self> = Overflowing<Self>.new(%value, %overflow)
         return(%r)
 
-routine I64.overflowing_usub(%self: Self, %other: Self) -> Overflowing<Self>
+routine I128.overflowing_usub(%self: Self, %other: Self) -> Overflowing<Self>
     block entry():
         %value: Self = %self.sub(%other)
         %overflow: Bool = usub_overflows<Self>(%self, %other)
         %r: Overflowing<Self> = Overflowing<Self>.new(%value, %overflow)
         return(%r)
 
-routine I64.overflowing_smul(%self: Self, %other: Self) -> Overflowing<Self>
+routine I128.overflowing_smul(%self: Self, %other: Self) -> Overflowing<Self>
     block entry():
         %value: Self = %self.mul(%other)
         %overflow: Bool = smul_overflows<Self>(%self, %other)
         %r: Overflowing<Self> = Overflowing<Self>.new(%value, %overflow)
         return(%r)
 
-routine I64.overflowing_umul(%self: Self, %other: Self) -> Overflowing<Self>
+routine I128.overflowing_umul(%self: Self, %other: Self) -> Overflowing<Self>
     block entry():
         %value: Self = %self.mul(%other)
         %overflow: Bool = umul_overflows<Self>(%self, %other)
@@ -788,7 +793,7 @@ routine I64.overflowing_umul(%self: Self, %other: Self) -> Overflowing<Self>
 
 ; Quotient of Euclidean division: the remainder is never negative.
 ; Division by zero and MIN.sdiv_euclid(-1) are undefined, as for sdiv.
-routine I64.sdiv_euclid(%self: Self, %other: Self) -> Self
+routine I128.sdiv_euclid(%self: Self, %other: Self) -> Self
     block entry():
         %q: Self = %self.sdiv(%other)
         %rem: Self = %self.srem(%other)
@@ -803,7 +808,7 @@ routine I64.sdiv_euclid(%self: Self, %other: Self) -> Self
         return(%r)
 
 ; Remainder of Euclidean division: always in 0 ..< |other|.
-routine I64.srem_euclid(%self: Self, %other: Self) -> Self
+routine I128.srem_euclid(%self: Self, %other: Self) -> Self
     block entry():
         %rem: Self = %self.srem(%other)
         %rem_negative: Bool = %rem.slt(0)
@@ -815,7 +820,7 @@ routine I64.srem_euclid(%self: Self, %other: Self) -> Self
         return(%r)
 
 ; Unsigned division rounding up. Division by zero is undefined.
-routine I64.udiv_ceil(%self: Self, %other: Self) -> Self
+routine I128.udiv_ceil(%self: Self, %other: Self) -> Self
     block entry():
         %q: Self = %self.udiv(%other)
         %rem: Self = %self.urem(%other)
@@ -825,7 +830,7 @@ routine I64.udiv_ceil(%self: Self, %other: Self) -> Self
         return(%r)
 
 ; The smallest multiple of %other that is >= %self (unsigned, wrapping).
-routine I64.unext_multiple_of(%self: Self, %other: Self) -> Self
+routine I128.unext_multiple_of(%self: Self, %other: Self) -> Self
     block entry():
         %rem: Self = %self.urem(%other)
         %exact: Bool = %rem.eq(0)
@@ -835,14 +840,14 @@ routine I64.unext_multiple_of(%self: Self, %other: Self) -> Self
         return(%r)
 
 ; |self - other| without overflow, as unsigned bits.
-routine I64.sabs_diff(%self: Self, %other: Self) -> Self
+routine I128.sabs_diff(%self: Self, %other: Self) -> Self
     block entry():
         %hi: Self = smax<Self>(%self, %other)
         %lo: Self = smin<Self>(%self, %other)
         %r: Self = %hi.sub(%lo)
         return(%r)
 
-routine I64.uabs_diff(%self: Self, %other: Self) -> Self
+routine I128.uabs_diff(%self: Self, %other: Self) -> Self
     block entry():
         %hi: Self = umax<Self>(%self, %other)
         %lo: Self = umin<Self>(%self, %other)
@@ -850,7 +855,7 @@ routine I64.uabs_diff(%self: Self, %other: Self) -> Self
         return(%r)
 
 ; floor((self + other) / 2) without overflow, unsigned.
-routine I64.umidpoint(%self: Self, %other: Self) -> Self
+routine I128.umidpoint(%self: Self, %other: Self) -> Self
     block entry():
         %common: Self = %self.bitand(%other)
         %half_diff: Self = %self.bitxor(%other).lshr(1)
@@ -858,7 +863,7 @@ routine I64.umidpoint(%self: Self, %other: Self) -> Self
         return(%r)
 
 ; (self + other) / 2 without overflow, signed, rounded toward zero.
-routine I64.smidpoint(%self: Self, %other: Self) -> Self
+routine I128.smidpoint(%self: Self, %other: Self) -> Self
     block entry():
         %common: Self = %self.bitand(%other)
         %half_diff: Self = %self.bitxor(%other).ashr(1)
@@ -872,7 +877,7 @@ routine I64.smidpoint(%self: Self, %other: Self) -> Self
 ; -- logarithms ----------------------------------------------------------------
 
 ; floor(log2(self)), unsigned. Traps on 0.
-routine I64.uilog2(%self: Self) -> Self
+routine I128.uilog2(%self: Self) -> Self
     block entry():
         %zero: Bool = %self.eq(0)
         branch %zero ? trap() : log()
@@ -883,7 +888,7 @@ routine I64.uilog2(%self: Self) -> Self
         return(%r)
 
 ; floor(log2(self)), signed. Traps on values <= 0.
-routine I64.silog2(%self: Self) -> Self
+routine I128.silog2(%self: Self) -> Self
     block entry():
         %positive: Bool = %self.sgt(0)
         branch %positive ? log() : trap()
@@ -893,7 +898,7 @@ routine I64.silog2(%self: Self) -> Self
         return(%r)
 
 ; floor(log10(self)), unsigned. Traps on 0.
-routine I64.uilog10(%self: Self) -> Self
+routine I128.uilog10(%self: Self) -> Self
     block entry():
         %zero: Bool = %self.eq(0)
         branch %zero ? trap() : loop(%self, 0)
@@ -906,7 +911,7 @@ routine I64.uilog10(%self: Self) -> Self
         jump loop(%rest.udiv(10), %digits.add(1))
 
 ; floor(log10(self)), signed. Traps on values <= 0.
-routine I64.silog10(%self: Self) -> Self
+routine I128.silog10(%self: Self) -> Self
     block entry():
         %positive: Bool = %self.sgt(0)
         branch %positive ? log() : trap()
@@ -916,7 +921,7 @@ routine I64.silog10(%self: Self) -> Self
         return(%r)
 
 ; floor(sqrt(self)), unsigned, computed one result bit at a time.
-routine I64.uisqrt(%self: Self) -> Self
+routine I128.uisqrt(%self: Self) -> Self
     block entry():
         %top_bit: Self = 1.shl(Self.BITS.sub(2))
         jump align(%top_bit)
@@ -942,7 +947,7 @@ routine I64.uisqrt(%self: Self) -> Self
         jump loop(%rest.sub(%trial), %half_root.add(%bit), %next_bit)
 
 ; floor(sqrt(self)), signed. Traps on negative values.
-routine I64.sisqrt(%self: Self) -> Self
+routine I128.sisqrt(%self: Self) -> Self
     block entry():
         %negative: Bool = %self.slt(0)
         branch %negative ? trap() : root()
@@ -953,7 +958,7 @@ routine I64.sisqrt(%self: Self) -> Self
 
 ; The smallest power of two >= self (unsigned); 0 and 1 give 1. Wraps to 0
 ; when the answer does not fit.
-routine I64.unext_power_of_two(%self: Self) -> Self
+routine I128.unext_power_of_two(%self: Self) -> Self
     block entry():
         %small: Bool = %self.ule(1)
         branch %small ? return(1) : round_up()
@@ -970,32 +975,27 @@ routine I64.unext_power_of_two(%self: Self) -> Self
 
 ; -- conversions --------------------------------------------------------------
 
-routine I64.to_i64(%self: Self) -> I64
+routine I128.to_i64(%self: Self) -> I64
+    block entry():
+        %r: I64 = trunc<Self, I64>(%self)
+        return(%r)
+
+routine I128.to_i128(%self: Self) -> I128
     block entry():
         return(%self)
 
-routine I64.to_i128(%self: Self) -> I128
-    block entry():
-        %r: I128 = sext<Self, I128>(%self)
-        return(%r)
-
-routine I64.to_u64(%self: Self) -> I64
+routine I128.to_u128(%self: Self) -> I128
     block entry():
         return(%self)
-
-routine I64.to_u128(%self: Self) -> I128
-    block entry():
-        %r: I128 = zext<Self, I128>(%self)
-        return(%r)
 
 ; Reads the integer as unsigned.
-routine I64.uto_f32(%self: Self) -> F32
+routine I128.uto_f32(%self: Self) -> F32
     block entry():
         %r: F32 = uitofp<Self, F32>(%self)
         return(%r)
 
 ; Reads the integer as unsigned.
-routine I64.uto_f64(%self: Self) -> F64
+routine I128.uto_f64(%self: Self) -> F64
     block entry():
         %r: F64 = uitofp<Self, F64>(%self)
         return(%r)
