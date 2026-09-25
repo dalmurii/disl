@@ -65,7 +65,7 @@ public sealed class FunctionGen
         for (int i = 0; i < _decl.Params.Count; i++)
         {
             var p = _decl.Params[i];
-            if (!_routineParams.TryAdd(p.Name, new Val($"%a.{p.Name[1..]}", _inst.Params[i])))
+            if (!_routineParams.TryAdd(p.Name, new Val($"%a.{IrName(p.Name)}", _inst.Params[i])))
                 throw Err(p.Pos, $"parameter '{p.Name}' is declared twice");
         }
 
@@ -89,7 +89,7 @@ public sealed class FunctionGen
 
         foreach (var b in blocks) EmitBlock(b);
 
-        var ps = string.Join(", ", _decl.Params.Select((p, i) => $"{_inst.Params[i].Llvm} %a.{p.Name[1..]}"));
+        var ps = string.Join(", ", _decl.Params.Select((p, i) => $"{_inst.Params[i].Llvm} %a.{IrName(p.Name)}"));
         _out.AppendLine($"define {_inst.CcPrefix}{_inst.Ret.Llvm} @{Compiler.Quote(_inst.Symbol)}({ps}){_inst.FnAttrs} {{");
         _out.AppendLine("start:");
         foreach (var a in _allocas) _out.AppendLine($"  {a}");
@@ -123,7 +123,7 @@ public sealed class FunctionGen
         }
     }
 
-    private static string ParamOp(string block, string param) => $"%p.{block}.{param[1..]}";
+    private static string ParamOp(string block, string param) => $"%p.{block}.{IrName(param)}";
 
     private string Tmp() => $"%t{_tmp++}";
 
@@ -179,7 +179,10 @@ public sealed class FunctionGen
         _values[name] = v;
     }
 
-    private string LocalOp(string name) => $"%v.{_blockName}.{name[1..]}";
+    private string LocalOp(string name) => $"%v.{_blockName}.{IrName(name)}";
+
+    /// A Disl name in IR: `%x` becomes `x` and `#x` becomes `$x`, so a value and a pointer may share a name.
+    private static string IrName(string name) => name[0] == '#' ? "$" + name[1..] : name[1..];
 
     private void EmitStmt(Stmt s)
     {
