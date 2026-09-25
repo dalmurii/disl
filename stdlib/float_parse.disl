@@ -11,10 +11,11 @@
 ;
 ; The method is exact, not fast: the value becomes a fraction N / D of big
 ; naturals, and a bit-by-bit division gives the significand plus a remainder
-; for rounding. Only the first 800 significant digits are kept; later ones
-; only record whether any was nonzero, which is enough to break a tie (the
-; longest decimal that is exactly halfway between two F64 values has 767
-; significant digits). With that cap every number fits in BigNat's 72 limbs.
+; for rounding. Only the first significant digits are kept; later ones only
+; record whether any was nonzero, which is enough to break a tie as long as
+; every exactly-halfway decimal fits in the kept digits: 767 digits for F64,
+; 11,563 for F128. So F64 and the smaller formats keep 800 digits in a
+; BigNat<72>, and F128 keeps 11,600 in a BigNat<864> (stdlib/bignat.disl).
 
 enum ParseFloatError
     Empty
@@ -29,289 +30,11 @@ enum DecimalKind
 struct DecimalParts
     kind:     DecimalKind
     negative: Bool
-    kept:     I64       ; significant digits kept (at most MAX_KEPT_DIGITS)
+    kept:     I64       ; significant digits kept
     exponent: I64
     sticky:   Bool      ; a nonzero digit was dropped after the kept ones
 
-const MAX_KEPT_DIGITS: I64 = 800
-const BIG_LIMBS: I64 = 72
 
-const POW10_I64: Array<I64, 19> = [
-    1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
-    10000000000, 100000000000, 1000000000000, 10000000000000, 100000000000000,
-    1000000000000000, 10000000000000000, 100000000000000000, 1000000000000000000
-]
-
-; -- BigNat --------------------------------------------------------------------
-
-; A natural number in 64-bit limbs, least significant first, read as unsigned.
-; `length` limbs are in use and the top one is nonzero (zero has length 0).
-; Fixed capacity: growing past BIG_LIMBS panics with Overflow.
-struct BigNat
-    limbs:  Array<I64, BIG_LIMBS>
-    length: I64
-
-routine BigNat.set(#self: Ptr<Self>, %value: I64) -> Void
-    block entry():
-        #self.limbs[0] = %value
-        #self.length = %value.ne(0).to_i64()
-        return()
-
-routine BigNat.copy_from(#self: Ptr<Self>, #other: Ptr<Self>) -> Void
-    block entry():
-        %value: Self := #other
-        #self = %value
-        return()
-
-routine BigNat.is_zero(#self: Ptr<Self>) -> Bool
-    block entry():
-        %length: I64  := #self.length
-        %zero:   Bool = %length.eq(0)
-        return(%zero)
-
-routine BigNat.bit_length(#self: Ptr<Self>) -> I64
-    block entry():
-        %length: I64  := #self.length
-        %zero:   Bool = %length.eq(0)
-        branch %zero ? return(0) : count(%length)
-
-    block count(%length: I64):
-        %top_at: I64 = %length.sub(1)
-        %top:    I64 := #self.limbs[%top_at]
-        %bits:   I64 = %top_at.mul(64).add(64).sub(%top.leading_zeros())
-        return(%bits)
-
-; Appends %limb as the new top limb.
-routine BigNat.push_limb(#self: Ptr<Self>, %limb: I64) -> Void
-    block entry():
-        %length: I64  := #self.length
-        %room:   Bool = %length.slt(BIG_LIMBS)
-        branch %room ? store(%length) : panic(TrapCode.Overflow)
-
-    block store(%length: I64):
-        #self.limbs[%length] = %limb
-        #self.length = %length.add(1)
-        return()
-
-; Drops zero limbs from the top.
-routine BigNat.trim(#self: Ptr<Self>) -> Void
-    block entry():
-        %length: I64 := #self.length
-        jump check(%length)
-
-    block check(%length: I64):
-        %empty: Bool = %length.eq(0)
-        branch %empty ? store(%length) : look(%length)
-
-    block look(%length: I64):
-        %at:     I64  = %length.sub(1)
-        %top:    I64  := #self.limbs[%at]
-        %zero:   Bool = %top.eq(0)
-        branch %zero ? check(%at) : store(%length)
-
-    block store(%length: I64):
-        #self.length = %length
-        return()
-
-; self = self × m + add, with m and add read as unsigned
-routine BigNat.mul_add(#self: Ptr<Self>, %m: I64, %add: I64) -> Void
-    block entry():
-        %length: I64 := #self.length
-        jump loop(0, %add.to_u128(), %length)
-
-    block loop(%i: I64, %carry: I128, %length: I64):
-        %done: Bool = %i.sge(%length)
-        branch %done ? spill(%carry) : step(%i, %carry, %length)
-
-    block step(%i: I64, %carry: I128, %length: I64):
-        %limb:    I64  := #self.limbs[%i]
-        %product: I128 = %limb.to_u128().mul(%m.to_u128()).add(%carry)
-        #self.limbs[%i] = %product.to_i64()
-        jump loop(%i.add(1), %product.lshr(64), %length)
-
-    block spill(%carry: I128):
-        %high: I64  = %carry.to_i64()
-        %none: Bool = %high.eq(0)
-        branch %none ? return() : grow(%high)
-
-    block grow(%high: I64):
-        #self.push_limb(%high)
-        return()
-
-; self = self × 10^k
-routine BigNat.mul_pow10(#self: Ptr<Self>, %k: I64) -> Void
-    block entry():
-        jump loop(%k)
-
-    block loop(%left: I64):
-        %big_step: Bool = %left.sge(19)
-        branch %big_step ? chunk(%left) : last(%left)
-
-    block chunk(%left: I64):
-        #self.mul_add(-8446744073709551616, 0)      ; 10^19, as an unsigned bit pattern
-        jump loop(%left.sub(19))
-
-    block last(%left: I64):
-        %factor: I64 := POW10_I64[%left]
-        #self.mul_add(%factor, 0)
-        return()
-
-; self = self × 2^bits
-routine BigNat.shl(#self: Ptr<Self>, %bits: I64) -> Void
-    block entry():
-        %limb_shift: I64  = %bits.sdiv(64)
-        %bit_shift:  I64  = %bits.srem(64)
-        %length:     I64  := #self.length
-        %whole:      Bool = %bit_shift.eq(0)
-        branch %whole ? move(%limb_shift) : shift_bits(0, 0, %length, %limb_shift, %bit_shift)
-
-    block shift_bits(%i: I64, %carry: I64, %length: I64, %limb_shift: I64, %bit_shift: I64):
-        %done: Bool = %i.sge(%length)
-        branch %done ? spill(%carry, %limb_shift) : shift_one(%i, %carry, %length, %limb_shift, %bit_shift)
-
-    block shift_one(%i: I64, %carry: I64, %length: I64, %limb_shift: I64, %bit_shift: I64):
-        %limb: I64 := #self.limbs[%i]
-        #self.limbs[%i] = %limb.shl(%bit_shift).bitor(%carry)
-        %out: I64 = %limb.lshr(64.sub(%bit_shift))
-        jump shift_bits(%i.add(1), %out, %length, %limb_shift, %bit_shift)
-
-    block spill(%carry: I64, %limb_shift: I64):
-        %none: Bool = %carry.eq(0)
-        branch %none ? move(%limb_shift) : grow(%carry, %limb_shift)
-
-    block grow(%carry: I64, %limb_shift: I64):
-        #self.push_limb(%carry)
-        jump move(%limb_shift)
-
-    ; Whole limbs move up by %limb_shift, top first, and zeros fill the bottom.
-    block move(%limb_shift: I64):
-        %length:     I64  := #self.length
-        %nothing:    Bool = %limb_shift.eq(0).bitor(%length.eq(0))
-        %new_length: I64  = %length.add(%limb_shift)
-        %room:       Bool = %new_length.sle(BIG_LIMBS)
-        select:
-            %nothing -> return()
-            %room -> move_loop(%length.sub(1), %limb_shift, %new_length)
-            _ -> panic(TrapCode.Overflow)
-
-    block move_loop(%i: I64, %limb_shift: I64, %new_length: I64):
-        %done: Bool = %i.slt(0)
-        branch %done ? zero_fill(0, %limb_shift, %new_length) : move_one(%i, %limb_shift, %new_length)
-
-    block move_one(%i: I64, %limb_shift: I64, %new_length: I64):
-        %limb: I64 := #self.limbs[%i]
-        %to:   I64 = %i.add(%limb_shift)
-        #self.limbs[%to] = %limb
-        jump move_loop(%i.sub(1), %limb_shift, %new_length)
-
-    block zero_fill(%i: I64, %limb_shift: I64, %new_length: I64):
-        %done: Bool = %i.sge(%limb_shift)
-        branch %done ? finish(%new_length) : zero_one(%i, %limb_shift, %new_length)
-
-    block zero_one(%i: I64, %limb_shift: I64, %new_length: I64):
-        #self.limbs[%i] = 0
-        jump zero_fill(%i.add(1), %limb_shift, %new_length)
-
-    block finish(%new_length: I64):
-        #self.length = %new_length
-        return()
-
-; self = self / 2, rounding down
-routine BigNat.shr1(#self: Ptr<Self>) -> Void
-    block entry():
-        %length: I64 := #self.length
-        jump loop(%length.sub(1), 0)
-
-    block loop(%i: I64, %carry: I64):
-        %done: Bool = %i.slt(0)
-        branch %done ? finish() : step(%i, %carry)
-
-    block step(%i: I64, %carry: I64):
-        %limb: I64 := #self.limbs[%i]
-        #self.limbs[%i] = %limb.lshr(1).bitor(%carry.shl(63))
-        jump loop(%i.sub(1), %limb.bitand(1))
-
-    block finish():
-        #self.trim()
-        return()
-
-; -1, 0, or 1 as self is below, equal to, or above other
-routine BigNat.compare(#self: Ptr<Self>, #other: Ptr<Self>) -> I32
-    block entry():
-        %a_length: I64 := #self.length
-        %b_length: I64 := #other.length
-        %shorter:  Bool = %a_length.slt(%b_length)
-        %longer:   Bool = %a_length.sgt(%b_length)
-        select:
-            %shorter -> return(-1)
-            %longer -> return(1)
-            _ -> loop(%a_length.sub(1))
-
-    block loop(%i: I64):
-        %done: Bool = %i.slt(0)
-        branch %done ? return(0) : step(%i)
-
-    block step(%i: I64):
-        %a: I64 := #self.limbs[%i]
-        %b: I64 := #other.limbs[%i]
-        %below: Bool = %a.ult(%b)
-        %above: Bool = %a.ugt(%b)
-        select:
-            %below -> return(-1)
-            %above -> return(1)
-            _ -> loop(%i.sub(1))
-
-; self = self - other, which must not be larger
-routine BigNat.sub(#self: Ptr<Self>, #other: Ptr<Self>) -> Void
-    block entry():
-        %a_length: I64 := #self.length
-        %b_length: I64 := #other.length
-        jump loop(0, 0, %a_length, %b_length)
-
-    block loop(%i: I64, %borrow: I64, %a_length: I64, %b_length: I64):
-        %done: Bool = %i.sge(%a_length)
-        branch %done ? finish() : step(%i, %borrow, %a_length, %b_length)
-
-    block step(%i: I64, %borrow: I64, %a_length: I64, %b_length: I64):
-        %a:        I64  := #self.limbs[%i]
-        %b_limb:   I64  := #other.limbs[%i]
-        %in_b:     Bool = %i.slt(%b_length)
-        %b:        I64  = %in_b ? %b_limb : 0
-        #self.limbs[%i] = %a.sub(%b).sub(%borrow)
-        ; a - b - borrow goes negative when a < b, or a == b with a borrow in
-        %under:    Bool = %a.ult(%b)
-        %even_out: Bool = %a.eq(%b).bitand(%borrow.eq(1))
-        %next:     I64  = %under.bitor(%even_out).to_i64()
-        jump loop(%i.add(1), %next, %a_length, %b_length)
-
-    block finish():
-        #self.trim()
-        return()
-
-; For a quotient below 2^%bits: returns floor(rem / divisor) and leaves the
-; remainder in #rem. #scratch holds the shifted divisor.
-routine BigNat.div_small(#rem: Ptr<Self>, #divisor: Ptr<Self>, #scratch: Ptr<Self>, %bits: I64) -> I64
-    block entry():
-        #scratch.copy_from(#divisor)
-        %top: I64 = %bits.sub(1)
-        #scratch.shl(%top)
-        jump loop(%top, 0)
-
-    block loop(%i: I64, %q: I64):
-        %done: Bool = %i.slt(0)
-        branch %done ? return(%q) : try_bit(%i, %q)
-
-    block try_bit(%i: I64, %q: I64):
-        %fits: Bool = #rem.compare(#scratch).sge(0)
-        branch %fits ? take(%i, %q) : next(%i, %q)
-
-    block take(%i: I64, %q: I64):
-        #rem.sub(#scratch)
-        jump next(%i, %q.bitor(1.shl(%i)))
-
-    block next(%i: I64, %q: I64):
-        #scratch.shr1()
-        jump loop(%i.sub(1), %q)
 
 ; -- text ----------------------------------------------------------------------
 
@@ -340,7 +63,8 @@ routine matches_word(#text: Ptr<I8>, %length: I64, %word: String) -> Bool
         branch %same ? loop(%i.add(1), #letters) : return(false)
 
 ; Reads %text into DecimalParts, accumulating the kept digits in #digits.
-routine parse_decimal(%text: String, #digits: Ptr<BigNat>) -> Result<DecimalParts, ParseFloatError>
+routine parse_decimal<N>(%text: String, #digits: Ptr<BigNat<N>>, %max_kept: I64) -> Result<DecimalParts, ParseFloatError>
+require N: I64
     block entry():
         #digits.set(0)
         %length: I64  = %text.length
@@ -389,7 +113,7 @@ routine parse_decimal(%text: String, #digits: Ptr<BigNat>) -> Result<DecimalPart
 
     block int_digit(%i: I64, %negative: Bool, %kept: I64, %exponent: I64, %sticky: Bool, %d: I64):
         %leading: Bool = %kept.eq(0).bitand(%d.eq(0))
-        %full:    Bool = %kept.sge(MAX_KEPT_DIGITS)
+        %full:    Bool = %kept.sge(%max_kept)
         %next:    I64  = %i.add(1)
         select:
             %leading -> int_loop(%next, %negative, %kept, %exponent, %sticky, true)
@@ -415,7 +139,7 @@ routine parse_decimal(%text: String, #digits: Ptr<BigNat>) -> Result<DecimalPart
 
     block frac_digit(%i: I64, %negative: Bool, %kept: I64, %exponent: I64, %sticky: Bool, %d: I64):
         %leading: Bool = %kept.eq(0).bitand(%d.eq(0))
-        %full:    Bool = %kept.sge(MAX_KEPT_DIGITS)
+        %full:    Bool = %kept.sge(%max_kept)
         %next:    I64  = %i.add(1)
         select:
             %leading -> frac_loop(%next, %negative, %kept, %exponent.sub(1), %sticky, true)
@@ -483,27 +207,29 @@ routine parse_decimal(%text: String, #digits: Ptr<BigNat>) -> Result<DecimalPart
 ; The IEEE bits, without the sign, of the float nearest to the parsed value,
 ; for a format with %mantissa_bits stored bits, exponent bias %bias, and
 ; all-ones exponent %exponent_max.
-routine decimal_to_bits(
-    #digits: Ptr<BigNat>, %parts: DecimalParts, %mantissa_bits: I64, %bias: I64, %exponent_max: I64
-) -> I64
+routine decimal_to_bits<N>(
+    #digits: Ptr<BigNat<N>>, %parts: DecimalParts, %mantissa_bits: I64, %bias: I64, %exponent_max: I64,
+    %huge_from: I64, %tiny_below: I64
+) -> I128
+require N: I64
     block entry():
-        %infinity: I64 = %exponent_max.shl(%mantissa_bits)
-        %quiet:    I64 = 1.shl(%mantissa_bits.sub(1))
+        %infinity: I128 = %exponent_max.to_i128().shl(%mantissa_bits.to_i128())
+        %quiet:    I128 = 1.shl(%mantissa_bits.sub(1).to_i128())
         %kind: DecimalKind = %parts.kind
         switch %kind:
             DecimalKind.Infinity -> return(%infinity)
             DecimalKind.NaN -> return(%infinity.bitor(%quiet))
             DecimalKind.Finite -> finite(%infinity)
 
-    ; Below 10^-324 everything rounds to zero; from 10^310 up, to infinity. In
-    ; between, the numbers stay inside BigNat's capacity.
-    block finite(%infinity: I64):
+    ; Below 10^tiny_below everything rounds to zero; from 10^huge_from up, to
+    ; infinity. In between, the numbers stay inside BigNat's capacity.
+    block finite(%infinity: I128):
         %zero:      Bool = #digits.is_zero()
         %kept:      I64  = %parts.kept
         %exponent:  I64  = %parts.exponent
         %magnitude: I64  = %kept.add(%exponent)
-        %huge:      Bool = %magnitude.sgt(310)
-        %tiny:      Bool = %magnitude.slt(-324)
+        %huge:      Bool = %magnitude.sgt(%huge_from)
+        %tiny:      Bool = %magnitude.slt(%tiny_below)
         select:
             %zero -> return(0)
             %tiny -> return(0)
@@ -511,55 +237,55 @@ routine decimal_to_bits(
             _ -> scale(%exponent, %infinity)
 
     ; value = n / d exactly
-    block scale(%exponent: I64, %infinity: I64):
-        #d:       Ptr<BigNat> = alloca<BigNat>
+    block scale(%exponent: I64, %infinity: I128):
+        #d:       Ptr<BigNat<N>> = alloca<BigNat<N>>
         #d.set(1)
         %up: Bool = %exponent.sge(0)
         branch %up ? scale_up(%exponent, %infinity, #d) : scale_down(%exponent, %infinity, #d)
 
-    block scale_up(%exponent: I64, %infinity: I64, #d: Ptr<BigNat>):
+    block scale_up(%exponent: I64, %infinity: I128, #d: Ptr<BigNat<N>>):
         #digits.mul_pow10(%exponent)
         jump estimate(%infinity, #d)
 
-    block scale_down(%exponent: I64, %infinity: I64, #d: Ptr<BigNat>):
+    block scale_down(%exponent: I64, %infinity: I128, #d: Ptr<BigNat<N>>):
         #d.mul_pow10(0.sub(%exponent))
         jump estimate(%infinity, #d)
 
     ; Pick the binary exponent e so that q = floor(value / 2^e) has
     ; mantissa_bits + 1 bits, or fewer at the subnormal floor.
-    block estimate(%infinity: I64, #d: Ptr<BigNat>):
+    block estimate(%infinity: I128, #d: Ptr<BigNat<N>>):
         %log2:  I64 = #digits.bit_length().sub(#d.bit_length())
         %floor: I64 = 1.sub(%bias).sub(%mantissa_bits)
         %e:     I64 = %log2.sub(%mantissa_bits).sub(1).max(%floor)
-        #a: Ptr<BigNat> = alloca<BigNat>
-        #b: Ptr<BigNat> = alloca<BigNat>
-        #t: Ptr<BigNat> = alloca<BigNat>
+        #a: Ptr<BigNat<N>> = alloca<BigNat<N>>
+        #b: Ptr<BigNat<N>> = alloca<BigNat<N>>
+        #t: Ptr<BigNat<N>> = alloca<BigNat<N>>
         jump attempt(%e, %infinity, #d, #a, #b, #t)
 
     ; a / b = value / 2^e
-    block attempt(%e: I64, %infinity: I64, #d: Ptr<BigNat>, #a: Ptr<BigNat>, #b: Ptr<BigNat>, #t: Ptr<BigNat>):
+    block attempt(%e: I64, %infinity: I128, #d: Ptr<BigNat<N>>, #a: Ptr<BigNat<N>>, #b: Ptr<BigNat<N>>, #t: Ptr<BigNat<N>>):
         #a.copy_from(#digits)
         #b.copy_from(#d)
         %negative_e: Bool = %e.slt(0)
         branch %negative_e ? widen_a(%e, %infinity, #d, #a, #b, #t) : widen_b(%e, %infinity, #d, #a, #b, #t)
 
-    block widen_a(%e: I64, %infinity: I64, #d: Ptr<BigNat>, #a: Ptr<BigNat>, #b: Ptr<BigNat>, #t: Ptr<BigNat>):
+    block widen_a(%e: I64, %infinity: I128, #d: Ptr<BigNat<N>>, #a: Ptr<BigNat<N>>, #b: Ptr<BigNat<N>>, #t: Ptr<BigNat<N>>):
         #a.shl(0.sub(%e))
         jump divide(%e, %infinity, #d, #a, #b, #t)
 
-    block widen_b(%e: I64, %infinity: I64, #d: Ptr<BigNat>, #a: Ptr<BigNat>, #b: Ptr<BigNat>, #t: Ptr<BigNat>):
+    block widen_b(%e: I64, %infinity: I128, #d: Ptr<BigNat<N>>, #a: Ptr<BigNat<N>>, #b: Ptr<BigNat<N>>, #t: Ptr<BigNat<N>>):
         #b.shl(%e)
         jump divide(%e, %infinity, #d, #a, #b, #t)
 
     ; The estimate can be one bit short; then q has a bit too many: try e + 1.
-    block divide(%e: I64, %infinity: I64, #d: Ptr<BigNat>, #a: Ptr<BigNat>, #b: Ptr<BigNat>, #t: Ptr<BigNat>):
-        %q:       I64  = BigNat.div_small(#a, #b, #t, %mantissa_bits.add(3))
-        %limit:   I64  = 1.shl(%mantissa_bits.add(1))
+    block divide(%e: I64, %infinity: I128, #d: Ptr<BigNat<N>>, #a: Ptr<BigNat<N>>, #b: Ptr<BigNat<N>>, #t: Ptr<BigNat<N>>):
+        %q:       I128 = #a.div_small(#b, #t, %mantissa_bits.add(3))
+        %limit:   I128 = 1.shl(%mantissa_bits.add(1).to_i128())
         %too_big: Bool = %q.sge(%limit)
         branch %too_big ? attempt(%e.add(1), %infinity, #d, #a, #b, #t) : round(%e, %q, %infinity, #a, #b)
 
     ; Round to nearest, ties to even. The remainder is in a; compare 2a with b.
-    block round(%e: I64, %q: I64, %infinity: I64, #a: Ptr<BigNat>, #b: Ptr<BigNat>):
+    block round(%e: I64, %q: I128, %infinity: I128, #a: Ptr<BigNat<N>>, #b: Ptr<BigNat<N>>):
         #a.shl(1)
         %half:   I32  = #a.compare(#b)
         %above:  Bool = %half.sgt(0)
@@ -567,32 +293,32 @@ routine decimal_to_bits(
         %sticky: Bool = %parts.sticky
         %odd:    Bool = %q.bitand(1).eq(1)
         %up:     Bool = %above.bitor(%tie.bitand(%sticky.bitor(%odd)))
-        %rounded: I64 = %q.add(%up.to_i64())
+        %rounded: I128 = %q.add(%up.to_i128())
         ; rounding up can carry into a new bit
-        %carry:  Bool = %rounded.eq(1.shl(%mantissa_bits.add(1)))
-        %q2:     I64  = %carry ? %rounded.lshr(1) : %rounded
+        %carry:  Bool = %rounded.eq(1.shl(%mantissa_bits.add(1).to_i128()))
+        %q2:     I128 = %carry ? %rounded.lshr(1) : %rounded
         %e2:     I64  = %e.add(%carry.to_i64())
-        %hidden: I64  = 1.shl(%mantissa_bits)
+        %hidden: I128 = 1.shl(%mantissa_bits.to_i128())
         %normal: Bool = %q2.sge(%hidden)
         %biased: I64  = %normal ? %e2.add(%mantissa_bits).add(%bias) : 0
         %overflow: Bool = %biased.sge(%exponent_max)
-        %bits:   I64  = %biased.shl(%mantissa_bits).bitor(%q2.bitand(%hidden.sub(1)))
+        %bits:   I128 = %biased.to_i128().shl(%mantissa_bits.to_i128()).bitor(%q2.bitand(%hidden.sub(1)))
         branch %overflow ? return(%infinity) : return(%bits)
 
 ; -- parse ---------------------------------------------------------------------
 
 routine F64.parse(%text: String) -> Result<Self, ParseFloatError>
     block entry():
-        #digits: Ptr<BigNat> = alloca<BigNat>
-        %parsed: Result<DecimalParts, ParseFloatError> = parse_decimal(%text, #digits)
+        #digits: Ptr<BigNat<72>> = alloca<BigNat<72>>
+        %parsed: Result<DecimalParts, ParseFloatError> = parse_decimal(%text, #digits, 800)
         %ok:     Bool           = %parsed.tag
         %parts:  DecimalParts   = %parsed.value
         %error:  ParseFloatError = %parsed.error
         %fail:   Result<Self, ParseFloatError> = Result<Self, ParseFloatError>.err(%error)
         branch %ok ? build(%parts, #digits) : return(%fail)
 
-    block build(%parts: DecimalParts, #digits: Ptr<BigNat>):
-        %magnitude: I64  = decimal_to_bits(#digits, %parts, 52, 1023, 2047)
+    block build(%parts: DecimalParts, #digits: Ptr<BigNat<72>>):
+        %magnitude: I64  = decimal_to_bits(#digits, %parts, 52, 1023, 2047, 310, -324).to_i64()
         %negative:  Bool = %parts.negative
         %sign:      I64  = %negative ? I64.MIN : 0
         %value:     Self = Self.from_bits(%magnitude.bitor(%sign))
@@ -601,16 +327,16 @@ routine F64.parse(%text: String) -> Result<Self, ParseFloatError>
 
 routine F32.parse(%text: String) -> Result<Self, ParseFloatError>
     block entry():
-        #digits: Ptr<BigNat> = alloca<BigNat>
-        %parsed: Result<DecimalParts, ParseFloatError> = parse_decimal(%text, #digits)
+        #digits: Ptr<BigNat<72>> = alloca<BigNat<72>>
+        %parsed: Result<DecimalParts, ParseFloatError> = parse_decimal(%text, #digits, 800)
         %ok:     Bool           = %parsed.tag
         %parts:  DecimalParts   = %parsed.value
         %error:  ParseFloatError = %parsed.error
         %fail:   Result<Self, ParseFloatError> = Result<Self, ParseFloatError>.err(%error)
         branch %ok ? build(%parts, #digits) : return(%fail)
 
-    block build(%parts: DecimalParts, #digits: Ptr<BigNat>):
-        %magnitude: I64  = decimal_to_bits(#digits, %parts, 23, 127, 255)
+    block build(%parts: DecimalParts, #digits: Ptr<BigNat<72>>):
+        %magnitude: I64  = decimal_to_bits(#digits, %parts, 23, 127, 255, 310, -324).to_i64()
         %negative:  Bool = %parts.negative
         %sign:      I64  = %negative ? 2147483648 : 0
         %value:     Self = Self.from_bits(%magnitude.bitor(%sign).to_i32())
@@ -619,16 +345,16 @@ routine F32.parse(%text: String) -> Result<Self, ParseFloatError>
 
 routine F16.parse(%text: String) -> Result<Self, ParseFloatError>
     block entry():
-        #digits: Ptr<BigNat> = alloca<BigNat>
-        %parsed: Result<DecimalParts, ParseFloatError> = parse_decimal(%text, #digits)
+        #digits: Ptr<BigNat<72>> = alloca<BigNat<72>>
+        %parsed: Result<DecimalParts, ParseFloatError> = parse_decimal(%text, #digits, 800)
         %ok:     Bool           = %parsed.tag
         %parts:  DecimalParts   = %parsed.value
         %error:  ParseFloatError = %parsed.error
         %fail:   Result<Self, ParseFloatError> = Result<Self, ParseFloatError>.err(%error)
         branch %ok ? build(%parts, #digits) : return(%fail)
 
-    block build(%parts: DecimalParts, #digits: Ptr<BigNat>):
-        %magnitude: I64  = decimal_to_bits(#digits, %parts, 10, 15, 31)
+    block build(%parts: DecimalParts, #digits: Ptr<BigNat<72>>):
+        %magnitude: I64  = decimal_to_bits(#digits, %parts, 10, 15, 31, 310, -324).to_i64()
         %negative:  Bool = %parts.negative
         %sign:      I64  = %negative ? 32768 : 0
         %value:     Self = Self.from_bits(%magnitude.bitor(%sign).to_i16())
@@ -637,18 +363,37 @@ routine F16.parse(%text: String) -> Result<Self, ParseFloatError>
 
 routine BF16.parse(%text: String) -> Result<Self, ParseFloatError>
     block entry():
-        #digits: Ptr<BigNat> = alloca<BigNat>
-        %parsed: Result<DecimalParts, ParseFloatError> = parse_decimal(%text, #digits)
+        #digits: Ptr<BigNat<72>> = alloca<BigNat<72>>
+        %parsed: Result<DecimalParts, ParseFloatError> = parse_decimal(%text, #digits, 800)
         %ok:     Bool           = %parsed.tag
         %parts:  DecimalParts   = %parsed.value
         %error:  ParseFloatError = %parsed.error
         %fail:   Result<Self, ParseFloatError> = Result<Self, ParseFloatError>.err(%error)
         branch %ok ? build(%parts, #digits) : return(%fail)
 
-    block build(%parts: DecimalParts, #digits: Ptr<BigNat>):
-        %magnitude: I64  = decimal_to_bits(#digits, %parts, 7, 127, 255)
+    block build(%parts: DecimalParts, #digits: Ptr<BigNat<72>>):
+        %magnitude: I64  = decimal_to_bits(#digits, %parts, 7, 127, 255, 310, -324).to_i64()
         %negative:  Bool = %parts.negative
         %sign:      I64  = %negative ? 32768 : 0
         %value:     Self = Self.from_bits(%magnitude.bitor(%sign).to_i16())
+        %r: Result<Self, ParseFloatError> = Result<Self, ParseFloatError>.ok(%value)
+        return(%r)
+
+routine F128.parse(%text: String) -> Result<Self, ParseFloatError>
+    block entry():
+        #digits: Ptr<BigNat<864>> = alloca<BigNat<864>>
+        %parsed: Result<DecimalParts, ParseFloatError> = parse_decimal(%text, #digits, 11600)
+        %ok:     Bool           = %parsed.tag
+        %parts:  DecimalParts   = %parsed.value
+        %error:  ParseFloatError = %parsed.error
+        %fail:   Result<Self, ParseFloatError> = Result<Self, ParseFloatError>.err(%error)
+        branch %ok ? build(%parts, #digits) : return(%fail)
+
+    ; F128's largest value is about 1.19e4932; its smallest subnormal, 6.5e-4966.
+    block build(%parts: DecimalParts, #digits: Ptr<BigNat<864>>):
+        %magnitude: I128 = decimal_to_bits(#digits, %parts, 112, 16383, 32767, 4933, -4966)
+        %negative:  Bool = %parts.negative
+        %sign:      I128 = %negative ? I128.MIN : 0
+        %value:     Self = Self.from_bits(%magnitude.bitor(%sign))
         %r: Result<Self, ParseFloatError> = Result<Self, ParseFloatError>.ok(%value)
         return(%r)
