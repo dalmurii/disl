@@ -275,7 +275,8 @@ routine f128_add_bits(%a: I128, %b: I128) -> I128
     block difference(%x: I128, %y: I128, %e: I64, %x_negative: Bool):
         %x_larger: Bool = %x.uge(%y)
         %m:        I128 = %x_larger ? %x.sub(%y) : %y.sub(%x)
-        %negative: Bool = %x_larger ? %x_negative : %x_negative.bitnot()
+        %sign:     Bool = %x_larger ? %x_negative : %x_negative.bitnot()
+        %negative: Bool = %sign.bitand(%m.ne(0))
         %r: I128 = f128_round_pack(%negative, %e, %m)
         return(%r)
 
@@ -728,3 +729,138 @@ routine F128.to_i64(%self: Self) -> I64
         %wide: I128 = %self.to_i128()
         %r:    I64  = %wide.clamp(I64.MIN.to_i128(), I64.MAX.to_i128()).to_i64()
         return(%r)
+
+; -- rounding to integers ------------------------------------------------------
+
+enum F128Rounding
+    TowardZero
+    Down
+    Up
+    NearestAway
+    NearestEven
+
+; Rounds to an integer by clearing the fraction bits of the encoding and, when
+; the mode says so, adding one unit of the lowest integer bit. A carry out of
+; the mantissa moves into the exponent, as the encoding is ordered.
+routine f128_round_int(%bits: I128, %mode: F128Rounding) -> I128
+    block entry():
+        %biased:   I64  = f128_exponent(%bits)
+        %e:        I64  = %biased.sub(F128_BIAS)
+        %special:  Bool = %biased.eq(F128_EXP_MAX)
+        %whole:    Bool = %e.sge(112)
+        %zero:     Bool = f128_is_zero_bits(%bits)
+        %below:    Bool = %e.slt(0)
+        select:
+            %special -> nan_or_inf()
+            %whole -> return(%bits)
+            %zero -> return(%bits)
+            %below -> below_one(%e)
+            _ -> split(%e)
+
+    block nan_or_inf():
+        %nan: Bool = f128_is_nan_bits(%bits)
+        branch %nan ? return(f128_quiet(%bits)) : return(%bits)
+
+    ; |x| < 1: the result is ±0 or ±1 (1.0 is 0x3FFF << 112)
+    block below_one(%e: I64):
+        %sign:     I128 = %bits.bitand(F128_SIGN)
+        %one:      I128 = %sign.bitor(0x3FFF0000000000000000000000000000)
+        %negative: Bool = %sign.ne(0)
+        %half_up:  Bool = %e.eq(-1)                                  ; |x| >= 0.5
+        %exact_half: Bool = %half_up.bitand(f128_fraction(%bits).eq(0))
+        %down:     I128 = %negative ? %one : %sign
+        %up:       I128 = %negative ? %sign : %one
+        %away:     I128 = %half_up ? %one : %sign
+        %over:     Bool = %half_up.bitand(%exact_half.bitnot())
+        %even:     I128 = %over ? %one : %sign
+        switch %mode:
+            F128Rounding.TowardZero -> return(%sign)
+            F128Rounding.Down -> return(%down)
+            F128Rounding.Up -> return(%up)
+            F128Rounding.NearestAway -> return(%away)
+            F128Rounding.NearestEven -> return(%even)
+
+    block split(%e: I64):
+        %frac_bits: I128 = 112.sub(%e).to_i128()
+        %unit:      I128 = 1.shl(%frac_bits)
+        %mask:      I128 = %unit.sub(1)
+        %kept:      I128 = %bits.bitand(%mask.bitnot())
+        %rest:      I128 = %bits.bitand(%mask)
+        %half:      I128 = %unit.lshr(1)
+        %negative:  Bool = %bits.slt(0)
+        %inexact:   Bool = %rest.ne(0)
+        %odd:       Bool = %kept.bitand(%unit).ne(0)
+        %over_half: Bool = %rest.ugt(%half)
+        %at_half:   Bool = %rest.eq(%half)
+        %away:      Bool = %over_half.bitor(%at_half)
+        %even_up:   Bool = %over_half.bitor(%at_half.bitand(%odd))
+        %down:      Bool = %negative.bitand(%inexact)
+        %up:        Bool = %negative.bitnot().bitand(%inexact)
+        switch %mode:
+            F128Rounding.TowardZero -> done(%kept, %unit, false)
+            F128Rounding.Down -> done(%kept, %unit, %down)
+            F128Rounding.Up -> done(%kept, %unit, %up)
+            F128Rounding.NearestAway -> done(%kept, %unit, %away)
+            F128Rounding.NearestEven -> done(%kept, %unit, %even_up)
+
+    block done(%kept: I128, %unit: I128, %bump: Bool):
+        %r: I128 = %bump ? %kept.add(%unit) : %kept
+        return(%r)
+
+routine F128.trunc(%self: Self) -> Self
+    block entry():
+        %r: Self = Self { bits: f128_round_int(%self.bits, F128Rounding.TowardZero) }
+        return(%r)
+
+routine F128.floor(%self: Self) -> Self
+    block entry():
+        %r: Self = Self { bits: f128_round_int(%self.bits, F128Rounding.Down) }
+        return(%r)
+
+routine F128.ceil(%self: Self) -> Self
+    block entry():
+        %r: Self = Self { bits: f128_round_int(%self.bits, F128Rounding.Up) }
+        return(%r)
+
+; Rounds half-way cases away from zero.
+routine F128.round(%self: Self) -> Self
+    block entry():
+        %r: Self = Self { bits: f128_round_int(%self.bits, F128Rounding.NearestAway) }
+        return(%r)
+
+; Rounds half-way cases to the even neighbor.
+routine F128.round_ties_even(%self: Self) -> Self
+    block entry():
+        %r: Self = Self { bits: f128_round_int(%self.bits, F128Rounding.NearestEven) }
+        return(%r)
+
+; self minus its integer part, with the sign of self.
+routine F128.fract(%self: Self) -> Self
+    block entry():
+        %whole: Self = %self.trunc()
+        %r:     Self = %self.sub(%whole)
+        return(%r)
+
+; The smaller value; if one operand is NaN, the other one.
+routine F128.min(%self: Self, %other: Self) -> Self
+    block entry():
+        %self_nan:  Bool = %self.is_nan()
+        %other_nan: Bool = %other.is_nan()
+        %less:      Bool = %other.lt(%self)
+        select:
+            %self_nan -> return(%other)
+            %other_nan -> return(%self)
+            %less -> return(%other)
+            _ -> return(%self)
+
+; The larger value; if one operand is NaN, the other one.
+routine F128.max(%self: Self, %other: Self) -> Self
+    block entry():
+        %self_nan:  Bool = %self.is_nan()
+        %other_nan: Bool = %other.is_nan()
+        %more:      Bool = %other.gt(%self)
+        select:
+            %self_nan -> return(%other)
+            %other_nan -> return(%self)
+            %more -> return(%other)
+            _ -> return(%self)
