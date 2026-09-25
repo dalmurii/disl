@@ -52,7 +52,7 @@ routine Graph.new(%num_nodes: I64, #alloc: Ptr<Allocator>) -> Self
     block entry():
         #adj: Ptr<List<Ptr<List<Edge>>>> = alloc<List<Ptr<List<Edge>>>>(#alloc, 1)
         %adj_null: Bool = #adj.is_null()
-        branch %adj_null ? trap() : setup(#adj)
+        branch %adj_null ? panic(TrapCode.AllocFailed) : setup(#adj)
 
     block setup(#adj: Ptr<List<Ptr<List<Edge>>>>):
         %adj_val: List<Ptr<List<Edge>>> = List<Ptr<List<Edge>>>.new(#alloc)
@@ -66,7 +66,7 @@ routine Graph.new(%num_nodes: I64, #alloc: Ptr<Allocator>) -> Self
     block make_list(%i: I64, #adj: Ptr<List<Ptr<List<Edge>>>>):
         #list: Ptr<List<Edge>> = alloc<List<Edge>>(#alloc, 1)
         %list_null: Bool = #list.is_null()
-        branch %list_null ? trap() : init_list(%i, #adj, #list)
+        branch %list_null ? panic(TrapCode.AllocFailed) : init_list(%i, #adj, #list)
 
     block init_list(%i: I64, #adj: Ptr<List<Ptr<List<Edge>>>>, #list: Ptr<List<Edge>>):
         %empty: List<Edge> = List<Edge>.new(#alloc)

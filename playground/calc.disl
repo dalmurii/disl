@@ -76,7 +76,7 @@ routine new_expr(#alloc: Ptr<Allocator>, %node: Expr) -> Ptr<Expr>
     block entry():
         #p: Ptr<Expr> = alloc<Expr>(#alloc, 1)
         %failed: Bool = #p.is_null()
-        branch %failed ? trap() : store(#p)
+        branch %failed ? panic(TrapCode.AllocFailed) : store(#p)
 
     block store(#p: Ptr<Expr>):
         #p = %node

@@ -93,7 +93,7 @@ routine LinkedList<T>.push_front(#self: Ptr<Self>, %val: T, #alloc: Ptr<Allocato
     block entry():
         #node: Ptr<ListNode<T>> = alloc<ListNode<T>>(#alloc, 1)
         %alloc_failed: Bool = #node.is_null()
-        branch %alloc_failed ? trap() : init(#node, %val)
+        branch %alloc_failed ? panic(TrapCode.AllocFailed) : init(#node, %val)
 
     block init(#node: Ptr<ListNode<T>>, %val: T):
         #node.value = %val
@@ -122,7 +122,7 @@ routine LinkedList<T>.push_back(#self: Ptr<Self>, %val: T, #alloc: Ptr<Allocator
     block entry():
         #node: Ptr<ListNode<T>> = alloc<ListNode<T>>(#alloc, 1)
         %alloc_failed: Bool = #node.is_null()
-        branch %alloc_failed ? trap() : init(#node, %val)
+        branch %alloc_failed ? panic(TrapCode.AllocFailed) : init(#node, %val)
 
     block init(#node: Ptr<ListNode<T>>, %val: T):
         #node.value = %val

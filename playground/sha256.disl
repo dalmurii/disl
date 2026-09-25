@@ -353,7 +353,7 @@ routine main() -> I32
         #alloc: Ptr<Allocator> = alloca<Allocator>([%heap])
         #many:  Ptr<I8>        = alloc<I8>(#alloc, MILLION)
         %failed: Bool = #many.is_null()
-        branch %failed ? trap() : fill_loop(0, #alloc, #many)
+        branch %failed ? panic(TrapCode.AllocFailed) : fill_loop(0, #alloc, #many)
 
     block fill_loop(%i: I64, #alloc: Ptr<Allocator>, #many: Ptr<I8>):
         %done: Bool = %i.sge(MILLION)
