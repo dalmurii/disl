@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace Disl;
@@ -438,6 +439,57 @@ public sealed partial class Compiler
             throw new CompileError(pos, $"'{name}' has type {t}; only Ptr values use the '#' sigil (write %{name[1..]})");
         if (!ptrSigil && t.IsPointer)
             throw new CompileError(pos, $"'{name}' has type {t}; Ptr values must use the '#' sigil (write #{name[1..]})");
+    }
+
+    // ── Const arrays ────────────────────────────────────────────────────────
+
+    private readonly Dictionary<string, string> _constArrays = [];
+
+    /// A const of Array type is read-only static data: a private constant global, emitted once on first use.
+    public string ConstArrayGlobal(ConstDecl c, ArrayType t, TypeEnv env)
+    {
+        string key = (c.Owner is null ? "" : env.Get("Self")?.Name + ".") + c.Name;
+        if (_constArrays.TryGetValue(key, out var name)) return name;
+        EnsureTypeDefined(t);
+        name = $"@\"const.{key}\"";
+        _constArrays[key] = name;
+        _globals.AppendLine($"{name} = private unnamed_addr constant {t.Llvm} {ConstInitializer(c.Value, t, env)}");
+        return name;
+    }
+
+    /// The LLVM constant for a const array element: integer, float, and Bool literals (or integer consts), and
+    /// nested array literals.
+    private string ConstInitializer(Expr e, DType t, TypeEnv env)
+    {
+        switch (t)
+        {
+            case ArrayType a:
+            {
+                if (e is not ArrayLit lit) throw new CompileError(e.Pos, $"expected an array literal for {a}");
+                if (lit.Elements.Count != a.Count)
+                    throw new CompileError(lit.Pos, $"{a} needs {a.Count} element(s), got {lit.Elements.Count}");
+                return "[" + string.Join(", ", lit.Elements.Select(x => $"{a.Elem.Llvm} {ConstInitializer(x, a.Elem, env)}")) + "]";
+            }
+            case IntType it:
+            {
+                Int128 v = e is IntLit il ? il.Value : EvalConstInt(e, env, 0);
+                Int128 span = Int128.One << it.Bits;
+                Int128 min = it.Bits == 128 ? Int128.MinValue : -(span >> 1);
+                Int128 umax = it.Bits == 128 ? Int128.MaxValue : span - 1;
+                // Values past the signed range are bit patterns, as in `0xb5c0fbcf` for an I32.
+                if (v < min || v > umax) throw new CompileError(e.Pos, $"{v} doesn't fit in {it}");
+                if (it.Bits < 128 && v > (span >> 1) - 1) v -= span;
+                return v.ToString(CultureInfo.InvariantCulture);
+            }
+            case BoolType when e is BoolLit b:
+                return b.Value ? "true" : "false";
+            case FloatType ft when e is FloatLit f:
+                return ft.Constant(f.Value);
+            case FloatType ft when e is IntLit bits: // open question #10: raw bits
+                return ft.FromBits(bits.Value);
+            default:
+                throw new CompileError(e.Pos, $"a const array element must be a literal of {t}");
+        }
     }
 
     // ── String literals ─────────────────────────────────────────────────────

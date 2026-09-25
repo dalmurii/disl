@@ -216,6 +216,8 @@ public sealed class FunctionGen
             }
             case StoreStmt st:
             {
+                if (ConstArrayRoot(st.Place) is { } root)
+                    throw Err(st.Pos, $"'{root.Name}' is a const array; it's read-only");
                 var hint = PlacePointee(st.Place);
                 DType valueType = hint ?? Infer(st.Value)
                     ?? throw Err(st.Pos, "cannot infer the type stored through an opaque Ptr; bind the value with a type first");
@@ -247,6 +249,15 @@ public sealed class FunctionGen
     };
 
     // ── Places ──────────────────────────────────────────────────────────────
+
+    /// The const array a place chain starts from (`K`, `K[i]`, `K[i].f`), if any.
+    private ConstRef? ConstArrayRoot(Expr place) => place switch
+    {
+        FieldExpr f => ConstArrayRoot(f.Base),
+        IndexExpr ix => ConstArrayRoot(ix.Base),
+        ConstRef r when ResolveConst(r) is { Type: PtrType { Pointee: ArrayType } } => r,
+        _ => null,
+    };
 
     /// Is `e` a place chain rooted at a pointer: `#p.f`, `#p[i]`, `#p.f[i].g`?
     private bool IsPlaceChain(Expr e) => e switch
@@ -634,6 +645,12 @@ public sealed class FunctionGen
         var env = new Compiler.TypeEnv(c.File);
         if (self is not null) env.Bind("Self", self);
         var t = _c.ResolveType(c.Type, env);
+        // A const array is read-only static data; its name is the address.
+        if (t is ArrayType at)
+        {
+            var ptr = new PtrType(at);
+            return new ConstInfo(ptr, _ => new Val(_c.ConstArrayGlobal(c, at, env), ptr));
+        }
         return new ConstInfo(t, _ =>
         {
             // Open question #10: an integer literal in a float const gives the float's raw bits.

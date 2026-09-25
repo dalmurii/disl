@@ -7,8 +7,8 @@
 ;     method call, so one line of the spec becomes several named values
 ;   * loop-carried state: the eight working variables a..h ride through the
 ;     round loop as one struct value (Working) instead of eight block params
-;   * no static data: there is no const Array, so sha256 builds the 64 round
-;     constants in a stack array on every call
+;   * static data: the 64 round constants and the initial hash are const
+;     arrays, read-only globals that the rounds load from (K[t])
 ;
 ; Expected output:
 ;   empty     e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
@@ -24,6 +24,25 @@ routine c_printf(#fmt: Ptr<I8>) -> I32
 ; ── Types ─────────────────────────────────────────────────────────────────────
 
 const MILLION: I64 = 1000000
+
+; K[0..64): the first 32 bits of the fractional parts of the cube roots of the
+; first 64 primes.
+const K: Array<I32, 64> = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+]
+
+; H(0): the first 32 bits of the fractional parts of the square roots of the
+; first 8 primes.
+const H0: Array<I32, 8> = [
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+]
 
 ; The eight working variables of one compression. The round loop carries them
 ; as a single SSA value, so each jump passes one argument instead of eight.
@@ -155,8 +174,8 @@ routine store_be64(#p: Ptr<I8>, %value: I64) -> Void
 
 ; ── Compression ───────────────────────────────────────────────────────────────
 
-; Mixes one 64-byte block into the 8-word #state. #k holds the 64 round constants.
-routine sha256_compress(#state: Ptr<I32>, #block: Ptr<I8>, #k: Ptr<I32>) -> Void
+; Mixes one 64-byte block into the 8-word #state.
+routine sha256_compress(#state: Ptr<I32>, #block: Ptr<I8>) -> Void
     block entry():
         #schedule: Ptr<Array<I32, 64>> = alloca<Array<I32, 64>>
         #w:        Ptr<I32>             = #schedule.cast<I32>()
@@ -210,7 +229,7 @@ routine sha256_compress(#state: Ptr<I32>, #block: Ptr<I8>, #k: Ptr<I32>) -> Void
         branch %done ? finish(%v) : round(%t, %v, #w)
 
     block round(%t: I64, %v: Working, #w: Ptr<I32>):
-        %k_t:  I32     := #k[%t]
+        %k_t:  I32     := K[%t]
         %w_t:  I32     := #w[%t]
         %next: Working = sha256_round(%v, %k_t, %w_t)
         jump round_loop(%t.add(1), %next, #w)
@@ -240,46 +259,26 @@ routine sha256_compress(#state: Ptr<I32>, #block: Ptr<I8>, #k: Ptr<I32>) -> Void
 ; Hashes #data[0..len) and writes the 8-word digest to #digest.
 routine sha256(#data: Ptr<I8>, %len: I64, #digest: Ptr<I32>) -> Void
     block entry():
-        ; K[0..64): the first 32 bits of the fractional parts of the cube
-        ; roots of the first 64 primes.
-        #k_table: Ptr<Array<I32, 64>> = alloca<Array<I32, 64>>([
-            0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-            0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-            0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-            0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-            0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-            0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-            0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-            0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-        ])
-        #k: Ptr<I32> = #k_table.cast<I32>()
-
-        ; H(0): the first 32 bits of the fractional parts of the square roots
-        ; of the first 8 primes.
-        #iv_table: Ptr<Array<I32, 8>> = alloca<Array<I32, 8>>([
-            0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-        ])
-        #iv: Ptr<I32> = #iv_table.cast<I32>()
-        copy<I32>(#digest, #iv, 8)
-
+        #h0: Ptr<I32> = H0.as_ptr()
+        copy<I32>(#digest, #h0, 8)
         %full_blocks: I64 = %len.sdiv(64)
-        jump block_loop(0, %full_blocks, #k)
+        jump block_loop(0, %full_blocks)
 
     ; Every complete 64-byte block is compressed straight from #data.
-    block block_loop(%i: I64, %full_blocks: I64, #k: Ptr<I32>):
+    block block_loop(%i: I64, %full_blocks: I64):
         %done: Bool = %i.sge(%full_blocks)
-        branch %done ? pad(%full_blocks, #k) : compress_block(%i, %full_blocks, #k)
+        branch %done ? pad(%full_blocks) : compress_block(%i, %full_blocks)
 
-    block compress_block(%i: I64, %full_blocks: I64, #k: Ptr<I32>):
+    block compress_block(%i: I64, %full_blocks: I64):
         %offset: I64     = %i.mul(64)
         #src:    Ptr<I8> = #data[%offset]
-        sha256_compress(#digest, #src, #k)
-        jump block_loop(%i.add(1), %full_blocks, #k)
+        sha256_compress(#digest, #src)
+        jump block_loop(%i.add(1), %full_blocks)
 
     ; The tail: leftover bytes, then 0x80, zeros, and the message length in
     ; bits as a big-endian I64. That fits one block when fewer than 56 bytes
     ; are left over, and takes two otherwise.
-    block pad(%full_blocks: I64, #k: Ptr<I32>):
+    block pad(%full_blocks: I64):
         %rest_start: I64 = %full_blocks.mul(64)
         %rest_len:   I64 = %len.sub(%rest_start)
 
@@ -297,12 +296,12 @@ routine sha256(#data: Ptr<I8>, %len: I64, #digest: Ptr<I32>) -> Void
         #len_dst: Ptr<I8> = #tail[%len_at]
         store_be64(#len_dst, %bits)
 
-        sha256_compress(#digest, #tail, #k)
-        branch %one_block ? return() : second_tail(#tail, #k)
+        sha256_compress(#digest, #tail)
+        branch %one_block ? return() : second_tail(#tail)
 
-    block second_tail(#tail: Ptr<I8>, #k: Ptr<I32>):
+    block second_tail(#tail: Ptr<I8>):
         #second: Ptr<I8> = #tail[64]
-        sha256_compress(#digest, #second, #k)
+        sha256_compress(#digest, #second)
         return()
 
 ; ── Output ────────────────────────────────────────────────────────────────────
