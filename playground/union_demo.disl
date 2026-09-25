@@ -19,11 +19,8 @@
 ; plain extraction (%r.value) — Section 1 exists to show the mechanism, not as
 ; the recommended Result.
 
-@[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_int(#fmt: Ptr<I8>, %x: I64) -> I32
-
-@[external("c"), callconv("c"), symbol("printf")]
-routine c_printf_float(#fmt: Ptr<I8>, %x: F64) -> I32
+@[external("c"), callconv("c"), symbol("printf"), variadic]
+routine c_printf(#fmt: Ptr<I8>) -> I32
 
 ; ============================================================
 ; A generic two-way overlay. Stdlib could ship UnionTwo / UnionThree, or
@@ -93,14 +90,14 @@ routine IntResult.print(#self: Ptr<Self>) -> Void
         #payload: Ptr<UnionTwo<I64, I32>> = #self.payload
         #ok_view: Ptr<I64> = #payload.cast<I64>()
         %v: I64 := #ok_view
-        c_printf_int("Ok(%lld)\n", %v)
+        c_printf("Ok(%lld)\n", %v)
         return()
 
     block print_err():
         #payload: Ptr<UnionTwo<I64, I32>> = #self.payload
         #err_view: Ptr<I32> = #payload.cast<I32>()
         %code: I32 := #err_view
-        c_printf_int("Err(%lld)\n", %code.to_i64())
+        c_printf("Err(%lld)\n", %code.to_i64())
         return()
 
 ; ============================================================
@@ -166,7 +163,7 @@ routine main() -> I32
         #int_ptr: Ptr<Number> = alloca<Number>([%as_int])
         #flt_ptr: Ptr<Number> = alloca<Number>([%as_float])
 
-        c_printf_int("Number int view: %lld\n", #int_ptr.as_int())
-        c_printf_float("Number float view: %f\n", #flt_ptr.as_float())
+        c_printf("Number int view: %lld\n", #int_ptr.as_int())
+        c_printf("Number float view: %f\n", #flt_ptr.as_float())
 
         return(0)

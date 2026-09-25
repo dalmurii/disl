@@ -1,0 +1,34 @@
+; Byte literals are I8, character literals are I32, hex / binary / octal integer literals take their type from context.
+
+@[external("c"), symbol("putchar")]
+routine c_putchar(%c: CInt) -> CInt
+
+routine put_byte(%b: I8) -> Void
+    block entry():
+        c_putchar(%b.to_u32())
+        return()
+
+; Maps a byte to a letter class through a switch on byte literals.
+routine class_of(%b: I8) -> I8
+    block entry():
+        switch %b:
+            b'a' -> return(b'V')
+            b'e' -> return(b'V')
+            b'\n' -> return(b'N')
+            _ -> return(b'C')
+
+routine main() -> I32
+    block entry():
+        put_byte(class_of(b'a'))
+        put_byte(class_of(b'x'))
+        put_byte(class_of(b'\n'))
+        put_byte(b'\n')
+        %snow: I32 = '☃'
+        %is_snowman: Bool = %snow.eq(0x2603)
+        %mask: I64 = 0b1010.bitor(0o5)
+        %ok_mask: Bool = %mask.eq(15)
+        %big: I8 = 0xFF
+        %ok_big: Bool = %big.eq(-1)
+        %all: Bool = %is_snowman.bitand(%ok_mask).bitand(%ok_big)
+        %code: I32 = %all ? 0 : 1
+        return(%code)

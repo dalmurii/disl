@@ -1,0 +1,5 @@
+; A byte literal is an I8; it does not silently widen.
+routine f() -> I64
+    block entry():
+        %x: I64 = b'A'
+        return(%x)

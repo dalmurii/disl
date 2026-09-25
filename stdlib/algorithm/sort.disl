@@ -151,7 +151,7 @@ require T: typename, Compare<T>
         #alloc: Ptr<Allocator> := #self.alloc
         #scratch: Ptr<T> = alloc<T>(#alloc, %n)
         %failed: Bool = #scratch.is_null()
-        branch %failed ? trap() : run_loop(0, %n, #data, #scratch, #alloc)
+        branch %failed ? panic(TrapCode.AllocFailed) : run_loop(0, %n, #data, #scratch, #alloc)
 
     block run_loop(%lo: I64, %n: I64, #data: Ptr<T>, #scratch: Ptr<T>, #alloc: Ptr<Allocator>):
         %done: Bool = %lo.sge(%n)

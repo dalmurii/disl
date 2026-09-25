@@ -1,0 +1,12 @@
+; Without a '_' arm, a switch on an enum must name every member.
+enum Dir
+    North
+    East
+    South
+    West
+
+routine turn(%d: Dir) -> I64
+    block entry():
+        switch %d:
+            Dir.North -> return(0)
+            Dir.South -> return(2)

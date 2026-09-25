@@ -1,0 +1,9 @@
+; An enum is a distinct type: it doesn't borrow its underlying integer's methods.
+enum Dir
+    North
+    East
+
+routine next(%d: Dir) -> Dir
+    block entry():
+        %n: Dir = %d.add(1)
+        return(%n)
