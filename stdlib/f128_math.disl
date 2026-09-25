@@ -1584,3 +1584,375 @@ routine F128.to_radians(%self: Self) -> Self
     block entry():
         %r: Self = f128_scale_angle(%self, 5)
         return(%r)
+
+; 1/sqrt(pi), ln(2 pi), ln(pi), pi
+const WIDE_SPECIAL_CONST_HI: Array<I128, 4> = [
+    -148298600039169391974795323704600509628,
+    -27583787787197019847858391156695424989,
+    -145516669399953666916830462538772667188,
+    -73025220904696776498454514141300515631
+]
+const WIDE_SPECIAL_CONST_LO: Array<I64, 4> = [
+    1443862089616487703,
+    -3481124675880907954,
+    3402168225884614711,
+    2955010104097229940
+]
+const WIDE_SPECIAL_CONST_EXP: Array<I64, 4> = [
+    -1, 0, 0, 1
+]
+; Stirling: B(2k+2) / ((2k+2)(2k+1)), k = 0 .. 35
+const WIDE_GAMMA_COEF_HI: Array<I128, 36> = [
+    -113427455640312821154458202477256070486,
+    -98303794888271111667197108813621927754,
+    -63735427455032918553457466153886744368,
+    -132872162321509304780936751473357111140,
+    -46975006881341673407401881834015140303,
+    -6202060678035086657862816132789026565,
+    -61076322267860749852400570564676345646,
+    -18504243743674562196178279306093539342,
+    -95763117986170046067796546196828310529,
+    -103372301648083654676280095556694530553,
+    -55234973141615841642017964605659149490,
+    -131795235905215768892596427358942223459,
+    -158086470151195654051817381811495839116,
+    -152794907374669511929260529847324642893,
+    -115886786338399552134273772508346200914,
+    -31214516027489744064801024463326538086,
+    -97590183256355373195963803073725608888,
+    -124736881419292246293067110339712772556,
+    -125301524056610306939805024447256559321,
+    -101019464390542375554754803080427584862,
+    -44828110997027510684122354673191195240,
+    -138917505919672312305345497926813326261,
+    -38707528587366020089905815449280498852,
+    -93209110968684332796810248760188866910,
+    -119672403279547694080071795441167024260,
+    -126362314316934341661347456345444038374,
+    -115746716363353299860340087521932204690,
+    -85942040416470366199637140370601622801,
+    -30236297301458030673308056189016117813,
+    -137439671396922088557510946388558989855,
+    -56083118901084290572334797773813579060,
+    -127578814805673666926534629882277720691,
+    -848200193277625277464895875303658260,
+    -52116099512690262768652814892718583697,
+    -80471596809670731529135539236043369619,
+    -91949287143818085694936721930865632970
+]
+const WIDE_GAMMA_COEF_LO: Array<I64, 36> = [
+    -6148914691236517205,
+    819855292164868961,
+    936977476759850241,
+    702733107569887681,
+    -124220498812858933,
+    6162838307586969525,
+    945986875574848801,
+    1456448813139943683,
+    -3403674631779848140,
+    5238051538888753700,
+    -7014600403460291884,
+    -5455386838977606314,
+    983826350597842753,
+    -7721089303223172051,
+    -2544526538967263188,
+    -4916798199026695162,
+    7453229928771536006,
+    -2699696349627571719,
+    3822298321579456641,
+    4852653976101071396,
+    -1230418801335210721,
+    8215546888776475061,
+    -8945726007061353873,
+    709554992780243286,
+    5156418256843981033,
+    7587983664109702845,
+    -4082379488921229056,
+    4296915557901079672,
+    5026276088673561046,
+    1678462540870363093,
+    4435282728105028804,
+    5533449093757007733,
+    -4524457527742815133,
+    -8543090989857899931,
+    9035560730989242428,
+    6440803289130877075
+]
+const WIDE_GAMMA_COEF_EXP: Array<I64, 36> = [
+    -4, -9, -11, -11, -11, -10, -8, -6, -3, 0, 3, 7, 11, 15, 19, 23, 28, 33, 38, 43, 48, 54, 59, 65, 71, 77, 83, 89, 95, 102, 108, 115, 121, 128, 135, 142
+]
+const WIDE_GAMMA_COEF_NEG: Array<Bool, 36> = [
+    false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true
+]
+
+; -- erf, erfc (TLFloat's continued fractions) ----------------------------------
+
+routine wide_special(%i: I64) -> Wide
+    block entry():
+        %w: Wide = wide_table(WIDE_SPECIAL_CONST_HI.as_ptr(), WIDE_SPECIAL_CONST_LO.as_ptr(), WIDE_SPECIAL_CONST_EXP.as_ptr(), %i)
+        return(%w)
+
+; erf z = 2/sqrt(pi) × z e^(-z²) × d/n, from the continued fraction evaluated
+; backward over %levels levels (even), two per step.
+routine wide_erf_cf(%z: Wide, %levels: I64) -> Wide
+    block entry():
+        %zz: Wide = %z.mul(%z)
+        %n0: Wide = wide_from_i64(%levels.mul(2).add(1))
+        jump level(%levels, %n0, wide_one(), %zz)
+
+    block level(%i: I64, %n: Wide, %d: Wide, %zz: Wide):
+        %done: Bool = %i.sle(0)
+        branch %done ? finish(%n, %d, %zz) : step(%i, %n, %d, %zz)
+
+    block step(%i: I64, %n: Wide, %d: Wide, %zz: Wide):
+        %i2: I64  = %i.mul(2)
+        %n1: Wide = %n.mul(wide_from_i64(%i2.sub(1))).add(%zz.mul(wide_from_i64(%i2)).mul(%d))
+        %n2: Wide = %n1.mul(wide_from_i64(%i2.sub(3))).sub(%zz.mul(wide_from_i64(%i2.sub(2))).mul(%n))
+        jump level(%i.sub(2), %n2, %n1, %zz)
+
+    block finish(%n: Wide, %d: Wide, %zz: Wide):
+        %scale: Wide = %z.mul(wide_special(0)).mul(wide_exp(%zz.neg()))
+        %r:     Wide = %scale.mul(%d.ldexp(1).div(%n))
+        return(%r)
+
+; erfc z = 1/sqrt(pi) × z e^(-z²) × d/n, for the tail |z| >= 3.125.
+routine wide_erfc_cf(%z: Wide, %levels: I64) -> Wide
+    block entry():
+        %zz: Wide = %z.mul(%z)
+        jump level(%levels, wide_one(), wide_one(), %zz)
+
+    block level(%i: I64, %n: Wide, %d: Wide, %zz: Wide):
+        %done: Bool = %i.sle(0)
+        branch %done ? finish(%n, %d, %zz) : step(%i, %n, %d, %zz)
+
+    block step(%i: I64, %n: Wide, %d: Wide, %zz: Wide):
+        %n1: Wide = %n.add(wide_from_i64(%i).ldexp(-1).mul(%d))
+        %n2: Wide = %zz.mul(%n1).add(wide_from_i64(%i.sub(1)).ldexp(-1).mul(%n))
+        jump level(%i.sub(2), %n2, %n1, %zz)
+
+    block finish(%n: Wide, %d: Wide, %zz: Wide):
+        %scale: Wide = %z.mul(wide_special(0)).mul(wide_exp(%zz.neg()))
+        %r:     Wide = %scale.mul(%d.div(%n))
+        return(%r)
+
+const F128_ERF_SPLIT: F128 = F128 { bits: 0x40009000000000000000000000000000 }   ; 3.125
+const F128_ERF_FLAT:  F128 = F128 { bits: 0x4005E000000000000000000000000000 }   ; 120
+
+routine F128.erf(%self: Self) -> Self
+    block entry():
+        %nan:  Bool = %self.is_nan()
+        %zero: Bool = f128_is_zero_bits(%self.bits)
+        %a:    Self = %self.abs()
+        %flat: Bool = %a.gt(F128_ERF_FLAT).bitor(%self.is_infinite())
+        %tail: Bool = %a.ge(F128_ERF_SPLIT)
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        select:
+            %nan -> return(%quiet)
+            %zero -> return(%self)
+            %flat -> one()
+            %tail -> tail(%a)
+            _ -> middle()
+
+    block one():
+        %r: Self = Self.from_bits(0x3FFF0000000000000000000000000000).copysign(%self)
+        return(%r)
+
+    block tail(%a: Self):
+        %c: Wide = wide_erfc_cf(wide_from_f128(%a), 120)
+        %r: Self = wide_one().sub(%c).to_f128().copysign(%self)
+        return(%r)
+
+    block middle():
+        %r: Self = wide_erf_cf(wide_from_f128(%self), 72).to_f128()
+        return(%r)
+
+routine F128.erfc(%self: Self) -> Self
+    block entry():
+        %nan:   Bool = %self.is_nan()
+        %neg:   Bool = %self.bits.slt(0)
+        %a:     Self = %self.abs()
+        %flat:  Bool = %a.gt(F128_ERF_FLAT).bitor(%self.is_infinite())
+        %tail:  Bool = %a.ge(F128_ERF_SPLIT)
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        select:
+            %nan -> return(%quiet)
+            %flat -> flat(%neg)
+            %tail -> tail(%a, %neg)
+            _ -> middle()
+
+    ; erfc(+big) underflows to +0; erfc(-big) is 2
+    block flat(%neg: Bool):
+        %two:  Self = Self.from_bits(0x40000000000000000000000000000000)
+        %zero: Self = Self.from_bits(0)
+        branch %neg ? return(%two) : return(%zero)
+
+    block tail(%a: Self, %neg: Bool):
+        %c:   Wide = wide_erfc_cf(wide_from_f128(%a), 120)
+        %two: Wide = wide_from_i64(2)
+        %v:   Wide = %neg ? %two.sub(%c) : %c
+        %r:   Self = %v.to_f128()
+        return(%r)
+
+    block middle():
+        %r: Self = wide_one().sub(wide_erf_cf(wide_from_f128(%self), 72)).to_f128()
+        return(%r)
+
+; -- gamma, ln_gamma (Stirling with argument shift and reflection) ---------------
+
+routine wide_gamma_coef(%i: I64) -> Wide
+    block entry():
+        %w:   Wide = wide_table(WIDE_GAMMA_COEF_HI.as_ptr(), WIDE_GAMMA_COEF_LO.as_ptr(), WIDE_GAMMA_COEF_EXP.as_ptr(), %i)
+        %neg: Bool := WIDE_GAMMA_COEF_NEG[%i]
+        %r:   Wide = %neg ? %w.neg() : %w
+        return(%r)
+
+; sin(π f) for |f| <= 1/2, keeping the series argument within π/4.
+routine wide_sin_pi(%f: Wide) -> Wide
+    block entry():
+        %pi:    Wide = wide_special(3)
+        %a:     Wide = %f.abs()
+        %far:   Bool = %a.exp.sge(-2).bitand(%a.ldexp(2).above_one())    ; |f| > 1/4
+        %near_v: Wide = wide_sin_core(%pi.mul(%f))
+        %rest:  Wide = wide_from_i64(1).ldexp(-1).sub(%a)                 ; 1/2 - |f|
+        %far_v0: Wide = wide_cos_core(%pi.mul(%rest))
+        %far_v: Wide = %f.negative ? %far_v0.neg() : %far_v0
+        %r:     Wide = %far ? %far_v : %near_v
+        return(%r)
+
+struct LnGamma
+    negative: Bool      ; the sign of Γ(x)
+    ln:       Wide      ; ln |Γ(x)|
+
+; ln |Γ(x)| and Γ's sign for finite x, not a pole. Below -1, reflection:
+; ln|Γ(x)| = ln π - ln|sin(π f)| - ln Γ(1 - x). Below 20, the recurrence
+; Γ(a) = Γ(a + 20 - k) / (a (a + 1) …) lifts a to 20 + f first, where the
+; Stirling series (36 terms in 1/a²) is accurate far past F128.
+routine wide_ln_gamma(%x: Wide) -> LnGamma
+    block entry():
+        %one:     Wide = wide_one()
+        %reflect: Bool = %x.negative.bitand(%x.above_one())
+        %a:       Wide = %reflect ? %one.sub(%x) : %x
+        ; the nearest integer stays an F128: for x near -2^70 it doesn't fit an I64
+        %rint:    F128 = %a.to_f128().round_ties_even()
+        %odd:     Bool = f128_is_odd_integer(%rint)
+        %fr:      Wide = %a.sub(wide_from_f128(%rint))
+        %small:   Bool = %rint.lt(F128.from_bits(0x40034000000000000000000000000000))   ; 20
+        branch %small ? lift(%rint.to_i64(), %fr, %one, %odd, %reflect) : stirling(%a, %one, %fr, %odd, %reflect)
+
+    ; w = (inv + fr)(inv + 1 + fr) … (19 + fr), and a becomes 20 + fr
+    block lift(%k: I64, %fr: Wide, %w: Wide, %odd: Bool, %reflect: Bool):
+        %done: Bool = %k.sge(20)
+        branch %done ? lifted(%fr, %w, %odd, %reflect) : factor(%k, %fr, %w, %odd, %reflect)
+
+    block factor(%k: I64, %fr: Wide, %w: Wide, %odd: Bool, %reflect: Bool):
+        %term: Wide = wide_from_i64(%k).add(%fr)
+        jump lift(%k.add(1), %fr, %w.mul(%term), %odd, %reflect)
+
+    block lifted(%fr: Wide, %w: Wide, %odd: Bool, %reflect: Bool):
+        %a: Wide = wide_from_i64(20).add(%fr)
+        jump stirling(%a, %w, %fr, %odd, %reflect)
+
+    ; series(1/a²)/a + (a - 1/2) ln a - a + ln(2π)/2 - ln|w|
+    block stirling(%a: Wide, %w: Wide, %fr: Wide, %odd: Bool, %reflect: Bool):
+        %inv_aa: Wide = wide_one().div(%a.mul(%a))
+        %last:   Wide = wide_gamma_coef(35)
+        jump series(34, %last, %a, %w, %fr, %odd, %reflect, %inv_aa)
+
+    block series(%i: I64, %s: Wide, %a: Wide, %w: Wide, %fr: Wide, %odd: Bool, %reflect: Bool, %inv_aa: Wide):
+        %done: Bool = %i.slt(0)
+        branch %done ? assemble(%s, %a, %w, %fr, %odd, %reflect)
+                     : term(%i, %s, %a, %w, %fr, %odd, %reflect, %inv_aa)
+
+    block term(%i: I64, %s: Wide, %a: Wide, %w: Wide, %fr: Wide, %odd: Bool, %reflect: Bool, %inv_aa: Wide):
+        %next: Wide = %s.mul(%inv_aa).add(wide_gamma_coef(%i))
+        jump series(%i.sub(1), %next, %a, %w, %fr, %odd, %reflect, %inv_aa)
+
+    block assemble(%s: Wide, %a: Wide, %w: Wide, %fr: Wide, %odd: Bool, %reflect: Bool):
+        %half:  Wide = wide_one().ldexp(-1)
+        %y0:    Wide = %s.div(%a).add(%a.sub(%half).mul(wide_log(%a))).sub(%a).add(%half.mul(wide_special(1)))
+        %y:     Wide = %y0.sub(wide_log(%w.abs()))
+        %w_neg: Bool = %w.negative
+        branch %reflect ? reflected(%y, %fr, %odd) : plain(%y, %w_neg)
+
+    block plain(%y: Wide, %negative: Bool):
+        %r: LnGamma = LnGamma { negative: %negative, ln: %y }
+        return(%r)
+
+    ; the sign: Γ(x) < 0 exactly when sin(π f) < 0 and the rounded 1 - x is even, or neither
+    block reflected(%y: Wide, %fr: Wide, %odd: Bool):
+        %s:      Wide = wide_sin_pi(%fr)
+        %ln:     Wide = wide_special(2).sub(wide_log(%s.abs())).sub(%y)
+        %even:   Bool = %odd.bitnot()
+        %negative: Bool = %s.negative.eq(%even)
+        %r: LnGamma = LnGamma { negative: %negative, ln: %ln }
+        return(%r)
+
+; ln |Γ(x)|: +inf at the poles (0 and the negative integers) and at ±inf.
+; Exact +0 at 1 and 2; near those points and near its other zeros the result
+; keeps an absolute error around 2^-180, not a relative one.
+routine F128.ln_gamma(%self: Self) -> Self
+    block entry():
+        %nan:   Bool = %self.is_nan()
+        %zero:  Bool = f128_is_zero_bits(%self.bits)
+        %inf:   Bool = %self.is_infinite()
+        %pole:  Bool = %self.bits.slt(0).bitand(f128_is_integer(%self))
+        %one:   Bool = %self.eq(F128.from_bits(0x3FFF0000000000000000000000000000))
+        %two:   Bool = %self.eq(F128.from_bits(0x40000000000000000000000000000000))
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        %infinity: Self = Self.INFINITY
+        %plus_zero: Self = Self.from_bits(0)
+        %blows_up: Bool = %zero.bitor(%inf).bitor(%pole)
+        %exact: Bool = %one.bitor(%two)
+        select:
+            %nan -> return(%quiet)
+            %blows_up -> return(%infinity)
+            %exact -> return(%plus_zero)
+            _ -> compute()
+
+    block compute():
+        %g: LnGamma = wide_ln_gamma(wide_from_f128(%self))
+        %r: Self = %g.ln.to_f128()
+        return(%r)
+
+; Γ(x): ±inf at ±0, NaN at the negative integers and -inf.
+routine F128.gamma(%self: Self) -> Self
+    block entry():
+        %nan:   Bool = %self.is_nan()
+        %zero:  Bool = f128_is_zero_bits(%self.bits)
+        %neg:   Bool = %self.bits.slt(0)
+        %pole:  Bool = %neg.bitand(f128_is_integer(%self)).bitor(%self.eq(Self.NEG_INFINITY))
+        %big:   Bool = %self.gt(F128.from_bits(0x4009C200000000000000000000000000))     ; 1800
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        %invalid: Self = Self.NAN
+        %infinity: Self = Self.INFINITY
+        select:
+            %nan -> return(%quiet)
+            %zero -> signed_inf()
+            %pole -> return(%invalid)
+            %big -> return(%infinity)
+            _ -> compute()
+
+    block signed_inf():
+        %r: Self = Self.INFINITY.copysign(%self)
+        return(%r)
+
+    ; e^ln|Γ|, clamped where it certainly over- or underflows
+    block compute():
+        %g:     LnGamma = wide_ln_gamma(wide_from_f128(%self))
+        %ln_f:  Self = %g.ln.to_f128()
+        %over:  Bool = %ln_f.gt(F128.from_bits(0x400C6300000000000000000000000000))     ; 11360
+        %under: Bool = %ln_f.lt(F128.from_bits(0xC00C6700000000000000000000000000))     ; -11488
+        %huge:  Self = Self.INFINITY
+        %tiny:  Self = Self.from_bits(0)
+        select:
+            %over -> signed(%huge, %g.negative)
+            %under -> signed(%tiny, %g.negative)
+            _ -> finite(%g)
+
+    block finite(%g: LnGamma):
+        %r: Self = wide_exp(%g.ln).to_f128()
+        jump signed(%r, %g.negative)
+
+    block signed(%r: Self, %negative: Bool):
+        %s: Self = %negative ? %r.neg() : %r
+        return(%s)
