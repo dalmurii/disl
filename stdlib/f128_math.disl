@@ -16,20 +16,26 @@ struct Wide
     hi:       I128
     lo:       I64
 
-const WIDE_CONST_HI: Array<I128, 3> = [
+const WIDE_CONST_HI: Array<I128, 6> = [
     -104416603695425169325430464667613727057,
     -94820525291540180590189934288721592696,
-    -99666397752933951918340834954143154529
+    -99666397752933951918340834954143154529,
+    -44716858435456047740267689390491050958,
+    -35645750244503037706462092670815545385,
+    -150232840864944374954986985536324516647
 ]
-const WIDE_CONST_LO: Array<I64, 3> = [
+const WIDE_CONST_LO: Array<I64, 6> = [
     4680158270178506286,
     -1488586286134896039,
-    2121020303797364813
+    2121020303797364813,
+    4531542625639571970,
+    3783765167943123677,
+    51702288056968889
 ]
-const WIDE_CONST_EXP: Array<I64, 3> = [
-    -1, 0, -1
+const WIDE_CONST_EXP: Array<I64, 6> = [
+    -1, 0, -1, -2, 5, -6
 ]
-const WIDE_EXP_COEF_HI: Array<I128, 28> = [
+const WIDE_EXP_COEF_HI: Array<I128, 36> = [
     -170141183460469231731687303715884105728,
     -170141183460469231731687303715884105728,
     -170141183460469231731687303715884105728,
@@ -57,9 +63,17 @@ const WIDE_EXP_COEF_HI: Array<I128, 28> = [
     -8767177115379204141471883883255099341,
     -128112645445380537497356864360719819703,
     -79150402027944093043660462113554806221,
-    -30792630751463654077046731499070842288
+    -30792630751463654077046731499070842288,
+    -163431089109810000956901535470226857646,
+    -145136129336244987594162941819032924493,
+    -132126380163932089202882164111517238696,
+    -125411670913706077129963053036670433123,
+    -125411670913706077129963053036670433123,
+    -131922904126046452473399766806218850648,
+    -144179343113981276649280639784192342460,
+    -160988173726006178376202979868270274089
 ]
-const WIDE_EXP_COEF_LO: Array<I64, 28> = [
+const WIDE_EXP_COEF_LO: Array<I64, 36> = [
     0,
     0,
     0,
@@ -87,10 +101,18 @@ const WIDE_EXP_COEF_LO: Array<I64, 28> = [
     -6920479880936147906,
     -1888546108842272,
     -5678245617890744832,
-    4201631311364777453
+    4201631311364777453,
+    7671430484696887578,
+    4012364379114949696,
+    -4328625230008511079,
+    -5658370822828756702,
+    -5658370822828756702,
+    7928908831469970434,
+    3122092059334195323,
+    -1361914476885204646
 ]
-const WIDE_EXP_COEF_EXP: Array<I64, 28> = [
-    0, 0, -1, -3, -5, -7, -10, -13, -16, -19, -22, -26, -29, -33, -37, -41, -45, -49, -53, -57, -62, -66, -70, -75, -80, -84, -89, -94
+const WIDE_EXP_COEF_EXP: Array<I64, 36> = [
+    0, 0, -1, -3, -5, -7, -10, -13, -16, -19, -22, -26, -29, -33, -37, -41, -45, -49, -53, -57, -62, -66, -70, -75, -80, -84, -89, -94, -98, -103, -108, -113, -118, -123, -128, -133
 ]
 const WIDE_LOG_COEF_HI: Array<I128, 26> = [
     -170141183460469231731687303715884105728,
@@ -894,4 +916,671 @@ routine F128.cos(%self: Self) -> Self
 routine F128.tan(%self: Self) -> Self
     block entry():
         %r: Self = f128_trig(%self, TrigKind.Tan)
+        return(%r)
+
+; -- more Wide -----------------------------------------------------------------
+
+routine Wide.abs(%self: Self) -> Self
+    block entry():
+        %r: Self = Self { negative: false, exp: %self.exp, hi: %self.hi, lo: %self.lo }
+        return(%r)
+
+; sqrt for self > 0: Newton's method on 1/sqrt, y ← y (3 - a y²) / 2, from an
+; F64 seed (53 bits → 106 → 212), then × a.
+routine Wide.sqrt(%self: Self) -> Self
+    block entry():
+        %zero: Bool = %self.is_zero()
+        branch %zero ? return(%self) : root()
+
+    block root():
+        %half_e: I64  = %self.exp.ashr(1)                        ; floor(e / 2)
+        %unit:   Wide = %self.ldexp(0.sub(%half_e).mul(2))        ; in [1, 4)
+        %seed64: F64  = %unit.to_f128().to_f64().sqrt()
+        %one64:  F64  = 1.0
+        %y0:     Wide = wide_from_f128(%one64.fdiv(%seed64).to_f128())
+        %three:  Wide = wide_from_i64(3)
+        %y1:     Wide = %y0.mul(%three.sub(%unit.mul(%y0).mul(%y0))).ldexp(-1)
+        %y2:     Wide = %y1.mul(%three.sub(%unit.mul(%y1).mul(%y1))).ldexp(-1)
+        %r:      Wide = %unit.mul(%y2).ldexp(%half_e)
+        return(%r)
+
+; |self| > 1?
+routine Wide.above_one(%self: Self) -> Bool
+    block entry():
+        %big:   Bool = %self.exp.sgt(0)
+        %one_e: Bool = %self.exp.eq(0)
+        %more:  Bool = %self.hi.ne(F128_SIGN).bitor(%self.lo.ne(0))
+        %zero:  Bool = %self.is_zero()
+        %r:     Bool = %big.bitor(%one_e.bitand(%more)).bitand(%zero.bitnot())
+        return(%r)
+
+routine wide_one() -> Wide
+    block entry():
+        %r: Wide = wide_from_i64(1)
+        return(%r)
+
+routine wide_half_pi() -> Wide
+    block entry():
+        %r: Wide = wide_table(WIDE_HALF_PI_HI.as_ptr(), WIDE_HALF_PI_LO.as_ptr(), WIDE_HALF_PI_EXP.as_ptr(), 0)
+        return(%r)
+
+; -- exp_m1, ln_1p ---------------------------------------------------------------
+
+; e^x - 1 without cancellation: below |x| = 1/2 the series x Σ x^j / (j+1)!
+; (35 terms, the first dropped one under 2^-150 relative), else e^x - 1.
+routine wide_exp_m1(%x: Wide) -> Wide
+    block entry():
+        %small: Bool = %x.exp.slt(-1)
+        branch %small ? series(%x) : direct(%x)
+
+    block direct(%x: Wide):
+        %r: Wide = wide_exp(%x).sub(wide_one())
+        return(%r)
+
+    block series(%x: Wide):
+        %last: Wide = wide_table(WIDE_EXP_COEF_HI.as_ptr(), WIDE_EXP_COEF_LO.as_ptr(), WIDE_EXP_COEF_EXP.as_ptr(), 35)
+        jump horner(34, %last, %x)
+
+    block horner(%i: I64, %s: Wide, %x: Wide):
+        %done: Bool = %i.slt(1)
+        %r:    Wide = %s.mul(%x)
+        branch %done ? return(%r) : step(%i, %s, %x)
+
+    block step(%i: I64, %s: Wide, %x: Wide):
+        %c: Wide = wide_table(WIDE_EXP_COEF_HI.as_ptr(), WIDE_EXP_COEF_LO.as_ptr(), WIDE_EXP_COEF_EXP.as_ptr(), %i)
+        jump horner(%i.sub(1), %s.mul(%x).add(%c), %x)
+
+; ln(1 + x) for x > -1: below |x| = 1/4, 2 atanh(t) with t = x / (2 + x)
+; (|t| < 0.143, inside the log series' reach); else ln of 1 + x, which is exact.
+routine wide_ln_1p(%x: Wide) -> Wide
+    block entry():
+        %small: Bool = %x.exp.slt(-2)
+        branch %small ? series(%x) : direct(%x)
+
+    block direct(%x: Wide):
+        %r: Wide = wide_log(%x.add(wide_one()))
+        return(%r)
+
+    block series(%x: Wide):
+        %t:    Wide = %x.div(%x.add(wide_from_i64(2)))
+        %tt:   Wide = %t.mul(%t)
+        %last: Wide = wide_table(WIDE_LOG_COEF_HI.as_ptr(), WIDE_LOG_COEF_LO.as_ptr(), WIDE_LOG_COEF_EXP.as_ptr(), 25)
+        jump horner(24, %last, %tt, %t)
+
+    block horner(%i: I64, %s: Wide, %tt: Wide, %t: Wide):
+        %done: Bool = %i.slt(0)
+        %r:    Wide = %s.mul(%t).ldexp(1)
+        branch %done ? return(%r) : step(%i, %s, %tt, %t)
+
+    block step(%i: I64, %s: Wide, %tt: Wide, %t: Wide):
+        %c: Wide = wide_table(WIDE_LOG_COEF_HI.as_ptr(), WIDE_LOG_COEF_LO.as_ptr(), WIDE_LOG_COEF_EXP.as_ptr(), %i)
+        jump horner(%i.sub(1), %s.mul(%tt).add(%c), %tt, %t)
+
+; -- atan ----------------------------------------------------------------------
+
+; atan x = x Σ (-x²)^k / (2k+1), 26 terms, for |x| < 0.1.
+routine wide_atan_series(%x: Wide) -> Wide
+    block entry():
+        %u:    Wide = %x.mul(%x).neg()
+        %last: Wide = wide_table(WIDE_LOG_COEF_HI.as_ptr(), WIDE_LOG_COEF_LO.as_ptr(), WIDE_LOG_COEF_EXP.as_ptr(), 25)
+        jump horner(24, %last, %u, %x)
+
+    block horner(%i: I64, %s: Wide, %u: Wide, %x: Wide):
+        %done: Bool = %i.slt(0)
+        %r:    Wide = %s.mul(%x)
+        branch %done ? return(%r) : step(%i, %s, %u, %x)
+
+    block step(%i: I64, %s: Wide, %u: Wide, %x: Wide):
+        %c: Wide = wide_table(WIDE_LOG_COEF_HI.as_ptr(), WIDE_LOG_COEF_LO.as_ptr(), WIDE_LOG_COEF_EXP.as_ptr(), %i)
+        jump horner(%i.sub(1), %s.mul(%u).add(%c), %u, %x)
+
+; atan x for any finite x: past |x| = 1, π/2 - atan(1/|x|); then three
+; half-angle steps x ← x / (1 + sqrt(1 + x²)) bring |x| <= 1 under 0.1.
+routine wide_atan(%x: Wide) -> Wide
+    block entry():
+        %a:      Wide = %x.abs()
+        %big:    Bool = %a.above_one()
+        %inv:    Wide = wide_one().div(%a)
+        %small:  Wide = %big ? %inv : %a
+        jump halve(0, %small, %big)
+
+    block halve(%n: I64, %t: Wide, %big: Bool):
+        %done: Bool = %n.sge(3)
+        branch %done ? finish(%t, %big) : step(%n, %t, %big)
+
+    block step(%n: I64, %t: Wide, %big: Bool):
+        %one:  Wide = wide_one()
+        %next: Wide = %t.div(%one.add(%one.add(%t.mul(%t)).sqrt()))
+        jump halve(%n.add(1), %next, %big)
+
+    block finish(%t: Wide, %big: Bool):
+        %r0:  Wide = wide_atan_series(%t).ldexp(3)
+        %r1:  Wide = %big ? wide_half_pi().sub(%r0) : %r0
+        %r:   Wide = %x.negative ? %r1.neg() : %r1
+        return(%r)
+
+; -- F128 wrappers -------------------------------------------------------------
+
+; Most functions below share the same frame: NaN in, NaN out; a few fixed
+; answers for infinities and zeros; otherwise compute in Wide and round once.
+
+routine F128.atan(%self: Self) -> Self
+    block entry():
+        %nan:  Bool = %self.is_nan()
+        %inf:  Bool = %self.is_infinite()
+        %zero: Bool = f128_is_zero_bits(%self.bits)
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        select:
+            %nan -> return(%quiet)
+            %zero -> return(%self)
+            %inf -> infinite()
+            _ -> compute()
+
+    block infinite():
+        %r0: Self = wide_half_pi().to_f128()
+        %r:  Self = %r0.copysign(%self)
+        return(%r)
+
+    block compute():
+        %r: Self = wide_atan(wide_from_f128(%self)).to_f128()
+        return(%r)
+
+; asin x = atan(x / sqrt((1 - x)(1 + x))), with the product exact near ±1.
+routine F128.asin(%self: Self) -> Self
+    block entry():
+        %nan:     Bool = %self.is_nan()
+        %zero:    Bool = f128_is_zero_bits(%self.bits)
+        %a:       Wide = wide_from_f128(%self.abs())
+        %outside: Bool = %a.above_one().bitor(%self.is_infinite())
+        %edge:    Bool = %self.abs().eq(F128.from_bits(0x3FFF0000000000000000000000000000))
+        %quiet:   Self = Self.from_bits(f128_quiet(%self.bits))
+        %invalid: Self = Self.NAN
+        select:
+            %nan -> return(%quiet)
+            %outside -> return(%invalid)
+            %zero -> return(%self)
+            %edge -> edge()
+            _ -> compute()
+
+    block edge():
+        %r: Self = wide_half_pi().to_f128().copysign(%self)
+        return(%r)
+
+    block compute():
+        %x:   Wide = wide_from_f128(%self)
+        %one: Wide = wide_one()
+        %d:   Wide = %one.sub(%x).mul(%one.add(%x)).sqrt()
+        %r:   Self = wide_atan(%x.div(%d)).to_f128()
+        return(%r)
+
+; acos x = 2 atan(sqrt((1 - x) / (1 + x))): no cancellation near 1.
+routine F128.acos(%self: Self) -> Self
+    block entry():
+        %nan:     Bool = %self.is_nan()
+        %a:       Wide = wide_from_f128(%self.abs())
+        %outside: Bool = %a.above_one().bitor(%self.is_infinite())
+        %minus_one: Bool = %self.eq(F128.from_bits(0xBFFF0000000000000000000000000000))
+        %quiet:   Self = Self.from_bits(f128_quiet(%self.bits))
+        %invalid: Self = Self.NAN
+        select:
+            %nan -> return(%quiet)
+            %outside -> return(%invalid)
+            %minus_one -> pi()
+            _ -> compute()
+
+    block pi():
+        %r: Self = wide_half_pi().ldexp(1).to_f128()
+        return(%r)
+
+    block compute():
+        %x:   Wide = wide_from_f128(%self)
+        %one: Wide = wide_one()
+        %q:   Wide = %one.sub(%x).div(%one.add(%x)).sqrt()
+        %r:   Self = wide_atan(%q).ldexp(1).to_f128()
+        return(%r)
+
+; atan2(y, x), the angle of (x, y), with IEEE's rules for zeros and infinities.
+routine F128.atan2(%self: Self, %x: Self) -> Self
+    block entry():
+        %y: Self = %self
+        %nan: Bool = %y.is_nan().bitor(%x.is_nan())
+        %quiet: Self = Self.NAN
+        branch %nan ? return(%quiet) : cases(%y)
+
+    block cases(%y: Self):
+        %y_zero: Bool = f128_is_zero_bits(%y.bits)
+        %x_zero: Bool = f128_is_zero_bits(%x.bits)
+        %y_inf:  Bool = %y.is_infinite()
+        %x_inf:  Bool = %x.is_infinite()
+        %x_neg:  Bool = %x.bits.slt(0)
+        %half_pi: Wide = wide_half_pi()
+        ; the angle for y >= 0, as a Wide
+        %pi:       Wide = %half_pi.ldexp(1)
+        %quarter:  Wide = %half_pi.ldexp(-1)
+        %three_q:  Wide = %quarter.mul(wide_from_i64(3))
+        %zero_angle: Wide = wide_zero()
+        %flat:     Wide = %x_neg ? %pi : %zero_angle           ; y = 0, or x infinite
+        %corner:   Wide = %x_neg ? %three_q : %quarter         ; both infinite
+        %steep:    Wide = %x_inf ? %corner : %half_pi          ; y infinite
+        select:
+            %y_zero -> at(%y, %flat)
+            %y_inf -> at(%y, %steep)
+            %x_zero -> at(%y, %half_pi)
+            %x_inf -> at(%y, %flat)
+            _ -> general(%y)
+
+    ; |angle| from |y / x|, then the quadrant, then y's sign
+    block general(%y: Self):
+        %ratio: Wide = wide_from_f128(%y.abs()).div(wide_from_f128(%x.abs()))
+        %a:     Wide = wide_atan(%ratio)
+        %x_neg: Bool = %x.bits.slt(0)
+        %angle: Wide = %x_neg ? wide_half_pi().ldexp(1).sub(%a) : %a
+        jump at(%y, %angle)
+
+    ; y's sign on the angle, keeping -0 for y = -0 and x > 0
+    block at(%y: Self, %angle: Wide):
+        %r0: Self = %angle.to_f128()
+        %r:  Self = %r0.copysign(%y)
+        return(%r)
+
+; -- hyperbolic ----------------------------------------------------------------
+
+routine F128.sinh(%self: Self) -> Self
+    block entry():
+        %nan:  Bool = %self.is_nan()
+        %zero: Bool = f128_is_zero_bits(%self.bits)
+        %inf:  Bool = %self.is_infinite()
+        %big:  Bool = %self.abs().gt(F128.from_bits(0x400C6400000000000000000000000000))  ; 11392
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        select:
+            %nan -> return(%quiet)
+            %zero -> return(%self)
+            %inf -> return(%self)
+            %big -> huge()
+            _ -> compute()
+
+    block huge():
+        %r: Self = Self.INFINITY.copysign(%self)
+        return(%r)
+
+    ; sinh a = (e^a - e^-a) / 2; below 1/2 from m = e^a - 1: (m + m / (m + 1)) / 2
+    block compute():
+        %a:     Wide = wide_from_f128(%self.abs())
+        %small: Bool = %a.exp.slt(-1)
+        %m:     Wide = wide_exp_m1(%a)
+        %via_m: Wide = %m.add(%m.div(%m.add(wide_one()))).ldexp(-1)
+        %e:     Wide = wide_exp(%a)
+        %via_e: Wide = %e.sub(wide_one().div(%e)).ldexp(-1)
+        %s:     Wide = %small ? %via_m : %via_e
+        %r:     Self = %s.to_f128().copysign(%self)
+        return(%r)
+
+routine F128.cosh(%self: Self) -> Self
+    block entry():
+        %nan:  Bool = %self.is_nan()
+        %inf:  Bool = %self.is_infinite()
+        %big:  Bool = %self.abs().gt(F128.from_bits(0x400C6400000000000000000000000000))
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        %infinity: Self = Self.INFINITY
+        %over: Bool = %inf.bitor(%big)
+        select:
+            %nan -> return(%quiet)
+            %over -> return(%infinity)
+            _ -> compute()
+
+    block compute():
+        %e: Wide = wide_exp(wide_from_f128(%self.abs()))
+        %r: Self = %e.add(wide_one().div(%e)).ldexp(-1).to_f128()
+        return(%r)
+
+; tanh a = m / (m + 2) with m = e^(2a) - 1; ±1 past |x| = 64.
+routine F128.tanh(%self: Self) -> Self
+    block entry():
+        %nan:  Bool = %self.is_nan()
+        %zero: Bool = f128_is_zero_bits(%self.bits)
+        %flat: Bool = %self.abs().gt(F128.from_bits(0x40050000000000000000000000000000))  ; 64
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        select:
+            %nan -> return(%quiet)
+            %zero -> return(%self)
+            %flat -> one()
+            _ -> compute()
+
+    block one():
+        %r: Self = Self.from_bits(0x3FFF0000000000000000000000000000).copysign(%self)
+        return(%r)
+
+    block compute():
+        %m: Wide = wide_exp_m1(wide_from_f128(%self.abs()).ldexp(1))
+        %t: Wide = %m.div(%m.add(wide_from_i64(2)))
+        %r: Self = %t.to_f128().copysign(%self)
+        return(%r)
+
+; asinh a = ln_1p(a + a² / (1 + sqrt(1 + a²))) below 1/2, else ln(a + sqrt(a² + 1)).
+routine F128.asinh(%self: Self) -> Self
+    block entry():
+        %nan:  Bool = %self.is_nan()
+        %zero: Bool = f128_is_zero_bits(%self.bits)
+        %inf:  Bool = %self.is_infinite()
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        select:
+            %nan -> return(%quiet)
+            %zero -> return(%self)
+            %inf -> return(%self)
+            _ -> compute()
+
+    block compute():
+        %a:     Wide = wide_from_f128(%self.abs())
+        %one:   Wide = wide_one()
+        %aa:    Wide = %a.mul(%a)
+        %root:  Wide = %aa.add(%one).sqrt()
+        %small: Bool = %a.exp.slt(-1)
+        %near:  Wide = wide_ln_1p(%a.add(%aa.div(%one.add(%root))))
+        %far:   Wide = wide_log(%a.add(%root))
+        %s:     Wide = %small ? %near : %far
+        %r:     Self = %s.to_f128().copysign(%self)
+        return(%r)
+
+; acosh x for x >= 1: with y = x - 1, ln_1p(y + sqrt(y (y + 2))) below y = 1/2,
+; else ln(x + sqrt(x² - 1)).
+routine F128.acosh(%self: Self) -> Self
+    block entry():
+        %nan:   Bool = %self.is_nan()
+        %below: Bool = %self.lt(F128.from_bits(0x3FFF0000000000000000000000000000))
+        %inf:   Bool = %self.is_infinite()
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        %invalid: Self = Self.NAN
+        select:
+            %nan -> return(%quiet)
+            %below -> return(%invalid)
+            %inf -> return(%self)
+            _ -> compute()
+
+    block compute():
+        %x:     Wide = wide_from_f128(%self)
+        %one:   Wide = wide_one()
+        %y:     Wide = %x.sub(%one)
+        %small: Bool = %y.exp.slt(-1)
+        %near:  Wide = wide_ln_1p(%y.add(%y.mul(%y.add(wide_from_i64(2))).sqrt()))
+        %far:   Wide = wide_log(%x.add(%x.mul(%x).sub(%one).sqrt()))
+        %s:     Wide = %small ? %near : %far
+        %r:     Self = %s.to_f128()
+        return(%r)
+
+; atanh a = ln_1p(2a / (1 - a)) / 2; ±inf at ±1, NaN beyond.
+routine F128.atanh(%self: Self) -> Self
+    block entry():
+        %nan:    Bool = %self.is_nan()
+        %zero:   Bool = f128_is_zero_bits(%self.bits)
+        %a:      Self = %self.abs()
+        %one:    Self = Self.from_bits(0x3FFF0000000000000000000000000000)
+        %at_one: Bool = %a.eq(%one)
+        %beyond: Bool = %a.gt(%one)
+        %quiet:  Self = Self.from_bits(f128_quiet(%self.bits))
+        %invalid: Self = Self.NAN
+        select:
+            %nan -> return(%quiet)
+            %zero -> return(%self)
+            %beyond -> return(%invalid)
+            %at_one -> pole()
+            _ -> compute(%a)
+
+    block pole():
+        %r: Self = Self.INFINITY.copysign(%self)
+        return(%r)
+
+    block compute(%a: Self):
+        %w:   Wide = wide_from_f128(%a)
+        %arg: Wide = %w.ldexp(1).div(wide_one().sub(%w))
+        %r:   Self = wide_ln_1p(%arg).ldexp(-1).to_f128().copysign(%self)
+        return(%r)
+
+; -- exponentials and logarithms -----------------------------------------------
+
+routine F128.exp_m1(%self: Self) -> Self
+    block entry():
+        %nan:   Bool = %self.is_nan()
+        %zero:  Bool = f128_is_zero_bits(%self.bits)
+        %over:  Bool = %self.gt(F128.from_bits(0x400C6300000000000000000000000000))   ; 11360
+        %under: Bool = %self.lt(F128.from_bits(0xC0050000000000000000000000000000))   ; -64: -1 after rounding
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        %infinity: Self = Self.INFINITY
+        %minus_one: Self = Self.from_bits(0xBFFF0000000000000000000000000000)
+        select:
+            %nan -> return(%quiet)
+            %zero -> return(%self)
+            %over -> return(%infinity)
+            %under -> return(%minus_one)
+            _ -> compute()
+
+    block compute():
+        %r: Self = wide_exp_m1(wide_from_f128(%self)).to_f128()
+        return(%r)
+
+routine F128.exp2(%self: Self) -> Self
+    block entry():
+        %nan:   Bool = %self.is_nan()
+        %over:  Bool = %self.gt(F128.from_bits(0x400D0008000000000000000000000000))   ; 16386
+        %under: Bool = %self.lt(F128.from_bits(0xC00D0300000000000000000000000000))   ; -16576
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        %infinity: Self = Self.INFINITY
+        %plus_zero: Self = Self.from_bits(0)
+        select:
+            %nan -> return(%quiet)
+            %over -> return(%infinity)
+            %under -> return(%plus_zero)
+            _ -> compute()
+
+    block compute():
+        %r: Self = wide_exp(wide_from_f128(%self).mul(wide_const(0))).to_f128()
+        return(%r)
+
+routine F128.ln_1p(%self: Self) -> Self
+    block entry():
+        %nan:    Bool = %self.is_nan()
+        %zero:   Bool = f128_is_zero_bits(%self.bits)
+        %minus_one: Self = Self.from_bits(0xBFFF0000000000000000000000000000)
+        %pole:   Bool = %self.eq(%minus_one)
+        %below:  Bool = %self.lt(%minus_one)
+        %inf:    Bool = %self.eq(Self.INFINITY)
+        %quiet:  Self = Self.from_bits(f128_quiet(%self.bits))
+        %invalid: Self = Self.NAN
+        %minus_inf: Self = Self.NEG_INFINITY
+        select:
+            %nan -> return(%quiet)
+            %zero -> return(%self)
+            %pole -> return(%minus_inf)
+            %below -> return(%invalid)
+            %inf -> return(%self)
+            _ -> compute()
+
+    block compute():
+        %r: Self = wide_ln_1p(wide_from_f128(%self)).to_f128()
+        return(%r)
+
+; ln x scaled by a constant (1/ln 2, 1/ln 10) before the single rounding.
+routine f128_log_scaled(%x: F128, %scale: I64) -> F128
+    block entry():
+        %scaled: F128 = %x.ln()
+        %finite: Bool = %scaled.is_finite().bitand(%x.is_nan().bitnot())
+        %zero:   Bool = f128_is_zero_bits(%scaled.bits)
+        %special: Bool = %finite.bitnot().bitor(%zero)
+        branch %special ? return(%scaled) : compute()
+
+    block compute():
+        %r: F128 = wide_log(wide_from_f128(%x)).mul(wide_const(%scale)).to_f128()
+        return(%r)
+
+routine F128.log2(%self: Self) -> Self
+    block entry():
+        %r: Self = f128_log_scaled(%self, 1)
+        return(%r)
+
+routine F128.log10(%self: Self) -> Self
+    block entry():
+        %r: Self = f128_log_scaled(%self, 3)
+        return(%r)
+
+; log of self to the given base: ln self / ln base
+routine F128.log(%self: Self, %base: Self) -> Self
+    block entry():
+        %num: Self = %self.ln()
+        %den: Self = %base.ln()
+        %plain: Bool = %num.is_finite().bitand(%den.is_finite()).bitand(f128_is_zero_bits(%num.bits).bitnot())
+        %div0:  Bool = f128_is_zero_bits(%den.bits)
+        %naive: Self = %num.div(%den)
+        branch %plain ? exact(%div0, %naive) : return(%naive)
+
+    block exact(%div0: Bool, %naive: Self):
+        branch %div0 ? return(%naive) : compute()
+
+    block compute():
+        %r: Self = wide_log(wide_from_f128(%self)).div(wide_log(wide_from_f128(%base))).to_f128()
+        return(%r)
+
+; -- powers and roots ----------------------------------------------------------
+
+; Is x an integer, and if so an odd one? (|x| >= 2^113 is always even.)
+routine f128_is_integer(%x: F128) -> Bool
+    block entry():
+        %r: Bool = %x.trunc().eq(%x).bitand(%x.is_finite())
+        return(%r)
+
+routine f128_is_odd_integer(%x: F128) -> Bool
+    block entry():
+        %int:  Bool = f128_is_integer(%x)
+        %big:  Bool = %x.abs().ge(F128.from_bits(0x40700000000000000000000000000000))   ; 2^113
+        %odd:  Bool = %x.to_i128().bitand(1).eq(1)
+        %r:    Bool = %int.bitand(%big.bitnot()).bitand(%odd)
+        return(%r)
+
+; x^y with the special cases of IEEE 754 / C99 Annex F.
+routine F128.powf(%self: Self, %y: Self) -> Self
+    block entry():
+        %x: Self = %self
+        %one: Self = Self.from_bits(0x3FFF0000000000000000000000000000)
+        %y_zero: Bool = f128_is_zero_bits(%y.bits)
+        %x_one:  Bool = %x.eq(%one)
+        %nan:    Bool = %x.is_nan().bitor(%y.is_nan())
+        %quiet:  Self = Self.NAN
+        select:
+            %y_zero -> return(%one)
+            %x_one -> return(%one)
+            %nan -> return(%quiet)
+            _ -> cases(%x)
+
+    block cases(%x: Self):
+        %one:     Self = Self.from_bits(0x3FFF0000000000000000000000000000)
+        %x_zero:  Bool = f128_is_zero_bits(%x.bits)
+        %x_inf:   Bool = %x.is_infinite()
+        %y_inf:   Bool = %y.is_infinite()
+        %y_neg:   Bool = %y.bits.slt(0)
+        %odd:     Bool = f128_is_odd_integer(%y)
+        %int:     Bool = f128_is_integer(%y)
+        %x_neg:   Bool = %x.bits.slt(0)
+        %big_x:   Bool = %x.abs().gt(%one)
+        %minus_one: Bool = %x.eq(%one.neg())
+        %zero:    Self = Self.from_bits(0)
+        %infinity: Self = Self.INFINITY
+        ; x = ±0: a pole for y < 0, zero for y > 0; odd integers keep x's sign
+        %at_zero:  Self = %y_neg ? %infinity : %zero
+        %zero_r:   Self = %odd ? %at_zero.copysign(%x) : %at_zero
+        ; y = ±inf: |x| > 1 grows for +inf, |x| < 1 grows for -inf
+        %grows:    Bool = %big_x.bitxor(%y_neg)
+        %growth:   Self = %grows ? %infinity : %zero
+        %inf_r:    Self = %minus_one ? %one : %growth
+        ; x = ±inf: like 1/0 for y < 0; odd integers keep x's sign
+        %x_inf_r0: Self = %y_neg ? %zero : %infinity
+        %x_inf_r:  Self = %odd ? %x_inf_r0.copysign(%x) : %x_inf_r0
+        %bad:      Bool = %x_neg.bitand(%int.bitnot())
+        %invalid:  Self = Self.NAN
+        select:
+            %x_zero -> return(%zero_r)
+            %y_inf -> return(%inf_r)
+            %x_inf -> return(%x_inf_r)
+            %bad -> return(%invalid)
+            _ -> general(%x, %odd)
+
+    ; e^(y ln|x|), negated for a negative x and an odd integer y
+    block general(%x: Self, %odd: Bool):
+        %z:     Wide = wide_from_f128(%y).mul(wide_log(wide_from_f128(%x.abs())))
+        %z_f:   Self = %z.to_f128()
+        %over:  Bool = %z_f.gt(F128.from_bits(0x400C6300000000000000000000000000))
+        %under: Bool = %z_f.lt(F128.from_bits(0xC00C6700000000000000000000000000))
+        %flip:  Bool = %odd.bitand(%x.bits.slt(0))
+        %r_inf: Self = Self.INFINITY
+        %r_zero: Self = Self.from_bits(0)
+        select:
+            %over -> signed(%r_inf, %flip)
+            %under -> signed(%r_zero, %flip)
+            _ -> finite(%z, %flip)
+
+    block finite(%z: Wide, %flip: Bool):
+        %r: Self = wide_exp(%z).to_f128()
+        jump signed(%r, %flip)
+
+    block signed(%r: Self, %flip: Bool):
+        %s: Self = %flip ? %r.neg() : %r
+        return(%s)
+
+routine F128.powi(%self: Self, %n: I32) -> Self
+    block entry():
+        %r: Self = %self.powf(%n.to_f128())
+        return(%r)
+
+; cube root, odd: sign × e^(ln|x| / 3)
+routine F128.cbrt(%self: Self) -> Self
+    block entry():
+        %nan:  Bool = %self.is_nan()
+        %zero: Bool = f128_is_zero_bits(%self.bits)
+        %inf:  Bool = %self.is_infinite()
+        %quiet: Self = Self.from_bits(f128_quiet(%self.bits))
+        %keep: Bool = %zero.bitor(%inf)
+        select:
+            %nan -> return(%quiet)
+            %keep -> return(%self)
+            _ -> compute()
+
+    block compute():
+        %l: Wide = wide_log(wide_from_f128(%self.abs()))
+        %r: Self = wide_exp(%l.div(wide_from_i64(3))).to_f128().copysign(%self)
+        return(%r)
+
+; sqrt(x² + y²) without overflow or underflow; inf if either is infinite.
+routine F128.hypot(%self: Self, %other: Self) -> Self
+    block entry():
+        %inf: Bool = %self.is_infinite().bitor(%other.is_infinite())
+        %nan: Bool = %self.is_nan().bitor(%other.is_nan())
+        %infinity: Self = Self.INFINITY
+        %quiet: Self = Self.NAN
+        select:
+            %inf -> return(%infinity)
+            %nan -> return(%quiet)
+            _ -> compute()
+
+    block compute():
+        %a: Wide = wide_from_f128(%self)
+        %b: Wide = wide_from_f128(%other)
+        %r: Self = %a.mul(%a).add(%b.mul(%b)).sqrt().to_f128()
+        return(%r)
+
+; -- angles --------------------------------------------------------------------
+
+routine f128_scale_angle(%x: F128, %which: I64) -> F128
+    block entry():
+        %keep: Bool = f128_is_zero_bits(%x.bits).bitor(%x.is_finite().bitnot())
+        branch %keep ? return(%x) : compute()
+
+    block compute():
+        %r: F128 = wide_from_f128(%x).mul(wide_const(%which)).to_f128()
+        return(%r)
+
+routine F128.to_degrees(%self: Self) -> Self
+    block entry():
+        %r: Self = f128_scale_angle(%self, 4)
+        return(%r)
+
+routine F128.to_radians(%self: Self) -> Self
+    block entry():
+        %r: Self = f128_scale_angle(%self, 5)
         return(%r)
