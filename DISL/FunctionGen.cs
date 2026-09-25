@@ -342,7 +342,7 @@ public sealed class FunctionGen
                 if (bp.Pointee is null) throw Err(ix.Pos, "an opaque Ptr cannot be indexed; cast it to Ptr<T> first");
                 var idx = EvalIndex(ix.Index);
                 _c.EnsureTypeDefined(bp.Pointee);
-                // `#arr[i]` on a Ptr<Array<T, N>> is element i of the array (as stdlib/collection/array.disl uses it).
+                // `#arr[i]` on a Ptr<Array<T, N>> is element i of the array (as stdlib/collection/Array.disl uses it).
                 if (bp.Pointee is ArrayType arr)
                     return (EmitTmp($"getelementptr {arr.Llvm}, ptr {b.Op}, i64 0, {idx.Type.Llvm} {idx.Op}"), arr.Elem);
                 return (EmitTmp($"getelementptr {bp.Pointee.Llvm}, ptr {b.Op}, {idx.Type.Llvm} {idx.Op}"), bp.Pointee);
