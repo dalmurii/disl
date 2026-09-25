@@ -87,3 +87,8 @@ routine Bool.to_i64(%self: Self) -> I64
     block entry():
         %result: I64 = zext<Self, I64>(%self)
         return(%result)
+
+routine Bool.to_i128(%self: Self) -> I128
+    block entry():
+        %result: I128 = zext<Self, I128>(%self)
+        return(%result)
