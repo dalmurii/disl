@@ -329,3 +329,212 @@ require W: typename, Writer<W>
     block entry():
         write_str(#out, %self)
         return()
+
+; -- floats --------------------------------------------------------------------
+;
+; Floats print the shortest decimal that reads back to the same value (Ryu,
+; stdlib/ryu.disl), laid out like Python's repr: positional when the decimal
+; exponent is in -4 .. 15 (0.0001, 1.0, 123.5), scientific otherwise (1e+16,
+; 5e-324). Specials are inf, -inf, NaN, and -0.0.
+
+; Writes %count zeros.
+routine write_zeros<W>(#out: Ptr<W>, %count: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        jump loop(%count)
+
+    block loop(%left: I64):
+        %done: Bool = %left.sle(0)
+        branch %done ? return() : one(%left)
+
+    block one(%left: I64):
+        write_str(#out, "0")
+        jump loop(%left.sub(1))
+
+; Writes digits × 10^exponent (digits > 0, at most 17 digits).
+routine write_float_decimal<W>(#out: Ptr<W>, %d: FloatDecimal) -> Void
+require W: typename, Writer<W>
+    block entry():
+        #buf:    Ptr<Array<I8, 20>> = alloca<Array<I8, 20>>
+        #digits: Ptr<I8>            = #buf.cast<I8>()
+        %value:  I64 = %d.digits
+        jump fill(20, %value, #digits)
+
+    block fill(%end: I64, %rest: I64, #digits: Ptr<I8>):
+        %at: I64 = %end.sub(1)
+        #digits[%at] = %rest.urem(10).add(48).to_i8()
+        %next: I64  = %rest.udiv(10)
+        %more: Bool = %next.ne(0)
+        branch %more ? fill(%at, %next, #digits) : layout(%at, #digits)
+
+    ; n digits at #first; the point goes after the first digit at scientific
+    ; exponent x = n - 1 + exponent.
+    block layout(%start: I64, #digits: Ptr<I8>):
+        #first:     Ptr<I8> = #digits[%start]
+        %n:         I64     = 20.sub(%start)
+        %exponent:  I64     = %d.exponent
+        %x:         I64     = %n.sub(1).add(%exponent)
+        %low_ok:    Bool    = %x.sge(-4)
+        %high_ok:   Bool    = %x.slt(16)
+        %positional: Bool   = %low_ok.bitand(%high_ok)
+        branch %positional ? positional(#first, %n, %exponent, %x) : scientific(#first, %n, %x)
+
+    block positional(#first: Ptr<I8>, %n: I64, %exponent: I64, %x: I64):
+        %whole:    Bool = %exponent.sge(0)
+        %fraction: Bool = %x.slt(0)
+        select:
+            %whole -> integral(#first, %n, %exponent)
+            %fraction -> below_one(#first, %n, %x)
+            _ -> split(#first, %n, %exponent)
+
+    ; 1234 × 10^2 → 123400.0
+    block integral(#first: Ptr<I8>, %n: I64, %exponent: I64):
+        #out.write_bytes(#first, %n)
+        write_zeros(#out, %exponent)
+        write_str(#out, ".0")
+        return()
+
+    ; 1234 × 10^-6 → 0.001234
+    block below_one(#first: Ptr<I8>, %n: I64, %x: I64):
+        write_str(#out, "0.")
+        write_zeros(#out, 0.sub(%x).sub(1))
+        #out.write_bytes(#first, %n)
+        return()
+
+    ; 1234 × 10^-2 → 12.34
+    block split(#first: Ptr<I8>, %n: I64, %exponent: I64):
+        %head: I64 = %n.add(%exponent)
+        #out.write_bytes(#first, %head)
+        write_str(#out, ".")
+        #tail: Ptr<I8> = #first[%head]
+        #out.write_bytes(#tail, 0.sub(%exponent))
+        return()
+
+    ; 1234 × 10^20 → 1.234e+23
+    block scientific(#first: Ptr<I8>, %n: I64, %x: I64):
+        #out.write_bytes(#first, 1)
+        %more: Bool = %n.sgt(1)
+        branch %more ? mantissa_tail(#first, %n, %x) : exponent_part(%x)
+
+    block mantissa_tail(#first: Ptr<I8>, %n: I64, %x: I64):
+        write_str(#out, ".")
+        #rest: Ptr<I8> = #first[1]
+        #out.write_bytes(#rest, %n.sub(1))
+        jump exponent_part(%x)
+
+    ; e+XX / e-XX, at least two digits
+    block exponent_part(%x: I64):
+        %negative: Bool = %x.slt(0)
+        branch %negative ? minus_exponent(%x) : plus_exponent(%x)
+
+    block minus_exponent(%x: I64):
+        write_str(#out, "e-")
+        write_udecimal64(#out, 0.sub(%x), 2)
+        return()
+
+    block plus_exponent(%x: I64):
+        write_str(#out, "e+")
+        write_udecimal64(#out, %x, 2)
+        return()
+
+; Writes a binary float given its IEEE fields. %exponent_max is the all-ones
+; exponent (infinity / NaN).
+routine write_binary_float<W>(
+    #out: Ptr<W>, %negative: Bool, %mantissa: I64, %exponent: I64,
+    %mantissa_bits: I64, %bias: I64, %exponent_max: I64
+) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %special: Bool = %exponent.eq(%exponent_max)
+        branch %special ? special() : sign()
+
+    block special():
+        %nan: Bool = %mantissa.ne(0)
+        branch %nan ? nan() : infinity()
+
+    block nan():
+        write_str(#out, "NaN")
+        return()
+
+    block infinity():
+        branch %negative ? negative_infinity() : positive_infinity()
+
+    block negative_infinity():
+        write_str(#out, "-inf")
+        return()
+
+    block positive_infinity():
+        write_str(#out, "inf")
+        return()
+
+    block sign():
+        branch %negative ? minus() : magnitude()
+
+    block minus():
+        write_str(#out, "-")
+        jump magnitude()
+
+    block magnitude():
+        %zero: Bool = %mantissa.bitor(%exponent).eq(0)
+        branch %zero ? zero() : digits()
+
+    block zero():
+        write_str(#out, "0.0")
+        return()
+
+    block digits():
+        %double: Bool = %mantissa_bits.eq(52)
+        branch %double ? double() : narrow()
+
+    block double():
+        %d: FloatDecimal = ryu_double_decimal(%mantissa, %exponent)
+        write_float_decimal(#out, %d)
+        return()
+
+    block narrow():
+        %d: FloatDecimal = ryu_float_decimal(%mantissa, %exponent, %mantissa_bits, %bias)
+        write_float_decimal(#out, %d)
+        return()
+
+routine F64.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %bits:     I64  = %self.to_bits()
+        %negative: Bool = %bits.slt(0)
+        %mantissa: I64  = %bits.bitand(4503599627370495)          ; 2^52 - 1
+        %exponent: I64  = %bits.lshr(52).bitand(2047)
+        write_binary_float(#out, %negative, %mantissa, %exponent, 52, 1023, 2047)
+        return()
+
+routine F32.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %bits:     I32  = %self.to_bits()
+        %negative: Bool = %bits.slt(0)
+        %wide:     I64  = %bits.to_u64()
+        %mantissa: I64  = %wide.bitand(8388607)                   ; 2^23 - 1
+        %exponent: I64  = %wide.lshr(23).bitand(255)
+        write_binary_float(#out, %negative, %mantissa, %exponent, 23, 127, 255)
+        return()
+
+routine F16.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %bits:     I16  = %self.to_bits()
+        %negative: Bool = %bits.slt(0)
+        %wide:     I64  = %bits.to_u64()
+        %mantissa: I64  = %wide.bitand(1023)                      ; 2^10 - 1
+        %exponent: I64  = %wide.lshr(10).bitand(31)
+        write_binary_float(#out, %negative, %mantissa, %exponent, 10, 15, 31)
+        return()
+
+routine BF16.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %bits:     I16  = %self.to_bits()
+        %negative: Bool = %bits.slt(0)
+        %wide:     I64  = %bits.to_u64()
+        %mantissa: I64  = %wide.bitand(127)                       ; 2^7 - 1
+        %exponent: I64  = %wide.lshr(7).bitand(255)
+        write_binary_float(#out, %negative, %mantissa, %exponent, 7, 127, 255)
+        return()
