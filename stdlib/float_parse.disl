@@ -397,3 +397,153 @@ routine F128.parse(%text: String) -> Result<Self, ParseFloatError>
         %value:     Self = Self.from_bits(%magnitude.bitor(%sign))
         %r: Result<Self, ParseFloatError> = Result<Self, ParseFloatError>.ok(%value)
         return(%r)
+
+; -- F128, faithful ------------------------------------------------------------
+;
+; F128.parse_faithful trades correct rounding for speed and a small stack: the
+; result is one of the two F128 values around the decimal (error below 1 ulp),
+; and differs from F128.parse only when the decimal is within about 2^-7 ulp of
+; a halfway point. No BigNat: the first 38 significant digits go into an I128,
+; and the power of ten is a product of 10^(±2^i) taken from a table of 128-bit
+; mantissas (each rounded to nearest), keeping the high 128 bits of every
+; product. At most 13 products, 13 table roundings (2^-128 each), 13 dropped
+; product halves (under 2^-127 each), and the digits past 38 (under 10^-37)
+; add up to less than 2^-120 relative error, which 113-bit rounding turns into
+; at most 0.5 + 2^-7 ulp.
+
+const F128_POW10_POS_MANT: Array<I128, 13> = [
+    -127605887595351923798765477786913079296,
+    -74436767763955288882613195375699296256,
+    -132590492579545358322154754262964371456,
+    -86752246875292583164033966356568211456,
+    -151387707606152654915534607431768211456,
+    -130567166920938463463374607431768211456,
+    -81788425498117315066059391159904819717,
+    -143918628309029401339543729232317185737,
+    -113654591931910507512271348603235145032,
+    -38414545433670202872093060917848155911,
+    -72492465040300791504879073356693155634,
+    -129541410232156950421271580585459265966,
+    -79253555889883451542170276959880590702
+]
+const F128_POW10_POS_EXP: Array<I64, 13> = [
+    -124, -121, -114, -101, -74, -21, 85, 298, 723, 1573, 3274, 6676, 13479
+]
+const F128_POW10_NEG_MANT: Array<I128, 13> = [
+    -68056473384187692692674921486353642291,
+    -122501652091537846846814858675436556124,
+    -61523051939305674194178129023663692631,
+    -111922736087984882494048852319848989635,
+    -33783258747760691791705202001706374732,
+    -64212513049315911965984372940687193358,
+    -116307892703158042407630379374923783644,
+    -45441552481755545319503155792059704353,
+    -84814807300494327571358900163052874999,
+    -148489666614523218761377752544510343979,
+    -124082860471796202217917445054562830695,
+    -65556250420680072699709038007244107060,
+    -118482924974393668459810514017917349892
+]
+const F128_POW10_NEG_EXP: Array<I64, 13> = [
+    -131, -134, -141, -154, -181, -234, -340, -553, -978, -1828, -3529, -6931, -13734
+]
+
+; A value mant × 2^exp with the mantissa's top bit (127) set.
+struct F128Wide
+    mant: I128
+    exp:  I64
+
+; The high 128 bits of a × b (both normalized), renormalized: the product of
+; two numbers in [2^127, 2^128) is in [2^254, 2^256).
+routine f128_wide_mul(%a: F128Wide, %m: I128, %e: I64) -> F128Wide
+    block entry():
+        %x:    I128 = %a.mant
+        %x0:   I128 = %x.bitand(0xFFFFFFFFFFFFFFFF)
+        %x1:   I128 = %x.lshr(64)
+        %y0:   I128 = %m.bitand(0xFFFFFFFFFFFFFFFF)
+        %y1:   I128 = %m.lshr(64)
+        %p00:  I128 = %x0.mul(%y0)
+        %p01:  I128 = %x0.mul(%y1)
+        %p10:  I128 = %x1.mul(%y0)
+        %p11:  I128 = %x1.mul(%y1)
+        %mid:  I128 = %p00.lshr(64).add(%p01.bitand(0xFFFFFFFFFFFFFFFF)).add(%p10.bitand(0xFFFFFFFFFFFFFFFF))
+        %hi:   I128 = %p11.add(%p01.lshr(64)).add(%p10.lshr(64)).add(%mid.lshr(64))
+        %next: I128 = %mid.lshr(63).bitand(1)                ; bit 127 of the low half
+        %top:  Bool = %hi.slt(0)                              ; bit 255 set
+        %mant: I128 = %top ? %hi : %hi.shl(1).bitor(%next)
+        %exp:  I64  = %a.exp.add(%e).add(%top ? 128 : 127)
+        %r: F128Wide = F128Wide { mant: %mant, exp: %exp }
+        return(%r)
+
+routine F128.parse_faithful(%text: String) -> Result<Self, ParseFloatError>
+    block entry():
+        #digits: Ptr<BigNat<3>> = alloca<BigNat<3>>
+        %parsed: Result<DecimalParts, ParseFloatError> = parse_decimal(%text, #digits, 38)
+        %ok:     Bool            = %parsed.tag
+        %parts:  DecimalParts    = %parsed.value
+        %error:  ParseFloatError = %parsed.error
+        %fail:   Result<Self, ParseFloatError> = Result<Self, ParseFloatError>.err(%error)
+        branch %ok ? build(%parts, #digits) : return(%fail)
+
+    block build(%parts: DecimalParts, #digits: Ptr<BigNat<3>>):
+        %negative: Bool = %parts.negative
+        %sign:     I128 = %negative ? F128_SIGN : 0
+        %kind:     DecimalKind = %parts.kind
+        switch %kind:
+            DecimalKind.Infinity -> done(%sign.bitor(F128_INF))
+            DecimalKind.NaN -> done(%sign.bitor(F128_QNAN))
+            DecimalKind.Finite -> finite(%parts, %negative, %sign, #digits)
+
+    block finite(%parts: DecimalParts, %negative: Bool, %sign: I128, #digits: Ptr<BigNat<3>>):
+        %length: I64  := #digits.length
+        %low:    I64  := #digits.limbs[0]
+        %high:   I64  := #digits.limbs[1]
+        %d_low:  I128 = %length.sge(1) ? %low.to_u128() : 0
+        %d_high: I128 = %length.sge(2) ? %high.to_u128().shl(64) : 0
+        %d:      I128 = %d_low.bitor(%d_high)
+        %kept:      I64  = %parts.kept
+        %exponent:  I64  = %parts.exponent
+        %magnitude: I64  = %kept.add(%exponent)
+        %zero: Bool = %d.eq(0).bitor(%magnitude.slt(-4966))
+        %huge: Bool = %magnitude.sgt(4933)
+        select:
+            %zero -> done(%sign)
+            %huge -> done(%sign.bitor(F128_INF))
+            _ -> scale(%d, %exponent, %negative, %parts.sticky)
+
+    ; d × 10^exponent: normalize d, then multiply in 10^(2^i) for every set bit of |exponent|.
+    block scale(%d: I128, %exponent: I64, %negative: Bool, %sticky: Bool):
+        %shift: I64 = %d.leading_zeros().to_i64()
+        %start: F128Wide = F128Wide { mant: %d.shl(%shift.to_i128()), exp: 0.sub(%shift) }
+        %down:  Bool = %exponent.slt(0)
+        %left:  I64  = %exponent.abs()
+        jump power(0, %left, %down, %start, %negative, %sticky)
+
+    block power(%i: I64, %left: I64, %down: Bool, %w: F128Wide, %negative: Bool, %sticky: Bool):
+        %done: Bool = %left.eq(0)
+        branch %done ? pack(%w, %negative, %sticky) : bit(%i, %left, %down, %w, %negative, %sticky)
+
+    block bit(%i: I64, %left: I64, %down: Bool, %w: F128Wide, %negative: Bool, %sticky: Bool):
+        %set: Bool = %left.bitand(1).eq(1)
+        branch %set ? times(%i, %left, %down, %w, %negative, %sticky) : power(%i.add(1), %left.lshr(1), %down, %w, %negative, %sticky)
+
+    block times(%i: I64, %left: I64, %down: Bool, %w: F128Wide, %negative: Bool, %sticky: Bool):
+        %pos_m: I128 := F128_POW10_POS_MANT[%i]
+        %pos_e: I64  := F128_POW10_POS_EXP[%i]
+        %neg_m: I128 := F128_POW10_NEG_MANT[%i]
+        %neg_e: I64  := F128_POW10_NEG_EXP[%i]
+        %m:     I128 = %down ? %neg_m : %pos_m
+        %e:     I64  = %down ? %neg_e : %pos_e
+        %next:  F128Wide = f128_wide_mul(%w, %m, %e)
+        jump power(%i.add(1), %left.lshr(1), %down, %next, %negative, %sticky)
+
+    ; value = mant × 2^exp = sig × 2^(biased - 16383 - 115)
+    block pack(%w: F128Wide, %negative: Bool, %sticky: Bool):
+        %sig:  I128 = %w.mant.bitor(%sticky.to_i128())
+        %bits: I128 = f128_round_pack(%negative, %w.exp.add(16383).add(115), %sig)
+        jump done(%bits)
+
+    block done(%bits: I128):
+        %value: Self = Self.from_bits(%bits)
+        %r: Result<Self, ParseFloatError> = Result<Self, ParseFloatError>.ok(%value)
+        return(%r)
