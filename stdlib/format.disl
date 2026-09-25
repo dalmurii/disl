@@ -123,6 +123,99 @@ routine SliceWriter.write_bytes(#self: Ptr<Self>, #bytes: Ptr<I8>, %count: I64) 
         #self.overflowed = true
         return()
 
+; -- BufWriter -----------------------------------------------------------------
+
+; Collects writes in a 4 KiB buffer and passes them on to another Writer in
+; large pieces. Nothing reaches the inner Writer until the buffer fills or
+; flush() is called, and nothing flushes by itself: call flush() before the
+; program ends or reads input. Writes of 4 KiB or more skip the buffer.
+struct BufWriter<W>
+require W: typename
+conform Writer<BufWriter<W>>
+    inner:  Ptr<W>
+    length: I64
+    data:   Array<I8, 4096>
+
+routine BufWriter<W>.init(#self: Ptr<Self>, #inner: Ptr<W>) -> Void
+require W: typename
+    block entry():
+        #self.inner = #inner
+        #self.length = 0
+        return()
+
+; Writes out the buffered bytes.
+routine BufWriter<W>.flush(#self: Ptr<Self>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %length: I64     := #self.length
+        #inner:  Ptr<W>  := #self.inner
+        #buffer: Ptr<Array<I8, 4096>> = #self.data
+        #data:   Ptr<I8> = #buffer.cast<I8>()
+        #self.length = 0
+        %empty: Bool = %length.eq(0)
+        branch %empty ? return() : pass(#inner, #data, %length)
+
+    block pass(#inner: Ptr<W>, #data: Ptr<I8>, %length: I64):
+        #inner.write_bytes(#data, %length)
+        return()
+
+routine BufWriter<W>.write_bytes(#self: Ptr<Self>, #bytes: Ptr<I8>, %count: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %length: I64  := #self.length
+        %fits:   Bool = %length.add(%count).sle(4096)
+        branch %fits ? append(%length) : make_room()
+
+    block make_room():
+        #self.flush()
+        %large: Bool = %count.sge(4096)
+        branch %large ? direct() : append(0)
+
+    block direct():
+        #inner: Ptr<W> := #self.inner
+        #inner.write_bytes(#bytes, %count)
+        return()
+
+    block append(%length: I64):
+        #buffer: Ptr<Array<I8, 4096>> = #self.data
+        #data:   Ptr<I8> = #buffer.cast<I8>()
+        #to:     Ptr<I8> = #data[%length]
+        copy<I8>(#to, #bytes, %count)
+        #self.length = %length.add(%count)
+        return()
+
+; -- CountWriter ---------------------------------------------------------------
+
+; Writes nothing and counts characters (UTF-8 code points: every byte that
+; isn't a continuation byte), to measure text before laying it out.
+struct CountWriter
+conform Writer<CountWriter>
+    count: I64
+
+routine CountWriter.new() -> Self
+    block entry():
+        %w: Self = Self { count: 0 }
+        return(%w)
+
+routine CountWriter.write_bytes(#self: Ptr<Self>, #bytes: Ptr<I8>, %length: I64) -> Void
+    block entry():
+        %count: I64 := #self.count
+        jump loop(0, %count)
+
+    block loop(%i: I64, %count: I64):
+        %done: Bool = %i.sge(%length)
+        branch %done ? finish(%count) : step(%i, %count)
+
+    ; continuation bytes are 10xxxxxx
+    block step(%i: I64, %count: I64):
+        %byte:  I8   := #bytes[%i]
+        %starts: Bool = %byte.bitand(-64).ne(-128)
+        jump loop(%i.add(1), %count.add(%starts.to_i64()))
+
+    block finish(%count: I64):
+        #self.count = %count
+        return()
+
 ; -- text ----------------------------------------------------------------------
 
 routine write_str<W>(#out: Ptr<W>, %text: String) -> Void
@@ -780,4 +873,357 @@ require W: typename, Writer<W>
         %boundary:  Bool = %fraction.eq(0).bitand(%biased.sgt(1))
         %even:      Bool = %f.bitand(1).eq(0)
         write_float_exact(#out, %f, %e, %boundary, %even)
+        return()
+
+; -- fixed-point floats --------------------------------------------------------
+;
+; format_fixed(#out, %digits) writes a float with exactly %digits digits after
+; the point, like C's %.*f: 3.14159 at 2 is "3.14", 1e20 at 0 is
+; "100000000000000000000", -0.001 at 2 is "-0.00". Rounding is correct from the
+; exact binary value, ties to even (0.125 at 2 is "0.12", 2.5 at 0 is "2").
+; Specials are inf, -inf, and NaN, as in format.
+
+; Writes f × 2^e (f >= 0, no sign) with %digits digits after the point. A float's
+; own digits end max(0, -e) places after the point, so the rounding works on at
+; most that many and the rest are zeros. Sized for F128: f × 10^16494 needs
+; about 55,000 bits and prints at most 16,530 digits.
+routine write_float_fixed<W>(#out: Ptr<W>, %f: I128, %e: I64, %digits: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        #n: Ptr<BigNat<864>> = alloca<BigNat<864>>
+        #n.set_i128(%f)
+        %places: I64  = %digits.min(0.sub(%e).max(0))
+        %up:     Bool = %e.sge(0)
+        branch %up ? scale_up(#n, %places) : scale_down(#n, %places)
+
+    block scale_up(#n: Ptr<BigNat<864>>, %places: I64):
+        #n.shl(%e)
+        jump print(#n, %places)
+
+    ; round(f × 10^places / 2^-e)
+    block scale_down(#n: Ptr<BigNat<864>>, %places: I64):
+        #n.mul_pow10(%places)
+        #n.shr_round_even(0.sub(%e))
+        jump print(#n, %places)
+
+    ; The digits of n fill #digits from the right, 19 at a time.
+    block print(#n: Ptr<BigNat<864>>, %places: I64):
+        #buf:    Ptr<Array<I8, 16640>> = alloca<Array<I8, 16640>>
+        #digits: Ptr<I8>               = #buf.cast<I8>()
+        jump chunk(#n, #digits, %places, 16640)
+
+    block chunk(#n: Ptr<BigNat<864>>, #digits: Ptr<I8>, %places: I64, %at: I64):
+        %done: Bool = #n.is_zero()
+        branch %done ? skip_zeros(#digits, %places, %at) : split(#n, #digits, %places, %at)
+
+    block split(#n: Ptr<BigNat<864>>, #digits: Ptr<I8>, %places: I64, %at: I64):
+        %low: I64 = #n.div_limb(-8446744073709551616)       ; 10^19, as an unsigned bit pattern
+        jump digit(#n, #digits, %places, %at, %low, 19)
+
+    block digit(#n: Ptr<BigNat<864>>, #digits: Ptr<I8>, %places: I64, %at: I64, %rest: I64, %left: I64):
+        %done: Bool = %left.eq(0)
+        branch %done ? chunk(#n, #digits, %places, %at) : put(#n, #digits, %places, %at, %rest, %left)
+
+    block put(#n: Ptr<BigNat<864>>, #digits: Ptr<I8>, %places: I64, %at: I64, %rest: I64, %left: I64):
+        %to:    I64 = %at.sub(1)
+        %ascii: I8  = %rest.urem(10).add(48).to_i8()
+        #digits[%to] = %ascii
+        jump digit(#n, #digits, %places, %to, %rest.udiv(10), %left.sub(1))
+
+    ; the top chunk is zero-padded to 19 digits
+    block skip_zeros(#digits: Ptr<I8>, %places: I64, %at: I64):
+        %inside: Bool = %at.slt(16640)
+        branch %inside ? look(#digits, %places, %at) : lay_out(#digits, %places, %at)
+
+    block look(#digits: Ptr<I8>, %places: I64, %at: I64):
+        %ascii: I8   := #digits[%at]
+        %zero:  Bool = %ascii.eq(48)
+        branch %zero ? skip_zeros(#digits, %places, %at.add(1)) : lay_out(#digits, %places, %at)
+
+    ; n has count digits at #digits[first ..]; the last %places of them follow the point
+    block lay_out(#digits: Ptr<I8>, %places: I64, %first: I64):
+        %count:     I64  = 16640.sub(%first)
+        %int_count: I64  = %count.sub(%places)
+        %has_int:   Bool = %int_count.sgt(0)
+        branch %has_int ? int_part(#digits, %places, %first, %int_count) : zero_int(#digits, %places, %first)
+
+    block int_part(#digits: Ptr<I8>, %places: I64, %first: I64, %int_count: I64):
+        #from: Ptr<I8> = #digits[%first]
+        #out.write_bytes(#from, %int_count)
+        jump fraction(#digits, %places, %first.add(%int_count))
+
+    block zero_int(#digits: Ptr<I8>, %places: I64, %first: I64):
+        write_str(#out, "0")
+        jump fraction(#digits, %places, %first)
+
+    block fraction(#digits: Ptr<I8>, %places: I64, %from: I64):
+        %none: Bool = %digits.eq(0)
+        branch %none ? return() : point(#digits, %places, %from)
+
+    block point(#digits: Ptr<I8>, %places: I64, %from: I64):
+        %count: I64 = 16640.sub(%from)
+        write_str(#out, ".")
+        write_zeros(#out, %places.sub(%count))
+        #start: Ptr<I8> = #digits[%from]
+        #out.write_bytes(#start, %count)
+        write_zeros(#out, %digits.sub(%places))
+        return()
+
+; format_fixed for a binary float given its IEEE fields: %shift is bias +
+; mantissa bits, so a normal value is (1.fraction) × 2^(biased - shift).
+routine write_binary_fixed<W>(
+    #out: Ptr<W>, %negative: Bool, %fraction: I128, %biased: I64,
+    %mantissa_bits: I64, %shift: I64, %exponent_max: I64, %digits: I64
+) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %special: Bool = %biased.eq(%exponent_max)
+        %nan:     Bool = %special.bitand(%fraction.ne(0))
+        select:
+            %nan -> text("NaN")
+            %special -> infinity()
+            %negative -> minus()
+            _ -> magnitude()
+
+    block infinity():
+        branch %negative ? text("-inf") : text("inf")
+
+    block text(%s: String):
+        write_str(#out, %s)
+        return()
+
+    block minus():
+        write_str(#out, "-")
+        jump magnitude()
+
+    block magnitude():
+        %subnormal: Bool = %biased.eq(0)
+        %implicit:  I128 = 1.shl(%mantissa_bits.to_i128())
+        %f:         I128 = %subnormal ? %fraction : %fraction.bitor(%implicit)
+        %e:         I64  = %subnormal ? 1.sub(%shift) : %biased.sub(%shift)
+        write_float_fixed(#out, %f, %e, %digits)
+        return()
+
+routine F64.format_fixed<W>(%self: Self, #out: Ptr<W>, %digits: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %bits:     I64  = %self.to_bits()
+        %negative: Bool = %bits.slt(0)
+        %fraction: I128 = %bits.bitand(4503599627370495).to_i128()   ; 2^52 - 1
+        %biased:   I64  = %bits.lshr(52).bitand(2047)
+        write_binary_fixed(#out, %negative, %fraction, %biased, 52, 1075, 2047, %digits)
+        return()
+
+routine F32.format_fixed<W>(%self: Self, #out: Ptr<W>, %digits: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %bits:     I32  = %self.to_bits()
+        %negative: Bool = %bits.slt(0)
+        %wide:     I64  = %bits.to_u64()
+        %fraction: I128 = %wide.bitand(8388607).to_i128()            ; 2^23 - 1
+        %biased:   I64  = %wide.lshr(23).bitand(255)
+        write_binary_fixed(#out, %negative, %fraction, %biased, 23, 150, 255, %digits)
+        return()
+
+routine F16.format_fixed<W>(%self: Self, #out: Ptr<W>, %digits: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %bits:     I16  = %self.to_bits()
+        %negative: Bool = %bits.slt(0)
+        %wide:     I64  = %bits.to_u64()
+        %fraction: I128 = %wide.bitand(1023).to_i128()               ; 2^10 - 1
+        %biased:   I64  = %wide.lshr(10).bitand(31)
+        write_binary_fixed(#out, %negative, %fraction, %biased, 10, 25, 31, %digits)
+        return()
+
+routine BF16.format_fixed<W>(%self: Self, #out: Ptr<W>, %digits: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %bits:     I16  = %self.to_bits()
+        %negative: Bool = %bits.slt(0)
+        %wide:     I64  = %bits.to_u64()
+        %fraction: I128 = %wide.bitand(127).to_i128()                ; 2^7 - 1
+        %biased:   I64  = %wide.lshr(7).bitand(255)
+        write_binary_fixed(#out, %negative, %fraction, %biased, 7, 134, 255, %digits)
+        return()
+
+routine F128.format_fixed<W>(%self: Self, #out: Ptr<W>, %digits: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %bits:     I128 = %self.bits
+        %negative: Bool = %bits.slt(0)
+        %fraction: I128 = f128_fraction(%bits)
+        %biased:   I64  = f128_exponent(%bits)
+        write_binary_fixed(#out, %negative, %fraction, %biased, 112, 16495, F128_EXP_MAX, %digits)
+        return()
+
+; -- views ---------------------------------------------------------------------
+;
+; A view wraps a value to pick one of its other forms and conforms to Format, so
+; it can go where any formattable value goes, format_with included:
+;
+;     %hex: Hex<I32> = Hex<I32> { value: %bits }
+;     format_with(#out, %hex, FormatSpec.zero_padded(8))
+
+; An integer in lowercase hex (format_hex).
+struct Hex<T>
+require T: typename
+conform Format<Hex<T>>
+    value: T
+
+routine Hex<T>.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require T: typename, W: typename, Writer<W>
+    block entry():
+        %value: T = %self.value
+        %value.format_hex(#out)
+        return()
+
+; An integer read as unsigned (uformat).
+struct Unsigned<T>
+require T: typename
+conform Format<Unsigned<T>>
+    value: T
+
+routine Unsigned<T>.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require T: typename, W: typename, Writer<W>
+    block entry():
+        %value: T = %self.value
+        %value.uformat(#out)
+        return()
+
+; A float with a fixed number of digits after the point (format_fixed).
+struct Fixed<T>
+require T: typename
+conform Format<Fixed<T>>
+    value:  T
+    digits: I64
+
+routine Fixed<T>.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require T: typename, W: typename, Writer<W>
+    block entry():
+        %value:  T   = %self.value
+        %digits: I64 = %self.digits
+        %value.format_fixed(#out, %digits)
+        return()
+
+; -- width and alignment -------------------------------------------------------
+;
+; format_with(#out, %value, %spec) writes any formattable value padded to
+; %spec.width characters. It formats the value twice: once into a CountWriter
+; to measure it, then for real, so nothing is buffered and any Format type
+; works. Width counts code points, not terminal columns.
+
+enum Align
+    Left
+    Right
+    Center
+    ; like Right, but the padding goes after a leading - or +: -0042
+    AfterSign
+
+struct FormatSpec
+    width: I64
+    fill:  String
+    align: Align
+
+; Right-aligned to %width, padded with spaces.
+routine FormatSpec.new(%width: I64) -> Self
+    block entry():
+        %spec: Self = Self { width: %width, fill: " ", align: Align.Right }
+        return(%spec)
+
+; Padded with zeros after the sign: -7 at 4 is -007.
+routine FormatSpec.zero_padded(%width: I64) -> Self
+    block entry():
+        %spec: Self = Self { width: %width, fill: "0", align: Align.AfterSign }
+        return(%spec)
+
+routine FormatSpec.with_align(%self: Self, %align: Align) -> Self
+    block entry():
+        %spec: Self = Self { width: %self.width, fill: %self.fill, align: %align }
+        return(%spec)
+
+; %fill is one character (any UTF-8 text works, but width counts it as one).
+routine FormatSpec.with_fill(%self: Self, %fill: String) -> Self
+    block entry():
+        %spec: Self = Self { width: %self.width, fill: %fill, align: %self.align }
+        return(%spec)
+
+; Writes %text %count times.
+routine write_repeated<W>(#out: Ptr<W>, %text: String, %count: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        jump loop(%count)
+
+    block loop(%left: I64):
+        %done: Bool = %left.sle(0)
+        branch %done ? return() : one(%left)
+
+    block one(%left: I64):
+        write_str(#out, %text)
+        jump loop(%left.sub(1))
+
+routine format_with<T, W>(#out: Ptr<W>, %value: T, %spec: FormatSpec) -> Void
+require T: typename, W: typename, Writer<W>, Format<T>
+    block entry():
+        %counter_val: CountWriter      = CountWriter.new()
+        #counter:     Ptr<CountWriter> = alloca<CountWriter>([%counter_val])
+        %value.format(#counter)
+        %length: I64    := #counter.count
+        %pad:    I64    = %spec.width.sub(%length).max(0)
+        %half:   I64    = %pad.sdiv(2)
+        %fill:   String = %spec.fill
+        %align:  Align  = %spec.align
+        switch %align:
+            Align.Left -> padded(0, %pad, %fill)
+            Align.Right -> padded(%pad, 0, %fill)
+            Align.Center -> padded(%half, %pad.sub(%half), %fill)
+            Align.AfterSign -> after_sign(%pad, %fill)
+
+    block padded(%before: I64, %after: I64, %fill: String):
+        write_repeated(#out, %fill, %before)
+        %value.format(#out)
+        write_repeated(#out, %fill, %after)
+        return()
+
+    block after_sign(%pad: I64, %fill: String):
+        %inner_val: SignPadWriter<W>      = SignPadWriter<W> { inner: #out, fill: %fill, pad: %pad }
+        #inner:     Ptr<SignPadWriter<W>> = alloca<SignPadWriter<W>>([%inner_val])
+        %value.format(#inner)
+        return()
+
+; Passes writes on to #inner, putting %pad copies of %fill before the first
+; byte, or after it when it is - or +.
+struct SignPadWriter<W>
+require W: typename
+conform Writer<SignPadWriter<W>>
+    inner: Ptr<W>
+    fill:  String
+    pad:   I64
+
+routine SignPadWriter<W>.write_bytes(#self: Ptr<Self>, #bytes: Ptr<I8>, %length: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        #inner: Ptr<W> := #self.inner
+        %pad:   I64    := #self.pad
+        %first: Bool   = %pad.sgt(0).bitand(%length.sgt(0))
+        branch %first ? first(#inner, %pad) : pass(#inner, #bytes, %length)
+
+    block first(#inner: Ptr<W>, %pad: I64):
+        %fill:   String := #self.fill
+        #self.pad = 0
+        %byte:   I8     := #bytes[0]
+        %signed: Bool   = %byte.eq(45).bitor(%byte.eq(43))      ; - or +
+        branch %signed ? sign(#inner, %pad, %fill) : pad(#inner, %pad, %fill, #bytes, %length)
+
+    block sign(#inner: Ptr<W>, %pad: I64, %fill: String):
+        #inner.write_bytes(#bytes, 1)
+        #rest: Ptr<I8> = #bytes[1]
+        jump pad(#inner, %pad, %fill, #rest, %length.sub(1))
+
+    block pad(#inner: Ptr<W>, %pad: I64, %fill: String, #from: Ptr<I8>, %count: I64):
+        write_repeated(#inner, %fill, %pad)
+        jump pass(#inner, #from, %count)
+
+    block pass(#inner: Ptr<W>, #from: Ptr<I8>, %count: I64):
+        #inner.write_bytes(#from, %count)
         return()

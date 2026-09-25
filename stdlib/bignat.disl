@@ -338,3 +338,107 @@ require N: I64
     block grow(%carry: I64):
         #self.push_limb(%carry)
         return()
+
+; self = floor(self / d), with d > 0 read as unsigned; returns the remainder
+routine BigNat<N>.div_limb(#self: Ptr<Self>, %d: I64) -> I64
+require N: I64
+    block entry():
+        %length:  I64  := #self.length
+        %divisor: I128 = %d.to_u128()
+        jump loop(%length.sub(1), 0, %divisor)
+
+    block loop(%i: I64, %rem: I128, %divisor: I128):
+        %done: Bool = %i.slt(0)
+        branch %done ? finish(%rem) : step(%i, %rem, %divisor)
+
+    block step(%i: I64, %rem: I128, %divisor: I128):
+        %limb: I64  := #self.limbs[%i]
+        %cur:  I128 = %rem.shl(64).bitor(%limb.to_u128())
+        #self.limbs[%i] = %cur.udiv(%divisor).to_i64()
+        jump loop(%i.sub(1), %cur.urem(%divisor), %divisor)
+
+    block finish(%rem: I128):
+        #self.trim()
+        return(%rem.to_i64())
+
+; Bit %i of self (0 is the lowest).
+routine BigNat<N>.bit(#self: Ptr<Self>, %i: I64) -> Bool
+require N: I64
+    block entry():
+        %length: I64  := #self.length
+        %at:     I64  = %i.sdiv(64)
+        %inside: Bool = %at.slt(%length)
+        branch %inside ? read(%at) : return(false)
+
+    block read(%at: I64):
+        %limb: I64  := #self.limbs[%at]
+        %set:  Bool = %limb.lshr(%i.srem(64)).bitand(1).eq(1)
+        return(%set)
+
+; Whether any bit below bit %n is set.
+routine BigNat<N>.any_below(#self: Ptr<Self>, %n: I64) -> Bool
+require N: I64
+    block entry():
+        %length: I64 := #self.length
+        %whole:  I64 = %n.sdiv(64).min(%length)
+        jump loop(0, %whole, %length)
+
+    block loop(%i: I64, %whole: I64, %length: I64):
+        %done: Bool = %i.sge(%whole)
+        branch %done ? partial(%whole, %length) : step(%i, %whole, %length)
+
+    block step(%i: I64, %whole: I64, %length: I64):
+        %limb: I64  := #self.limbs[%i]
+        %set:  Bool = %limb.ne(0)
+        branch %set ? return(true) : loop(%i.add(1), %whole, %length)
+
+    block partial(%whole: I64, %length: I64):
+        %inside: Bool = %whole.slt(%length)
+        branch %inside ? mask(%whole) : return(false)
+
+    block mask(%at: I64):
+        %limb: I64  := #self.limbs[%at]
+        %low:  I64  = 1.shl(%n.srem(64)).sub(1)
+        %set:  Bool = %limb.bitand(%low).ne(0)
+        return(%set)
+
+; self = self / 2^bits (bits > 0), rounded to nearest, ties to even
+routine BigNat<N>.shr_round_even(#self: Ptr<Self>, %bits: I64) -> Void
+require N: I64
+    block entry():
+        %half_at:    I64  = %bits.sub(1)
+        %half:       Bool = #self.bit(%half_at)
+        %sticky:     Bool = #self.any_below(%half_at)
+        %limb_shift: I64  = %bits.sdiv(64)
+        %bit_shift:  I64  = %bits.srem(64)
+        %length:     I64  := #self.length
+        %kept:       I64  = %length.sub(%limb_shift).max(0)
+        jump loop(0, %kept, %length, %limb_shift, %bit_shift, %half, %sticky)
+
+    ; limb i takes the bits of limbs i + shift and i + shift + 1
+    block loop(%i: I64, %kept: I64, %length: I64, %limb_shift: I64, %bit_shift: I64, %half: Bool, %sticky: Bool):
+        %done: Bool = %i.sge(%kept)
+        branch %done ? shifted(%kept, %half, %sticky) : step(%i, %kept, %length, %limb_shift, %bit_shift, %half, %sticky)
+
+    block step(%i: I64, %kept: I64, %length: I64, %limb_shift: I64, %bit_shift: I64, %half: Bool, %sticky: Bool):
+        %from:      I64  = %i.add(%limb_shift)
+        %low:       I64  := #self.limbs[%from]
+        %next_at:   I64  = %from.add(1)
+        %has_next:  Bool = %next_at.slt(%length)
+        %next_limb: I64  := #self.limbs[%next_at.min(%length.sub(1))]
+        %next:      I64  = %has_next ? %next_limb : 0
+        ; two shifts, so a zero bit shift never shifts by 64
+        %high:      I64  = %next.shl(63.sub(%bit_shift)).shl(1)
+        #self.limbs[%i] = %low.lshr(%bit_shift).bitor(%high)
+        jump loop(%i.add(1), %kept, %length, %limb_shift, %bit_shift, %half, %sticky)
+
+    block shifted(%kept: I64, %half: Bool, %sticky: Bool):
+        #self.length = %kept
+        #self.trim()
+        %odd:   Bool = #self.bit(0)
+        %round: Bool = %half.bitand(%sticky.bitor(%odd))
+        branch %round ? bump() : return()
+
+    block bump():
+        #self.mul_add(1, 1)
+        return()
