@@ -34,8 +34,21 @@ public sealed class Instance(RoutineDecl decl, Compiler.TypeEnv env, string symb
         }
     }
 
+    /// At -O0, LLVM's x86 backend treats a bfloat returned from a call as a promoted f32 and truncates it again
+    /// (BF16.from_bits(0xBF80) came back as 0x0001), and likewise for bfloat arguments. So Disl routines pass BF16 as
+    /// its i16 bits and bitcast inside. External and exported routines keep the C ABI: LLVM itself calls the exported
+    /// __truncsfbf2.
+    public bool PassesBf16AsBits => Decl.Attr("external") is null && Decl.Attr("export") is null;
+
+    public static bool IsBf16(DType t) => t is FloatType ft && ft == FloatType.BF16;
+
+    /// The LLVM type of a parameter or return value at the call boundary.
+    public string AbiLlvm(DType t) => PassesBf16AsBits && IsBf16(t) ? "i16" : t.Llvm;
+
+    public string LlvmRet => AbiLlvm(Ret);
+
     public string LlvmParamTypes =>
-        string.Join(", ", Params.Select(p => p.Llvm).Concat(Variadic ? ["..."] : []));
+        string.Join(", ", Params.Select(AbiLlvm).Concat(Variadic ? ["..."] : []));
 }
 
 public sealed partial class Compiler
@@ -111,7 +124,7 @@ public sealed partial class Compiler
         if (sig.IsExternalC)
         {
             if (_declaredSymbols.Add(sig.Symbol))
-                _declares.AppendLine($"declare {sig.CcPrefix}{sig.Ret.Llvm} @{Quote(sig.Symbol)}({sig.LlvmParamTypes}){sig.FnAttrs}");
+                _declares.AppendLine($"declare {sig.CcPrefix}{sig.LlvmRet} @{Quote(sig.Symbol)}({sig.LlvmParamTypes}){sig.FnAttrs}");
         }
         else if (!sig.IsTemplate)
         {
@@ -127,7 +140,7 @@ public sealed partial class Compiler
         if (inst.Decl.Attr("export") is { } export)
         {
             string name = export.First ?? throw new CompileError(export.Pos, "@export needs a symbol name");
-            _functions.AppendLine($"@{Quote(name)} = alias {inst.Ret.Llvm} ({inst.LlvmParamTypes}), ptr @{Quote(inst.Symbol)}");
+            _functions.AppendLine($"@{Quote(name)} = alias {inst.LlvmRet} ({inst.LlvmParamTypes}), ptr @{Quote(inst.Symbol)}");
             _functions.AppendLine();
         }
     }

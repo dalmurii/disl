@@ -89,10 +89,23 @@ public sealed class FunctionGen
 
         foreach (var b in blocks) EmitBlock(b);
 
-        var ps = string.Join(", ", _decl.Params.Select((p, i) => $"{_inst.Params[i].Llvm} %a.{IrName(p.Name)}"));
-        _out.AppendLine($"define {_inst.CcPrefix}{_inst.Ret.Llvm} @{Compiler.Quote(_inst.Symbol)}({ps}){_inst.FnAttrs} {{");
+        // A BF16 parameter arrives as its i16 bits (see Instance.PassesBf16AsBits) and is bitcast back on entry.
+        var ps = new List<string>();
+        var unpack = new List<string>();
+        for (int i = 0; i < _decl.Params.Count; i++)
+        {
+            string name = $"%a.{IrName(_decl.Params[i].Name)}";
+            if (_inst.PassesBf16AsBits && Instance.IsBf16(_inst.Params[i]))
+            {
+                ps.Add($"i16 {name}.bits");
+                unpack.Add($"{name} = bitcast i16 {name}.bits to bfloat");
+            }
+            else ps.Add($"{_inst.Params[i].Llvm} {name}");
+        }
+        _out.AppendLine($"define {_inst.CcPrefix}{_inst.LlvmRet} @{Compiler.Quote(_inst.Symbol)}({string.Join(", ", ps)}){_inst.FnAttrs} {{");
         _out.AppendLine("start:");
         foreach (var a in _allocas) _out.AppendLine($"  {a}");
+        foreach (var u in unpack) _out.AppendLine($"  {u}");
         _out.AppendLine("  br label %b.entry");
         foreach (var lb in _lblocks)
         {
@@ -922,15 +935,15 @@ public sealed class FunctionGen
         if (sig.IsTemplate) return ExpandTemplate(sig, args, plan.Pos);
 
         var inst = _c.RequireInstance(plan.Decl, plan.Env);
-        string argList = string.Join(", ", args.Select(a => $"{a.Type.Llvm} {a.Op}"));
-        string fnType = inst.IsExternalC ? $"{inst.Ret.Llvm} ({inst.LlvmParamTypes}) " : $"{inst.Ret.Llvm} ";
+        string argList = string.Join(", ", args.Select(a => AbiArg(a, inst.PassesBf16AsBits)));
+        string fnType = inst.IsExternalC ? $"{inst.LlvmRet} ({inst.LlvmParamTypes}) " : $"{inst.LlvmRet} ";
         string call = $"call {inst.CcPrefix}{fnType}@{Compiler.Quote(inst.Symbol)}({argList})";
         if (inst.Ret is VoidType)
         {
             Line(call);
             return new Val("", VoidType.Instance);
         }
-        return new Val(EmitTmp(call), inst.Ret);
+        return AbiResult(EmitTmp(call), inst.Ret, inst.PassesBf16AsBits);
     }
 
     /// An argument in the `...` part of a C variadic call gets C's default promotions: untyped integer literals
@@ -965,15 +978,24 @@ public sealed class FunctionGen
             : Eval(place, ct);
         var args = argExprs.Select((a, i) => EvalArg(a, ct.Params[i])).ToList();
         string cc = ct.CallConv switch { "fast" => "fastcc ", "cold" => "coldcc ", _ => "" };
-        string argList = string.Join(", ", args.Select((a, i) => $"{ct.Params[i].Llvm} {a.Op}"));
-        string call = $"call {cc}{ct.Ret.Llvm} {fp.Op}({argList})";
+        bool bits = ct.CallConv != "c";
+        string argList = string.Join(", ", args.Select(a => AbiArg(a, bits)));
+        string ret = bits && Instance.IsBf16(ct.Ret) ? "i16" : ct.Ret.Llvm;
+        string call = $"call {cc}{ret} {fp.Op}({argList})";
         if (ct.Ret is VoidType)
         {
             Line(call);
             return new Val("", VoidType.Instance);
         }
-        return new Val(EmitTmp(call), ct.Ret);
+        return AbiResult(EmitTmp(call), ct.Ret, bits);
     }
+
+    /// A call argument as the callee's ABI wants it: a BF16 goes to a Disl routine as its i16 bits.
+    private string AbiArg(Val a, bool bf16AsBits) =>
+        bf16AsBits && Instance.IsBf16(a.Type) ? $"i16 {EmitTmp($"bitcast bfloat {a.Op} to i16")}" : $"{a.Type.Llvm} {a.Op}";
+
+    private Val AbiResult(string op, DType t, bool bf16AsBits) =>
+        bf16AsBits && Instance.IsBf16(t) ? new Val(EmitTmp($"bitcast i16 {op} to bfloat"), t) : new Val(op, t);
 
     private Val LoadPlace(Expr place)
     {
@@ -1181,7 +1203,9 @@ public sealed class FunctionGen
                 {
                     if (r.Value is null) throw Err(r.Pos, $"'{_decl.DisplayName}' must return a {_inst.Ret}");
                     var v = Eval(r.Value, _inst.Ret);
-                    Terminate($"ret {_inst.Ret.Llvm} {v.Op}");
+                    if (_inst.PassesBf16AsBits && Instance.IsBf16(_inst.Ret))
+                        v = new Val(EmitTmp($"bitcast bfloat {v.Op} to i16"), new IntType(16));
+                    Terminate($"ret {_inst.LlvmRet} {v.Op}");
                 }
                 break;
             }

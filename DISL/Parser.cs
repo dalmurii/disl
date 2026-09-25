@@ -350,9 +350,13 @@ public sealed class Parser(List<Token> tokens, string file, bool isLibrary = fal
         if (Accept(TokenKind.At)) return new TypeArgAttr(ParseAttribute());
         if (Accept(TokenKind.LParen))
         {
+            // A one-element tuple is written `(T,)`, so a trailing comma is allowed.
             var types = new List<TypeRef>();
-            if (!Is(TokenKind.RParen))
-                do types.Add(ParseType()); while (Accept(TokenKind.Comma));
+            while (!Is(TokenKind.RParen))
+            {
+                types.Add(ParseType());
+                if (!Accept(TokenKind.Comma)) break;
+            }
             Expect(TokenKind.RParen, "')'");
             return new TypeArgTuple(types);
         }
