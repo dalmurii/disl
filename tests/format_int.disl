@@ -1,0 +1,81 @@
+; Integer formatting through FdWriter: signed, unsigned, and hex for every width, including the extremes.
+
+routine main() -> I32
+    block entry():
+        %out_val: FdWriter      = FdWriter.stdout()
+        #out:     Ptr<FdWriter> = alloca<FdWriter>([%out_val])
+
+        %i8_min: I8 = I8.MIN
+        %i8_min.format(#out)
+        write_str(#out, " ")
+        %i8_min.uformat(#out)
+        write_str(#out, " ")
+        %i8_min.format_hex(#out)
+        write_line(#out)
+
+        %i16: I16 = -1234
+        %i16.format(#out)
+        write_str(#out, " ")
+        %i16.uformat(#out)
+        write_line(#out)
+
+        %i32_max: I32 = I32.MAX
+        %i32_max.format(#out)
+        write_str(#out, " ")
+        %i32_max.format_hex(#out)
+        write_line(#out)
+
+        %zero: I64 = 0
+        %zero.format(#out)
+        write_str(#out, " ")
+        %zero.format_hex(#out)
+        write_line(#out)
+
+        %i64_min: I64 = I64.MIN
+        %i64_min.format(#out)
+        write_str(#out, " ")
+        %i64_min.uformat(#out)
+        write_line(#out)
+
+        %minus_one: I64 = -1
+        %minus_one.uformat(#out)
+        write_str(#out, " ")
+        %minus_one.format_hex(#out)
+        write_line(#out)
+
+        %i128_min: I128 = I128.MIN
+        %i128_min.format(#out)
+        write_line(#out)
+
+        %i128_max: I128 = I128.MAX
+        %i128_max.format(#out)
+        write_str(#out, " ")
+        %i128_max.format_hex(#out)
+        write_line(#out)
+
+        %all_ones: I128 = -1
+        %all_ones.uformat(#out)
+        write_line(#out)
+
+        ; a chunk boundary: 10^19 has a zero-padded low chunk
+        %ten_19: I128 = 10000000000000000000
+        %ten_19.format(#out)
+        write_str(#out, " ")
+        %ten_19.format_hex(#out)
+        write_line(#out)
+
+        ; three chunks, the middle and low ones all padding
+        %three_chunks: I128 = 100000000000000000000000000000000000005
+        %three_chunks.format(#out)
+        write_line(#out)
+
+        %flag: Bool = true
+        %flag.format(#out)
+        write_str(#out, " ")
+        %text: String = "done"
+        %text.format(#out)
+        write_line(#out)
+
+        %failed: Bool = #out.has_failed()
+        %code: I32 = %failed ? 1 : 0
+        return(%code)

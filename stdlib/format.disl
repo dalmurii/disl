@@ -1,0 +1,331 @@
+; Disl stdlib: formatting
+;
+; Formatting writes text into a Writer: any type with a write_bytes method.
+; Nothing allocates unless the Writer does, nothing parses a format string, and
+; every value is written by one visible call:
+;
+;     %out_val: FdWriter = FdWriter.stdout()
+;     #out: Ptr<FdWriter> = alloca<FdWriter>([%out_val])
+;     write_str(#out, "x = ")
+;     %x.format(#out)
+;     write_line(#out)
+;
+; A type is formattable when it conforms to Format. Integers have three forms,
+; since signedness lives on operations, not types: format (signed decimal),
+; uformat (unsigned decimal), and format_hex (lowercase hex of the bits).
+
+concept Writer<W>
+require W: typename
+    ; Write %length bytes starting at #data.
+    routine Self.write_bytes(#self: Ptr<Self>, #data: Ptr<I8>, %length: I64) -> Void
+
+concept Format<T>
+require T: typename
+    routine Self.format<W>(%self: Self, #out: Ptr<W>) -> Void
+
+; -- FdWriter ------------------------------------------------------------------
+
+; Writes straight to a file descriptor with write(2): no buffer, so nothing is
+; lost if the program stops, and every call is a system call. A failed write
+; sets `failed` and drops the rest; check has_failed() when it matters.
+struct FdWriter
+conform Writer<FdWriter>
+    fd:     I32
+    failed: Bool
+
+routine FdWriter.stdout() -> Self
+    block entry():
+        %w: Self = Self { fd: 1, failed: false }
+        return(%w)
+
+routine FdWriter.stderr() -> Self
+    block entry():
+        %w: Self = Self { fd: 2, failed: false }
+        return(%w)
+
+routine FdWriter.has_failed(#self: Ptr<Self>) -> Bool
+    block entry():
+        %failed: Bool := #self.failed
+        return(%failed)
+
+; write(2) may write fewer bytes than asked, so this loops. Each call asks for
+; at most 2^30 bytes and reads the result as a 32-bit count: the binding in
+; io.disl declares CSize, but the Windows CRT returns int (open question #18).
+routine FdWriter.write_bytes(#self: Ptr<Self>, #data: Ptr<I8>, %length: I64) -> Void
+    block entry():
+        %fd: I32 := #self.fd
+        jump write_loop(#data, %length, %fd)
+
+    block write_loop(#at: Ptr<I8>, %remaining: I64, %fd: I32):
+        %done: Bool = %remaining.sle(0)
+        branch %done ? return() : write_some(#at, %remaining, %fd)
+
+    block write_some(#at: Ptr<I8>, %remaining: I64, %fd: I32):
+        %chunk:    I64   = %remaining.min(1073741824)
+        %fd_c:     CInt  = bitcast<I32, CInt>(%fd)
+        %chunk_c:  CSize = i64_to_csize(%chunk)
+        %wrote_c:  CSize = c_write(%fd_c, #at, %chunk_c)
+        %wrote:    I64   = csize_to_i64(%wrote_c).to_i32().to_i64()
+        %progress: Bool  = %wrote.sgt(0)
+        branch %progress ? advance(#at, %remaining, %fd, %wrote) : fail()
+
+    block advance(#at: Ptr<I8>, %remaining: I64, %fd: I32, %wrote: I64):
+        #next: Ptr<I8> = #at[%wrote]
+        jump write_loop(#next, %remaining.sub(%wrote), %fd)
+
+    block fail():
+        #self.failed = true
+        return()
+
+; -- text ----------------------------------------------------------------------
+
+routine write_str<W>(#out: Ptr<W>, %text: String) -> Void
+require W: typename, Writer<W>
+    block entry():
+        #data:   Ptr<I8> = %text.data
+        %length: I64     = %text.length
+        #out.write_bytes(#data, %length)
+        return()
+
+routine write_line<W>(#out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_str(#out, "\n")
+        return()
+
+; -- integer digits ------------------------------------------------------------
+
+; The bits of %value read as unsigned, in decimal, zero-padded to at least
+; %min_digits digits (at most 20).
+routine write_udecimal64<W>(#out: Ptr<W>, %value: I64, %min_digits: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        #buf:    Ptr<Array<I8, 20>> = alloca<Array<I8, 20>>
+        #digits: Ptr<I8>            = #buf.cast<I8>()
+        jump digit(20, %value, #digits)
+
+    ; Fills #digits from the right: at least one digit, then until the value is
+    ; used up and %min_digits are written.
+    block digit(%end: I64, %rest: I64, #digits: Ptr<I8>):
+        %at:    I64  = %end.sub(1)
+        %ascii: I8   = %rest.urem(10).add(48).to_i8()
+        #digits[%at] = %ascii
+        %next:       I64  = %rest.udiv(10)
+        %written:    I64  = 20.sub(%at)
+        %more_value: Bool = %next.ne(0)
+        %more_width: Bool = %written.slt(%min_digits)
+        %more:       Bool = %more_value.bitor(%more_width)
+        branch %more ? digit(%at, %next, #digits) : emit(%at, #digits)
+
+    block emit(%start: I64, #digits: Ptr<I8>):
+        #first: Ptr<I8> = #digits[%start]
+        #out.write_bytes(#first, 20.sub(%start))
+        return()
+
+routine write_decimal64<W>(#out: Ptr<W>, %value: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %negative: Bool = %value.slt(0)
+        branch %negative ? minus() : plain()
+
+    block plain():
+        write_udecimal64(#out, %value, 0)
+        return()
+
+    ; 0 - MIN wraps back to MIN, whose bits read as unsigned are |MIN|.
+    block minus():
+        write_str(#out, "-")
+        write_udecimal64(#out, 0.sub(%value), 0)
+        return()
+
+; The bits of %value in lowercase hex, zero-padded to at least %min_digits
+; digits (at most 16).
+routine write_hex64<W>(#out: Ptr<W>, %value: I64, %min_digits: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        #buf:    Ptr<Array<I8, 16>> = alloca<Array<I8, 16>>
+        #digits: Ptr<I8>            = #buf.cast<I8>()
+        jump digit(16, %value, #digits)
+
+    block digit(%end: I64, %rest: I64, #digits: Ptr<I8>):
+        %at:     I64  = %end.sub(1)
+        %nibble: I64  = %rest.bitand(15)
+        %decimal: Bool = %nibble.ult(10)
+        %base:   I64  = %decimal ? 48 : 87            ; '0', or 'a' - 10
+        #digits[%at] = %base.add(%nibble).to_i8()
+        %next:       I64  = %rest.lshr(4)
+        %written:    I64  = 16.sub(%at)
+        %more_value: Bool = %next.ne(0)
+        %more_width: Bool = %written.slt(%min_digits)
+        %more:       Bool = %more_value.bitor(%more_width)
+        branch %more ? digit(%at, %next, #digits) : emit(%at, #digits)
+
+    block emit(%start: I64, #digits: Ptr<I8>):
+        #first: Ptr<I8> = #digits[%start]
+        #out.write_bytes(#first, 16.sub(%start))
+        return()
+
+const TEN_POW_19: I128 = 10000000000000000000
+const TWO_POW_64: I128 = 18446744073709551616
+
+; 128-bit values go out in 19-digit chunks, so only the chunking divides I128.
+routine write_udecimal128<W>(#out: Ptr<W>, %value: I128, %min_digits: I64) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %fits: Bool = %value.ult(TWO_POW_64)
+        branch %fits ? low_only() : split()
+
+    block low_only():
+        write_udecimal64(#out, %value.to_i64(), %min_digits)
+        return()
+
+    block split():
+        %high:     I128 = %value.udiv(TEN_POW_19)
+        %low:      I128 = %value.urem(TEN_POW_19)
+        %high_min: I64  = %min_digits.sub(19).max(0)
+        write_udecimal128(#out, %high, %high_min)
+        write_udecimal64(#out, %low.to_i64(), 19)
+        return()
+
+routine write_decimal128<W>(#out: Ptr<W>, %value: I128) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %negative: Bool = %value.slt(0)
+        branch %negative ? minus() : plain()
+
+    block plain():
+        write_udecimal128(#out, %value, 0)
+        return()
+
+    block minus():
+        write_str(#out, "-")
+        write_udecimal128(#out, 0.sub(%value), 0)
+        return()
+
+routine write_hex128<W>(#out: Ptr<W>, %value: I128) -> Void
+require W: typename, Writer<W>
+    block entry():
+        %high: I64 = %value.lshr(64).to_i64()
+        %low:  I64 = %value.to_i64()
+        %wide: Bool = %high.ne(0)
+        branch %wide ? both(%high, %low) : low_only(%low)
+
+    block low_only(%low: I64):
+        write_hex64(#out, %low, 0)
+        return()
+
+    block both(%high: I64, %low: I64):
+        write_hex64(#out, %high, 0)
+        write_hex64(#out, %low, 16)
+        return()
+
+; -- Format --------------------------------------------------------------------
+
+routine I8.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_decimal64(#out, %self.to_i64())
+        return()
+
+routine I8.uformat<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_udecimal64(#out, %self.to_u64(), 0)
+        return()
+
+routine I8.format_hex<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_hex64(#out, %self.to_u64(), 0)
+        return()
+
+routine I16.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_decimal64(#out, %self.to_i64())
+        return()
+
+routine I16.uformat<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_udecimal64(#out, %self.to_u64(), 0)
+        return()
+
+routine I16.format_hex<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_hex64(#out, %self.to_u64(), 0)
+        return()
+
+routine I32.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_decimal64(#out, %self.to_i64())
+        return()
+
+routine I32.uformat<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_udecimal64(#out, %self.to_u64(), 0)
+        return()
+
+routine I32.format_hex<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_hex64(#out, %self.to_u64(), 0)
+        return()
+
+routine I64.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_decimal64(#out, %self)
+        return()
+
+routine I64.uformat<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_udecimal64(#out, %self, 0)
+        return()
+
+routine I64.format_hex<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_hex64(#out, %self, 0)
+        return()
+
+routine I128.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_decimal128(#out, %self)
+        return()
+
+routine I128.uformat<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_udecimal128(#out, %self, 0)
+        return()
+
+routine I128.format_hex<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_hex128(#out, %self)
+        return()
+
+routine Bool.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        branch %self ? yes() : no()
+
+    block yes():
+        write_str(#out, "true")
+        return()
+
+    block no():
+        write_str(#out, "false")
+        return()
+
+routine String.format<W>(%self: Self, #out: Ptr<W>) -> Void
+require W: typename, Writer<W>
+    block entry():
+        write_str(#out, %self)
+        return()
