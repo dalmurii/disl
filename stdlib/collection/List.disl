@@ -47,7 +47,7 @@ require T: typename
         #old_data: Ptr<T> := #self.data
         #new_data: Ptr<T> = realloc<T>(#alloc, #old_data, %capacity)
         %failed: Bool = #new_data.is_null()
-        branch %failed ? trap() : install(#new_data, %capacity)
+        branch %failed ? panic(TrapCode.AllocFailed) : install(#new_data, %capacity)
 
     block install(#new_data: Ptr<T>, %capacity: I64):
         #self.data = #new_data
@@ -97,7 +97,7 @@ require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length.eq(0)
-        branch %empty ? trap() : pop(%length)
+        branch %empty ? panic(TrapCode.Empty) : pop(%length)
 
     block pop(%length: I64):
         %index: I64 = %length.sub(1)
@@ -113,7 +113,7 @@ require T: typename
         %not_negative: Bool = %index.sge(0)
         %before_end: Bool = %index.slt(%length)
         %in_bounds: Bool = %not_negative.bitand(%before_end)
-        branch %in_bounds ? load(%index) : trap()
+        branch %in_bounds ? load(%index) : panic(TrapCode.Bounds)
 
     block load(%index: I64):
         #data: Ptr<T> := #self.data
@@ -127,7 +127,7 @@ require T: typename
         %not_negative: Bool = %index.sge(0)
         %before_end: Bool = %index.slt(%length)
         %in_bounds: Bool = %not_negative.bitand(%before_end)
-        branch %in_bounds ? store(%index, %value) : trap()
+        branch %in_bounds ? store(%index, %value) : panic(TrapCode.Bounds)
 
     block store(%index: I64, %value: T):
         #data: Ptr<T> := #self.data

@@ -351,7 +351,7 @@ routine I8.umax(%self: Self, %other: Self) -> Self
 routine I8.clamp(%self: Self, %lo: Self, %hi: Self) -> Self
     block entry():
         %valid: Bool = %lo.sle(%hi)
-        branch %valid ? clamp() : trap()
+        branch %valid ? clamp() : panic(TrapCode.InvalidArgument)
 
     block clamp():
         %at_least_lo: Self = smax<Self>(%self, %lo)
@@ -362,7 +362,7 @@ routine I8.clamp(%self: Self, %lo: Self, %hi: Self) -> Self
 routine I8.uclamp(%self: Self, %lo: Self, %hi: Self) -> Self
     block entry():
         %valid: Bool = %lo.ule(%hi)
-        branch %valid ? clamp() : trap()
+        branch %valid ? clamp() : panic(TrapCode.InvalidArgument)
 
     block clamp():
         %at_least_lo: Self = umax<Self>(%self, %lo)
@@ -878,7 +878,7 @@ routine I8.smidpoint(%self: Self, %other: Self) -> Self
 routine I8.uilog2(%self: Self) -> Self
     block entry():
         %zero: Bool = %self.eq(0)
-        branch %zero ? trap() : log()
+        branch %zero ? panic(TrapCode.InvalidArgument) : log()
 
     block log():
         %lz: Self = clz<Self>(%self, true)
@@ -889,7 +889,7 @@ routine I8.uilog2(%self: Self) -> Self
 routine I8.silog2(%self: Self) -> Self
     block entry():
         %positive: Bool = %self.sgt(0)
-        branch %positive ? log() : trap()
+        branch %positive ? log() : panic(TrapCode.InvalidArgument)
 
     block log():
         %r: Self = %self.uilog2()
@@ -899,7 +899,7 @@ routine I8.silog2(%self: Self) -> Self
 routine I8.uilog10(%self: Self) -> Self
     block entry():
         %zero: Bool = %self.eq(0)
-        branch %zero ? trap() : loop(%self, 0)
+        branch %zero ? panic(TrapCode.InvalidArgument) : loop(%self, 0)
 
     block loop(%rest: Self, %digits: Self):
         %last: Bool = %rest.ult(10)
@@ -912,7 +912,7 @@ routine I8.uilog10(%self: Self) -> Self
 routine I8.silog10(%self: Self) -> Self
     block entry():
         %positive: Bool = %self.sgt(0)
-        branch %positive ? log() : trap()
+        branch %positive ? log() : panic(TrapCode.InvalidArgument)
 
     block log():
         %r: Self = %self.uilog10()
@@ -948,7 +948,7 @@ routine I8.uisqrt(%self: Self) -> Self
 routine I8.sisqrt(%self: Self) -> Self
     block entry():
         %negative: Bool = %self.slt(0)
-        branch %negative ? trap() : root()
+        branch %negative ? panic(TrapCode.InvalidArgument) : root()
 
     block root():
         %r: Self = %self.uisqrt()

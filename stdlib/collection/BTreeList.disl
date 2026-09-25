@@ -47,7 +47,7 @@ require T: typename
     block entry():
         #node: Ptr<BTreeListNode<T>> = alloc<BTreeListNode<T>>(#alloc, 1)
         %failed: Bool = #node.is_null()
-        branch %failed ? trap() : init(#node, %leaf)
+        branch %failed ? panic(TrapCode.AllocFailed) : init(#node, %leaf)
 
     block init(#node: Ptr<BTreeListNode<T>>, %leaf: Bool):
         #node.leaf = %leaf
@@ -115,7 +115,7 @@ require T: typename
     block entry():
         %length: I64 := #self.length
         %in_bounds: Bool = %order.sge(0).bitand(%order.slt(%length))
-        branch %in_bounds ? select_root(%order) : trap()
+        branch %in_bounds ? select_root(%order) : panic(TrapCode.Bounds)
 
     block select_root(%order: I64):
         #root: Ptr<BTreeListNode<T>> := #self.root
@@ -144,7 +144,7 @@ require T: typename
     block entry():
         %length: I64 := #self.length
         %in_bounds: Bool = %order.sge(0).bitand(%order.slt(%length))
-        branch %in_bounds ? set_root(%order, %value) : trap()
+        branch %in_bounds ? set_root(%order, %value) : panic(TrapCode.Bounds)
 
     block set_root(%order: I64, %value: T):
         #root: Ptr<BTreeListNode<T>> := #self.root
@@ -348,7 +348,7 @@ require T: typename
     block entry():
         %length: I64 := #self.length
         %in_bounds: Bool = %order.sge(0).bitand(%order.sle(%length))
-        branch %in_bounds ? insert_checked(%order, %value) : trap()
+        branch %in_bounds ? insert_checked(%order, %value) : panic(TrapCode.Bounds)
 
     block insert_checked(%order: I64, %value: T):
         #alloc: Ptr<Allocator> := #self.alloc
@@ -590,7 +590,7 @@ require T: typename
     block right_only(%slot: I64, %local_order: I64):
         %parent_length: I64 := #self.length
         %has_right: Bool = %slot.add(1).slt(%parent_length)
-        branch %has_right ? check_right_only(%slot, %local_order) : trap()
+        branch %has_right ? check_right_only(%slot, %local_order) : panic(TrapCode.Unreachable)
 
     block check_right_only(%slot: I64, %local_order: I64):
         #right: Ptr<BTreeListNode<T>> := #self.children[%slot.add(1)]
@@ -609,7 +609,7 @@ require T: typename
     block entry():
         %length: I64 := #self.length
         %in_bounds: Bool = %order.sge(0).bitand(%order.slt(%length))
-        branch %in_bounds ? remove_root(%order) : trap()
+        branch %in_bounds ? remove_root(%order) : panic(TrapCode.Bounds)
 
     block remove_root(%order: I64):
         #alloc: Ptr<Allocator> := #self.alloc

@@ -54,7 +54,7 @@ routine Option<T>.unwrap(#self: Ptr<Self>) -> T
 require T: typename
     block entry():
         %tag: Bool := #self.tag
-        branch %tag ? load() : trap()
+        branch %tag ? load() : panic(TrapCode.UnwrapNone)
 
     block load():
         %value: T := #self.value

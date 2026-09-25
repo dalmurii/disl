@@ -44,7 +44,7 @@ require T: typename
     block entry():
         #node: Ptr<BTreeSetNode<T>> = alloc<BTreeSetNode<T>>(#alloc, 1)
         %failed: Bool = #node.is_null()
-        branch %failed ? trap() : init(#node, %leaf)
+        branch %failed ? panic(TrapCode.AllocFailed) : init(#node, %leaf)
 
     block init(#node: Ptr<BTreeSetNode<T>>, %leaf: Bool):
         #node.leaf = %leaf
@@ -162,7 +162,7 @@ require T: typename
     block entry():
         %length: I64 := #self.length
         %in_bounds: Bool = %order.sge(0).bitand(%order.slt(%length))
-        branch %in_bounds ? select_root(%order) : trap()
+        branch %in_bounds ? select_root(%order) : panic(TrapCode.Bounds)
 
     block select_root(%order: I64):
         #root: Ptr<BTreeSetNode<T>> := #self.root
@@ -197,7 +197,7 @@ require T: typename
 
     block last_child(#node: Ptr<BTreeSetNode<T>>, %order: I64, %i: I64):
         %leaf: Bool := #node.leaf
-        branch %leaf ? trap() : descend_last(#node, %order, %i)
+        branch %leaf ? panic(TrapCode.Unreachable) : descend_last(#node, %order, %i)
 
     block descend_last(#node: Ptr<BTreeSetNode<T>>, %order: I64, %i: I64):
         #child: Ptr<BTreeSetNode<T>> := #node.children[%i]
@@ -523,7 +523,7 @@ require T: typename
         branch %has_left ? merge_with_left() : merge_with_right()
 
     block pick_merge_no_right(%has_left: Bool):
-        branch %has_left ? merge_with_left() : trap()
+        branch %has_left ? merge_with_left() : panic(TrapCode.Unreachable)
 
     block merge_with_left():
         %i_m1: I64 = %i.sub(1)

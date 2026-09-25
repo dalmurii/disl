@@ -188,7 +188,7 @@ require K: typename, V: typename
         %f3: Bool = %f1.bitor(%f2)
         %failed: Bool = %f3.bitor(%e)
         branch %failed
-            ? trap()
+            ? panic(TrapCode.AllocFailed)
             : clear_loop(
                 0, #old_keys, #old_values, #old_hashes, #old_entry_states, #old_slots,
                 %old_count, #new_keys, #new_values, #new_hashes, #new_entry_states,
@@ -366,7 +366,7 @@ require K: typename, V: typename
     block entry():
         %entry_idx: I64 = #self.find(%key)
         %found: Bool = %entry_idx.sge(0)
-        branch %found ? load(%entry_idx) : trap()
+        branch %found ? load(%entry_idx) : panic(TrapCode.MissingKey)
 
     block load(%entry_idx: I64):
         #values: Ptr<V> := #self.values

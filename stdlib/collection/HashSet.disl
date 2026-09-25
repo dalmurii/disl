@@ -167,7 +167,7 @@ require T: typename
         %f2: Bool = %c.bitor(%d)
         %failed: Bool = %f1.bitor(%f2)
         branch %failed
-            ? trap()
+            ? panic(TrapCode.AllocFailed)
             : clear_loop(
                 0, #old_keys, #old_hashes, #old_entry_states, #old_slots, %old_count,
                 #new_keys, #new_hashes, #new_entry_states, #new_slots, %new_capacity, #alloc)

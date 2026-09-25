@@ -46,7 +46,7 @@ routine String.byte_at(#self: Ptr<Self>, %index: I64) -> I8
     block entry():
         %length: I64 := #self.length
         %in_bounds: Bool = %index.sge(0).bitand(%index.slt(%length))
-        branch %in_bounds ? load(%index) : trap()
+        branch %in_bounds ? load(%index) : panic(TrapCode.Bounds)
 
     block load(%index: I64):
         #data: Ptr<I8> := #self.data
@@ -63,7 +63,7 @@ routine String.slice(#self: Ptr<Self>, %start: I64, %end: I64) -> Self
         %valid_end:   Bool = %end.sle(%length)
         %valid_order: Bool = %start.sle(%end)
         %valid:       Bool = %valid_start.bitand(%valid_end).bitand(%valid_order)
-        branch %valid ? make(%start, %end) : trap()
+        branch %valid ? make(%start, %end) : panic(TrapCode.Bounds)
 
     block make(%start: I64, %end: I64):
         #base: Ptr<I8> := #self.data
@@ -84,7 +84,7 @@ routine String.concat(%a: Self, %b: Self, #alloc: Ptr<Allocator>) -> Self
         %length: I64 = %la.add(%lb)
         #data: Ptr<I8> = alloc<I8>(#alloc, %length.add(1))
         %failed: Bool = #data.is_null()
-        branch %failed ? trap() : copy_a(#data)
+        branch %failed ? panic(TrapCode.AllocFailed) : copy_a(#data)
 
     block copy_a(#data: Ptr<I8>):
         #src_a: Ptr<I8> = %a.data

@@ -26,7 +26,7 @@ require T: typename, N: I64
         %not_negative: Bool = %index.sge(0)
         %before_end:   Bool = %index.slt(N)
         %in_bounds:    Bool = %not_negative.bitand(%before_end)
-        branch %in_bounds ? load(%index) : trap()
+        branch %in_bounds ? load(%index) : panic(TrapCode.Bounds)
 
     block load(%index: I64):
         #base: Ptr<T> = bitcast<Ptr<Self>, Ptr<T>>(#self)
@@ -39,7 +39,7 @@ require T: typename, N: I64
         %not_negative: Bool = %index.sge(0)
         %before_end:   Bool = %index.slt(N)
         %in_bounds:    Bool = %not_negative.bitand(%before_end)
-        branch %in_bounds ? store(%index, %value) : trap()
+        branch %in_bounds ? store(%index, %value) : panic(TrapCode.Bounds)
 
     block store(%index: I64, %value: T):
         #base: Ptr<T> = bitcast<Ptr<Self>, Ptr<T>>(#self)

@@ -45,7 +45,7 @@ require K: typename, V: typename
     block entry():
         #node: Ptr<BTreeMapNode<K, V>> = alloc<BTreeMapNode<K, V>>(#alloc, 1)
         %failed: Bool = #node.is_null()
-        branch %failed ? trap() : init(#node, %leaf)
+        branch %failed ? panic(TrapCode.AllocFailed) : init(#node, %leaf)
 
     block init(#node: Ptr<BTreeMapNode<K, V>>, %leaf: Bool):
         #node.leaf = %leaf
@@ -116,7 +116,7 @@ require K: typename, V: typename
     block entry():
         #root: Ptr<BTreeMapNode<K, V>> := #self.root
         %empty: Bool = #root.is_null()
-        branch %empty ? trap() : search(#root, %key)
+        branch %empty ? panic(TrapCode.MissingKey) : search(#root, %key)
 
     block search(#node: Ptr<BTreeMapNode<K, V>>, %key: K):
         %i: I64 = #self.find_index(#node, %key)
@@ -132,7 +132,7 @@ require K: typename, V: typename
 
     block descend_or_missing(#node: Ptr<BTreeMapNode<K, V>>, %i: I64, %key: K):
         %leaf: Bool := #node.leaf
-        branch %leaf ? trap() : descend(#node, %i, %key)
+        branch %leaf ? panic(TrapCode.MissingKey) : descend(#node, %i, %key)
 
     block descend(#node: Ptr<BTreeMapNode<K, V>>, %i: I64, %key: K):
         #child: Ptr<BTreeMapNode<K, V>> := #node.children[%i]
@@ -201,7 +201,7 @@ require K: typename, V: typename
     block entry():
         %length: I64 := #self.length
         %in_bounds: Bool = %order.sge(0).bitand(%order.slt(%length))
-        branch %in_bounds ? select_root(%order) : trap()
+        branch %in_bounds ? select_root(%order) : panic(TrapCode.Bounds)
 
     block select_root(%order: I64):
         #root: Ptr<BTreeMapNode<K, V>> := #self.root
@@ -236,7 +236,7 @@ require K: typename, V: typename
 
     block last_child(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64):
         %leaf: Bool := #node.leaf
-        branch %leaf ? trap() : descend_last(#node, %order, %i)
+        branch %leaf ? panic(TrapCode.Unreachable) : descend_last(#node, %order, %i)
 
     block descend_last(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64):
         #child: Ptr<BTreeMapNode<K, V>> := #node.children[%i]
@@ -251,7 +251,7 @@ require K: typename, V: typename
     block entry():
         %length: I64 := #self.length
         %in_bounds: Bool = %order.sge(0).bitand(%order.slt(%length))
-        branch %in_bounds ? select_root(%order) : trap()
+        branch %in_bounds ? select_root(%order) : panic(TrapCode.Bounds)
 
     block select_root(%order: I64):
         #root: Ptr<BTreeMapNode<K, V>> := #self.root
@@ -286,7 +286,7 @@ require K: typename, V: typename
 
     block last_child(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64):
         %leaf: Bool := #node.leaf
-        branch %leaf ? trap() : descend_last(#node, %order, %i)
+        branch %leaf ? panic(TrapCode.Unreachable) : descend_last(#node, %order, %i)
 
     block descend_last(#node: Ptr<BTreeMapNode<K, V>>, %order: I64, %i: I64):
         #child: Ptr<BTreeMapNode<K, V>> := #node.children[%i]
@@ -667,7 +667,7 @@ require K: typename, V: typename
         branch %has_left ? merge_with_left() : merge_with_right()
 
     block pick_merge_no_right(%has_left: Bool):
-        branch %has_left ? merge_with_left() : trap()
+        branch %has_left ? merge_with_left() : panic(TrapCode.Unreachable)
 
     block merge_with_left():
         %i_m1: I64 = %i.sub(1)

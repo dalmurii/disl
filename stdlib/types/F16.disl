@@ -270,7 +270,7 @@ routine F16.maximum(%self: Self, %other: Self) -> Self
 routine F16.clamp(%self: Self, %lo: Self, %hi: Self) -> Self
     block entry():
         %valid: Bool = %lo.le(%hi)
-        branch %valid ? clamp() : trap()
+        branch %valid ? clamp() : panic(TrapCode.InvalidArgument)
 
     block clamp():
         %below: Bool = %self.lt(%lo)

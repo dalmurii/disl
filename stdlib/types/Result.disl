@@ -2,7 +2,7 @@
 ;
 ; Result<T, E> is either a success value (T) or an error (E) — the standard way
 ; to report an expected failure (malformed input, I/O error, allocation
-; failure). Contract violations (bugs) still trap(); Result is for failures the
+; failure). Contract violations (bugs) still panic; Result is for failures the
 ; caller is expected to handle.
 ;
 ; Layout — separate fields, not an overlay:
@@ -82,7 +82,7 @@ routine Result<T, E>.unwrap(#self: Ptr<Self>) -> T
 require T: typename, E: typename
     block entry():
         %tag: Bool := #self.tag
-        branch %tag ? load() : trap()
+        branch %tag ? load() : panic(TrapCode.UnwrapErr)
 
     block load():
         %value: T := #self.value
@@ -93,7 +93,7 @@ routine Result<T, E>.unwrap_err(#self: Ptr<Self>) -> E
 require T: typename, E: typename
     block entry():
         %tag: Bool := #self.tag
-        branch %tag ? trap() : load()
+        branch %tag ? panic(TrapCode.UnwrapOk) : load()
 
     block load():
         %error: E := #self.error

@@ -47,7 +47,7 @@ require T: typename
         #old_data: Ptr<T> := #self.data
         #new_data: Ptr<T> = realloc<T>(#alloc, #old_data, %capacity)
         %failed: Bool = #new_data.is_null()
-        branch %failed ? trap() : install(#new_data, %capacity)
+        branch %failed ? panic(TrapCode.AllocFailed) : install(#new_data, %capacity)
 
     block install(#new_data: Ptr<T>, %capacity: I64):
         #self.data = #new_data
@@ -121,7 +121,7 @@ require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length.eq(0)
-        branch %empty ? trap() : load()
+        branch %empty ? panic(TrapCode.Empty) : load()
 
     block load():
         #data: Ptr<T> := #self.data
@@ -133,7 +133,7 @@ require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length.eq(0)
-        branch %empty ? trap() : remove_root(%length)
+        branch %empty ? panic(TrapCode.Empty) : remove_root(%length)
 
     block remove_root(%length: I64):
         #data: Ptr<T> := #self.data
