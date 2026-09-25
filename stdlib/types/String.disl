@@ -34,6 +34,12 @@ routine String.from_ptr(#data: Ptr<I8>, %length: I64) -> Self
 
 ; -- predicates ----------------------------------------------------------------
 
+; The length in bytes of the UTF-8 text, not in characters (count those with chars()).
+routine String.length(#self: Ptr<Self>) -> I64
+    block entry():
+        %length: I64 := #self.length
+        return(%length)
+
 routine String.is_empty(#self: Ptr<Self>) -> Bool
     block entry():
         %length: I64 := #self.length

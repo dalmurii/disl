@@ -46,6 +46,13 @@ require T: typename
         %length: I64 := #self.length
         return(%length)
 
+routine HashSet<T>.is_empty(#self: Ptr<Self>) -> Bool
+require T: typename
+    block entry():
+        %length: I64 := #self.length
+        %empty: Bool = %length.eq(0)
+        return(%empty)
+
 routine HashSet<T>.slot(#self: Ptr<Self>, %key: T, %hash: I64) -> I64
 require T: typename
     block entry():

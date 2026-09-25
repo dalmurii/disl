@@ -48,6 +48,13 @@ require K: typename, V: typename
         %length: I64 := #self.length
         return(%length)
 
+routine HashMap<K, V>.is_empty(#self: Ptr<Self>) -> Bool
+require K: typename, V: typename
+    block entry():
+        %length: I64 := #self.length
+        %empty: Bool = %length.eq(0)
+        return(%empty)
+
 ; Probe the slot table for %key. Returns the slot index at which the key was
 ; found, or the slot at which a new entry should be installed (preferring the
 ; first tombstone seen, else the first empty slot).

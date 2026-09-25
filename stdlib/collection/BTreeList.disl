@@ -42,6 +42,13 @@ require T: typename
         %length: I64 := #self.length
         return(%length)
 
+routine BTreeList<T>.is_empty(#self: Ptr<Self>) -> Bool
+require T: typename
+    block entry():
+        %length: I64 := #self.length
+        %empty: Bool = %length.eq(0)
+        return(%empty)
+
 routine BTreeListNode<T>.new(%leaf: Bool, #alloc: Ptr<Allocator>) -> Ptr<BTreeListNode<T>>
 require T: typename
     block entry():

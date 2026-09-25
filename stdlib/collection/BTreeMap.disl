@@ -40,6 +40,13 @@ require K: typename, V: typename
         %length: I64 := #self.length
         return(%length)
 
+routine BTreeMap<K, V>.is_empty(#self: Ptr<Self>) -> Bool
+require K: typename, V: typename
+    block entry():
+        %length: I64 := #self.length
+        %empty: Bool = %length.eq(0)
+        return(%empty)
+
 routine BTreeMapNode<K, V>.new(%leaf: Bool, #alloc: Ptr<Allocator>) -> Ptr<BTreeMapNode<K, V>>
 require K: typename, V: typename
     block entry():
