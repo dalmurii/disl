@@ -1,17 +1,17 @@
-﻿; Disl stdlib collection: PriorityQueue<T>
+﻿; Disl stdlib collection: BinaryHeap<T>
 ;
 ; Binary min-heap ordered by Priority<T>: a.less(b) returns true when a has
 ; higher priority than b (sits closer to the top). The allocator is stored in
 ; the struct.
 
-struct PriorityQueue<T>
+struct BinaryHeap<T>
 require T: typename, Priority<T>
     data: Ptr<T>
     length: I64
     capacity: I64
     alloc: Ptr<Allocator>
 
-routine PriorityQueue<T>.new(#alloc: Ptr<Allocator>) -> Self
+routine BinaryHeap<T>.new(#alloc: Ptr<Allocator>) -> Self
 require T: typename, Priority<T>
     block entry():
         %queue: Self = Self {
@@ -22,20 +22,20 @@ require T: typename, Priority<T>
         }
         return(%queue)
 
-routine PriorityQueue<T>.length(#self: Ptr<Self>) -> I64
+routine BinaryHeap<T>.length(#self: Ptr<Self>) -> I64
 require T: typename
     block entry():
         %length: I64 := #self.length
         return(%length)
 
-routine PriorityQueue<T>.is_empty(#self: Ptr<Self>) -> Bool
+routine BinaryHeap<T>.is_empty(#self: Ptr<Self>) -> Bool
 require T: typename
     block entry():
         %length: I64 := #self.length
         %empty: Bool = %length.eq(0)
         return(%empty)
 
-routine PriorityQueue<T>.reserve(#self: Ptr<Self>, %capacity: I64) -> Void
+routine BinaryHeap<T>.reserve(#self: Ptr<Self>, %capacity: I64) -> Void
 require T: typename
     block entry():
         %old_capacity: I64 := #self.capacity
@@ -54,7 +54,7 @@ require T: typename
         #self.capacity = %capacity
         return()
 
-routine PriorityQueue<T>.ensure(#self: Ptr<Self>, %wanted: I64) -> Void
+routine BinaryHeap<T>.ensure(#self: Ptr<Self>, %wanted: I64) -> Void
 require T: typename
     block entry():
         %capacity: I64 := #self.capacity
@@ -81,13 +81,13 @@ require T: typename
         #self.reserve(%new_capacity)
         return()
 
-routine PriorityQueue<T>.less(#self: Ptr<Self>, %a: T, %b: T) -> Bool
+routine BinaryHeap<T>.less(#self: Ptr<Self>, %a: T, %b: T) -> Bool
 require T: typename, Priority<T>
     block entry():
         %result: Bool = %a.less(%b)
         return(%result)
 
-routine PriorityQueue<T>.push(#self: Ptr<Self>, %value: T) -> Void
+routine BinaryHeap<T>.push(#self: Ptr<Self>, %value: T) -> Void
 require T: typename
     block entry():
         %length: I64 := #self.length
@@ -116,7 +116,7 @@ require T: typename
         #data[%index] = %parent_value
         jump sift_up(%parent)
 
-routine PriorityQueue<T>.peek(#self: Ptr<Self>) -> T
+routine BinaryHeap<T>.peek(#self: Ptr<Self>) -> T
 require T: typename
     block entry():
         %length: I64 := #self.length
@@ -128,7 +128,7 @@ require T: typename
         %value: T := #data[0]
         return(%value)
 
-routine PriorityQueue<T>.pop(#self: Ptr<Self>) -> T
+routine BinaryHeap<T>.pop(#self: Ptr<Self>) -> T
 require T: typename
     block entry():
         %length: I64 := #self.length
@@ -186,13 +186,13 @@ require T: typename
         #data[%child] = %index_value
         jump sift_down(%child, %result)
 
-routine PriorityQueue<T>.clear(#self: Ptr<Self>) -> Void
+routine BinaryHeap<T>.clear(#self: Ptr<Self>) -> Void
 require T: typename
     block entry():
         #self.length = 0
         return()
 
-routine PriorityQueue<T>.free(#self: Ptr<Self>) -> Void
+routine BinaryHeap<T>.free(#self: Ptr<Self>) -> Void
 require T: typename
     block entry():
         #data: Ptr<T> := #self.data
