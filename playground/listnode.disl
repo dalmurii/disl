@@ -262,3 +262,92 @@ routine LinkedList<T>.free(#self: Ptr<Self>, #alloc: Ptr<Allocator>) -> Void
         #self.tail = null
         #self.length = 0
         return()
+
+; ── Demo ──────────────────────────────────────────────────────────────────────
+
+routine print_list(#out: Ptr<BufWriter<FdWriter>>, #list: Ptr<LinkedList<I64>>) -> Void
+    block entry():
+        write_str(#out, "list [")
+        %iter_val: LinkedListIter<I64> = #list.iter()
+        #iter: Ptr<LinkedListIter<I64>> = alloca<LinkedListIter<I64>>([%iter_val])
+        jump next(#iter, true)
+
+    block next(#iter: Ptr<LinkedListIter<I64>>, %first: Bool):
+        %item: Option<I64> = #iter.next()
+        %more: Bool = %item.tag
+        %value: I64 = %item.value
+        branch %more ? item(#iter, %first, %value) : finish()
+
+    block item(#iter: Ptr<LinkedListIter<I64>>, %first: Bool, %value: I64):
+        branch %first ? write(#iter, %value) : separate(#iter, %value)
+
+    block separate(#iter: Ptr<LinkedListIter<I64>>, %value: I64):
+        write_str(#out, ", ")
+        jump write(#iter, %value)
+
+    block write(#iter: Ptr<LinkedListIter<I64>>, %value: I64):
+        %value.format(#out)
+        jump next(#iter, false)
+
+    block finish():
+        write_str(#out, "] length ")
+        #list.length().format(#out)
+        write_line(#out)
+        return()
+
+; Prints "<label> <value>" for a some, "<label> none" for a none.
+routine print_option(#out: Ptr<BufWriter<FdWriter>>, %label: String, %item: Option<I64>) -> Void
+    block entry():
+        write_str(#out, %label)
+        write_str(#out, " ")
+        %some: Bool = %item.tag
+        %value: I64 = %item.value
+        branch %some ? some(%value) : none()
+
+    block some(%value: I64):
+        %value.format(#out)
+        write_line(#out)
+        return()
+
+    block none():
+        write_str(#out, "none")
+        write_line(#out)
+        return()
+
+routine main() -> I32
+    block entry():
+        %fd_val: FdWriter      = FdWriter.stdout()
+        #fd:     Ptr<FdWriter> = alloca<FdWriter>([%fd_val])
+        #out: Ptr<BufWriter<FdWriter>> = alloca<BufWriter<FdWriter>>
+        #out.init(#fd)
+        %heap:  Allocator      = make_heap_allocator()
+        #alloc: Ptr<Allocator> = alloca<Allocator>([%heap])
+        %list_val: LinkedList<I64> = LinkedList<I64>.new()
+        #list: Ptr<LinkedList<I64>> = alloca<LinkedList<I64>>([%list_val])
+
+        print_list(#out, #list)
+        print_option(#out, "peek_front", #list.peek_front())
+        #list.push_back(1, #alloc)
+        #list.push_back(2, #alloc)
+        #list.push_back(3, #alloc)
+        #list.push_front(0, #alloc)
+        #list.push_front(-1, #alloc)
+        print_list(#out, #list)
+        print_option(#out, "peek_front", #list.peek_front())
+        print_option(#out, "peek_back", #list.peek_back())
+        print_option(#out, "pop_front", #list.pop_front(#alloc))
+        print_option(#out, "pop_back", #list.pop_back(#alloc))
+        print_list(#out, #list)
+        print_option(#out, "pop_back", #list.pop_back(#alloc))
+        print_option(#out, "pop_back", #list.pop_back(#alloc))
+        print_option(#out, "pop_back", #list.pop_back(#alloc))
+        print_option(#out, "pop_back", #list.pop_back(#alloc))
+        print_list(#out, #list)
+        #list.push_front(7, #alloc)
+        print_option(#out, "peek_back", #list.peek_back())
+        #list.push_back(8, #alloc)
+        print_list(#out, #list)
+        #list.free(#alloc)
+        print_list(#out, #list)
+        #out.flush()
+        return(0)

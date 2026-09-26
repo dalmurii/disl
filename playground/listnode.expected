@@ -1,0 +1,16 @@
+list [] length 0
+peek_front none
+list [-1, 0, 1, 2, 3] length 5
+peek_front -1
+peek_back 3
+pop_front -1
+pop_back 3
+list [0, 1, 2] length 3
+pop_back 2
+pop_back 1
+pop_back 0
+pop_back none
+list [] length 0
+peek_back 7
+list [7, 8] length 2
+list [] length 0

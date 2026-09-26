@@ -9,11 +9,11 @@ static class Cli
         usage:
           disl build <file.disl>... [-o <out>] [--emit-llvm] [--target <arch-os-abi>] [-O]
           disl run   <file.disl>... [--target <arch-os-abi>] [-O]
-          disl test  <dir>
+          disl test  <dir>...
           disl check [<file.disl>...]   type-check every non-generic routine, the stdlib included
 
         All input files form one compilation unit.
-        test: every <name>.disl in <dir> is built and run. Its stdout must equal <name>.expected (if present),
+        test: every <name>.disl in each <dir> is built and run. Its stdout must equal <name>.expected (if present),
               and its exit code must equal the number in <name>.exit (default 0). If <name>.error exists, the
               build must fail with a message containing its text.
         """;
@@ -311,9 +311,15 @@ static class Cli
 
     private static int Test(string[] args)
     {
-        if (args.Length != 1) throw new ToolError("test takes one directory");
-        var files = Directory.GetFiles(args[0], "*.disl").OrderBy(f => f, StringComparer.Ordinal).ToList();
-        if (files.Count == 0) throw new ToolError($"no .disl files in {args[0]}");
+        if (args.Length == 0) throw new ToolError("test takes one or more directories");
+        var files = new List<string>();
+        foreach (var dir in args)
+        {
+            var found = Directory.GetFiles(dir, "*.disl").OrderBy(f => f, StringComparer.Ordinal).ToList();
+            if (found.Count == 0) throw new ToolError($"no .disl files in {dir}");
+            files.AddRange(found);
+        }
+        bool qualify = args.Length > 1;
 
         var target = BuildTarget.Host();
         int passed = 0;
@@ -323,6 +329,7 @@ static class Cli
         {
             string stem = Path.ChangeExtension(file, null);
             string name = Path.GetFileName(stem);
+            if (qualify) name = Path.GetFileName(Path.GetDirectoryName(stem)) + "/" + name;
             string? why = RunOne(file, stem, target);
             if (why is null)
             {

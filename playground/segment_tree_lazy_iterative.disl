@@ -492,3 +492,136 @@ routine LazySegmentTree<T, L>.free(#self: Ptr<Self>, #alloc: Ptr<Allocator>) -> 
         #self.size = 0
         #self.height = 0
         return()
+
+; ── Demo: range add, range sum ────────────────────────────────────────────────
+
+; A segment's sum. Applying an add of %delta to %length elements adds %delta * %length.
+struct RangeSum
+    sum: I64
+
+; A pending add over every element of a segment.
+struct RangeAdd
+    delta: I64
+
+routine RangeSum.identity() -> Self
+    block entry():
+        %zero: Self = Self { sum: 0 }
+        return(%zero)
+
+routine RangeSum.combine(%self: Self, %right: Self) -> Self
+    block entry():
+        %total: Self = Self { sum: %self.sum.add(%right.sum) }
+        return(%total)
+
+routine RangeSum.apply(%self: Self, %lazy: RangeAdd, %length: I64) -> Self
+    block entry():
+        %added: I64 = %lazy.delta.mul(%length)
+        %result: Self = Self { sum: %self.sum.add(%added) }
+        return(%result)
+
+routine RangeAdd.identity() -> Self
+    block entry():
+        %none: Self = Self { delta: 0 }
+        return(%none)
+
+routine RangeAdd.compose(%self: Self, %older: Self) -> Self
+    block entry():
+        %both: Self = Self { delta: %self.delta.add(%older.delta) }
+        return(%both)
+
+routine RangeAdd.is_identity_lazy(%self: Self) -> Bool
+    block entry():
+        %none: Bool = %self.delta.eq(0)
+        return(%none)
+
+routine print_sum(
+        #out: Ptr<BufWriter<FdWriter>>, #tree: Ptr<LazySegmentTree<RangeSum, RangeAdd>>,
+        %left: I64, %right: I64) -> Void
+    block entry():
+        %total: RangeSum = #tree.range_query(%left, %right)
+        write_str(#out, "sum [")
+        %left.format(#out)
+        write_str(#out, ", ")
+        %right.format(#out)
+        write_str(#out, ") = ")
+        %total.sum.format(#out)
+        write_line(#out)
+        return()
+
+routine print_get(#out: Ptr<BufWriter<FdWriter>>, #tree: Ptr<LazySegmentTree<RangeSum, RangeAdd>>, %index: I64) -> Void
+    block entry():
+        %value: RangeSum = #tree.get(%index)
+        write_str(#out, "get ")
+        %index.format(#out)
+        write_str(#out, " = ")
+        %value.sum.format(#out)
+        write_line(#out)
+        return()
+
+routine print_add(#out: Ptr<BufWriter<FdWriter>>, %left: I64, %right: I64, %delta: I64) -> Void
+    block entry():
+        write_str(#out, "add ")
+        %delta.format(#out)
+        write_str(#out, " to [")
+        %left.format(#out)
+        write_str(#out, ", ")
+        %right.format(#out)
+        write_str(#out, ")")
+        write_line(#out)
+        return()
+
+; Fills %count leaves with i * 7 mod 10: 0 7 4 1 8 5 2 9 6 3.
+routine fill_values(#values: Ptr<RangeSum>, %count: I64) -> Void
+    block entry():
+        jump loop(0)
+
+    block loop(%i: I64):
+        %done: Bool = %i.sge(%count)
+        branch %done ? return() : store(%i)
+
+    block store(%i: I64):
+        %leaf: RangeSum = RangeSum { sum: %i.mul(7).srem(10) }
+        #values[%i] = %leaf
+        jump loop(%i.add(1))
+
+routine main() -> I32
+    block entry():
+        %fd_val: FdWriter      = FdWriter.stdout()
+        #fd:     Ptr<FdWriter> = alloca<FdWriter>([%fd_val])
+        #out: Ptr<BufWriter<FdWriter>> = alloca<BufWriter<FdWriter>>
+        #out.init(#fd)
+        %heap:  Allocator      = make_heap_allocator()
+        #alloc: Ptr<Allocator> = alloca<Allocator>([%heap])
+        #values: Ptr<RangeSum> = alloc<RangeSum>(#alloc, 10)
+        %no_values: Bool = #values.is_null()
+        branch %no_values ? panic(TrapCode.AllocFailed) : run(#out, #alloc, #values)
+
+    block run(#out: Ptr<BufWriter<FdWriter>>, #alloc: Ptr<Allocator>, #values: Ptr<RangeSum>):
+        fill_values(#values, 10)
+        %tree_val: LazySegmentTree<RangeSum, RangeAdd> = LazySegmentTree<RangeSum, RangeAdd>.new(10, #alloc)
+        #tree: Ptr<LazySegmentTree<RangeSum, RangeAdd>> = alloca<LazySegmentTree<RangeSum, RangeAdd>>([%tree_val])
+        #tree.build_from(#values)
+        free<RangeSum>(#alloc, #values)
+        print_sum(#out, #tree, 0, 10)
+        print_sum(#out, #tree, 3, 8)
+
+        print_add(#out, 2, 7, 10)
+        #tree.range_apply(2, 7, RangeAdd { delta: 10 })
+        print_sum(#out, #tree, 0, 10)
+        print_sum(#out, #tree, 3, 5)
+        print_sum(#out, #tree, 6, 9)
+
+        print_add(#out, 0, 4, -3)
+        #tree.range_apply(0, 4, RangeAdd { delta: -3 })
+        print_sum(#out, #tree, 0, 4)
+        print_sum(#out, #tree, 1, 8)
+        print_get(#out, #tree, 3)
+
+        #tree.set(5, RangeSum { sum: 100 })
+        print_get(#out, #tree, 5)
+        print_sum(#out, #tree, 4, 7)
+        print_sum(#out, #tree, 4, 4)
+        print_sum(#out, #tree, 0, 10)
+        #tree.free(#alloc)
+        #out.flush()
+        return(0)
