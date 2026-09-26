@@ -78,6 +78,7 @@ require T: typename, N: I64
 ;
 ; These helpers operate on Array<T, N> fields inside larger structures. The
 ; range convention is half-open: [start, end).
+; Moves elements [start, end) one slot right, to [start + 1, end + 1), opening a hole at start. Writes index end.
 routine Array<T, N>.shift_right(#self: Ptr<Self>, %start: I64, %end: I64) -> Void
 require T: typename, N: I64
     block entry():
@@ -93,6 +94,7 @@ require T: typename, N: I64
         #self[%i] = %value
         jump loop(%from)
 
+; Closes the hole at start: moves elements [start + 1, end) one slot left, to [start, end - 1).
 routine Array<T, N>.shift_left(#self: Ptr<Self>, %start: I64, %end: I64) -> Void
 require T: typename, N: I64
     block entry():

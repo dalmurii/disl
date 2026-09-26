@@ -4,8 +4,8 @@
 ; shifting. The allocator is stored in the struct.
 ;
 ; Logical element i lives at data[start + i]. Front growth consumes spare slots
-; before start; when either side runs out the live range is moved into a larger
-; centered buffer.
+; before start; when either side runs out the live range is moved back to the
+; center of a new buffer, twice as large if the deque is more than half full.
 
 struct Deque<T>
 conform Equal<Deque<T>>
@@ -77,6 +77,17 @@ require T: typename
         #self.capacity = %new_capacity
         return()
 
+; The capacity to recenter into when one end runs out: double it only when the deque is more than half full.
+; Otherwise the live range just moves back to the middle, so a queue (push_back / pop_front) keeps a bounded buffer
+; instead of doubling each time its window drifts to the end.
+routine Deque<T>.grown_capacity(#self: Ptr<Self>, %capacity: I64) -> I64
+require T: typename
+    block entry():
+        %length: I64 := #self.length
+        %crowded: Bool = %length.mul(2).sgt(%capacity)
+        %new_capacity: I64 = %crowded ? %capacity.mul(2) : %capacity
+        return(%new_capacity)
+
 routine Deque<T>.ensure_front(#self: Ptr<Self>) -> Void
 require T: typename
     block entry():
@@ -94,8 +105,7 @@ require T: typename
         return()
 
     block grow(%capacity: I64):
-        %new_capacity: I64 = %capacity.mul(2)
-        #self.recenter(%new_capacity)
+        #self.recenter(#self.grown_capacity(%capacity))
         return()
 
 routine Deque<T>.ensure_back(#self: Ptr<Self>) -> Void
@@ -116,8 +126,7 @@ require T: typename
         return()
 
     block grow(%capacity: I64):
-        %new_capacity: I64 = %capacity.mul(2)
-        #self.recenter(%new_capacity)
+        #self.recenter(#self.grown_capacity(%capacity))
         return()
 
 routine Deque<T>.push_back(#self: Ptr<Self>, %value: T) -> Void

@@ -1,8 +1,7 @@
 ; Disl stdlib collection: DequeIter<T>
 ;
 ; Forward iterator over Deque<T>, yielding elements front-to-back.
-; Delegates index-to-physical mapping to Deque.get, which handles the
-; ring-buffer arithmetic (start + index) % capacity internally.
+; Delegates index-to-physical mapping to Deque.get, which reads data[start + index].
 ;
 ; Satisfies concept Iterator<T, DequeIter<T>>.
 
